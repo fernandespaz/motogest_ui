@@ -1,0 +1,65 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { PageParams } from '@/api/types';
+
+interface CrudLike<TResponse, TRequest, TListParams> {
+  list: (params?: TListParams) => Promise<any>;
+  get: (id: number) => Promise<TResponse>;
+  create: (payload: TRequest) => Promise<TResponse>;
+  update: (id: number, payload: TRequest) => Promise<TResponse>;
+  remove: (id: number) => Promise<void>;
+}
+
+export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
+  resourceKey: string,
+  api: CrudLike<TResponse, TRequest, TListParams>,
+) {
+  const keys = {
+    all: [resourceKey] as const,
+    list: (params?: TListParams) => [resourceKey, 'list', params] as const,
+    detail: (id: number) => [resourceKey, 'detail', id] as const,
+  };
+
+  function useList(params?: TListParams) {
+    return useQuery({
+      queryKey: keys.list(params),
+      queryFn: () => api.list(params),
+    });
+  }
+
+  function useDetail(id: number | undefined) {
+    return useQuery({
+      queryKey: keys.detail(id!),
+      queryFn: () => api.get(id!),
+      enabled: !!id,
+    });
+  }
+
+  function useCreate() {
+    const qc = useQueryClient();
+    return useMutation({
+      mutationFn: (payload: TRequest) => api.create(payload),
+      onSuccess: () => qc.invalidateQueries({ queryKey: keys.all }),
+    });
+  }
+
+  function useUpdate() {
+    const qc = useQueryClient();
+    return useMutation({
+      mutationFn: ({ id, payload }: { id: number; payload: TRequest }) => api.update(id, payload),
+      onSuccess: (_data, variables) => {
+        qc.invalidateQueries({ queryKey: keys.all });
+        qc.invalidateQueries({ queryKey: keys.detail(variables.id) });
+      },
+    });
+  }
+
+  function useRemove() {
+    const qc = useQueryClient();
+    return useMutation({
+      mutationFn: (id: number) => api.remove(id),
+      onSuccess: () => qc.invalidateQueries({ queryKey: keys.all }),
+    });
+  }
+
+  return { keys, useList, useDetail, useCreate, useUpdate, useRemove };
+}
