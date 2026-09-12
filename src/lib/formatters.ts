@@ -57,6 +57,14 @@ export function formatPhone(value: string): string {
   return digits.replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, a, b, c) => (c ? `(${a}) ${b}-${c}` : `(${a}) ${b}`));
 }
 
+/** First letter of the first and last word — the standard "avatar" shorthand for a name. */
+export function getInitials(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '?';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
 export function formatCep(value: string): string {
   const digits = onlyDigits(value).slice(0, 8);
   return digits.replace(/^(\d{5})(\d)/, '$1-$2');

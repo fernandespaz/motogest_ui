@@ -8,7 +8,29 @@ export const apiClient = axios.create({
   },
 });
 
+function isSessionExpired(): boolean {
+  const { token, expiresAt } = useAuthStore.getState();
+  return !!token && !!expiresAt && Date.now() >= expiresAt;
+}
+
+function forceReauth(requestUrl?: string) {
+  const isLoginRequest = requestUrl?.includes('/auth/login');
+  if (isLoginRequest) return;
+  useAuthStore.getState().logout();
+  if (typeof window !== 'undefined') {
+    window.location.assign('/login?sessao=expirada');
+  }
+}
+
 apiClient.interceptors.request.use((config) => {
+  // The JWT's own lifetime (expiresAt, tracked from expiraEmSegundos at login) is
+  // known client-side — catching it here means the very first request after expiry
+  // redirects immediately instead of letting every subsequent click hit the API
+  // and come back with a 401/403 the user has no way to act on.
+  if (isSessionExpired()) {
+    forceReauth(config.url);
+    return Promise.reject(new axios.CanceledError('Sessão expirada'));
+  }
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -27,15 +49,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
-        useAuthStore.getState().logout();
-        if (typeof window !== 'undefined') {
-          window.location.assign('/login?sessao=expirada');
-        }
-      }
+      forceReauth(error.config?.url);
     }
     if (error.response?.status === 403) {
+      // This backend has, in practice, returned 403 (not 401) for a token that's
+      // no longer valid server-side — if our own record of the session says it
+      // should already be expired, treat it as the same case instead of showing
+      // a "sem permissão" toast that never goes away no matter what the user does.
+      if (isSessionExpired()) {
+        forceReauth(error.config?.url);
+        return Promise.reject(error);
+      }
       return Promise.reject(new ApiForbiddenError());
     }
     return Promise.reject(error);

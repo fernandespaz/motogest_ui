@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { LogIn, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/Field';
@@ -28,6 +28,8 @@ export function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
   const location = useLocation() as { state?: { from?: { pathname: string } } };
+  const [searchParams] = useSearchParams();
+  const sessaoExpirada = searchParams.get('sessao') === 'expirada';
 
   const {
     register,
@@ -97,6 +99,12 @@ export function LoginPage() {
         >
           <h2 className="text-2xl font-semibold text-ink">Acessar plataforma</h2>
           <p className="mb-7 mt-1.5 text-sm text-ink-muted">Entre com sua conta da oficina para continuar.</p>
+
+          {sessaoExpirada && (
+            <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-warning">
+              Sua sessão expirou. Faça login novamente para continuar.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
             <Input

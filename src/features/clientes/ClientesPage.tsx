@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Field';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
-import { formatDocumento } from '@/lib/formatters';
+import { formatDocumento, formatPhone, getInitials } from '@/lib/formatters';
 import { ClienteFormModal } from './ClienteFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -49,7 +49,11 @@ export function ClientesPage() {
     <div>
       <PageHeader
         title="Clientes"
-        subtitle="Cadastro de pessoas físicas e jurídicas, com os veículos vinculados"
+        subtitle={
+          data
+            ? `${data.totalElements} ${data.totalElements === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}, com os veículos vinculados`
+            : 'Cadastro de pessoas físicas e jurídicas, com os veículos vinculados'
+        }
         action={
           <Button onClick={() => setModalCliente(null)}>
             <Plus size={18} /> Novo cliente
@@ -58,11 +62,11 @@ export function ClientesPage() {
       />
 
       <div className="mb-4 max-w-sm">
-        <Input
+        <SearchInput
           placeholder="Buscar por nome, CPF/CNPJ ou placa..."
           value={busca}
-          onChange={(e) => {
-            setBusca(e.target.value);
+          onChange={(value) => {
+            setBusca(value);
             setPage(0);
           }}
         />
@@ -79,25 +83,40 @@ export function ClientesPage() {
             {
               header: 'Nome',
               render: (row) => (
-                <div>
-                  <p className="font-medium text-ink">{row.nome}</p>
-                  <p className="text-xs text-ink-muted">
-                    {formatDocumento(row.documento ?? '', row.tipoPessoa === 'PJ' ? 'PJ' : 'PF')}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                    {getInitials(row.nome ?? '?')}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-ink">{row.nome}</p>
+                    <p className="font-mono text-xs text-ink-muted">
+                      {formatDocumento(row.documento ?? '', row.tipoPessoa === 'PJ' ? 'PJ' : 'PF')}
+                    </p>
+                  </div>
                 </div>
               ),
             },
             { header: 'Tipo', render: (row) => <Badge>{row.tipoPessoa === 'PJ' ? 'Jurídica' : 'Física'}</Badge>, hideBelow: 'sm' },
-            { header: 'Contato', render: (row) => row.telefone || row.email || '—', hideBelow: 'md' },
+            {
+              header: 'Contato',
+              render: (row) => (row.telefone ? formatPhone(row.telefone) : row.email || '—'),
+              hideBelow: 'md',
+            },
             {
               header: 'Veículos',
               render: (row) =>
                 row.veiculos && row.veiculos.length > 0 ? (
-                  <span className="text-xs text-ink-muted">
-                    {row.veiculos.map((v) => v.placa).join(', ')}
-                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {row.veiculos.map((v) => (
+                      <Badge key={v.id}>
+                        <span className="font-mono">{v.placa}</span>
+                      </Badge>
+                    ))}
+                  </div>
                 ) : (
-                  <span className="text-xs text-ink-muted">—</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
+                    <Bike size={13} /> Nenhum
+                  </span>
                 ),
               hideBelow: 'md',
             },

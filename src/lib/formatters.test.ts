@@ -8,6 +8,7 @@ import {
   formatDateTime,
   formatDocumento,
   formatPhone,
+  getInitials,
   onlyDigits,
   toDateInputValue,
   toDateTimeLocalValue,
@@ -105,6 +106,20 @@ describe('formatCep', () => {
 
   it('leaves a partial CEP unmasked', () => {
     expect(formatCep('0131')).toBe('0131');
+  });
+});
+
+describe('getInitials', () => {
+  it('takes the first letter of the first and last word', () => {
+    expect(getInitials('Marcos Vinícius Andrade')).toBe('MA');
+  });
+
+  it('uses the first two letters of a single-word name', () => {
+    expect(getInitials('Madonna')).toBe('MA');
+  });
+
+  it('falls back to "?" for an empty name', () => {
+    expect(getInitials('  ')).toBe('?');
   });
 });
 
