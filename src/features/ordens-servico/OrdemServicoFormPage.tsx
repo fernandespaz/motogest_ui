@@ -27,7 +27,7 @@ import type { ClienteResponse, OrdemServicoStatus, VeiculoResponse } from '@/api
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toDateTimeLocalValue } from '@/lib/formatters';
 import { ordensServicoApi } from '@/api/endpoints/ordensServico';
-import { openBlobInNewTab } from '@/lib/downloadBlob';
+import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -138,8 +138,7 @@ export function OrdemServicoFormPage() {
   async function baixarPdf() {
     if (!osId) return;
     try {
-      const blob = await ordensServicoApi.pdf(osId);
-      openBlobInNewTab(blob, `os-${os?.numero ?? osId}.pdf`);
+      await openPdfInNewTab(() => ordensServicoApi.pdf(osId), `os-${os?.numero ?? osId}.pdf`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível gerar o PDF.'));
     }

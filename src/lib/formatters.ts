@@ -5,6 +5,13 @@ export function formatCurrency(value: number | undefined | null): string {
 
 export function formatDate(value: string | undefined | null): string {
   if (!value) return '—';
+  // Date-only strings ("YYYY-MM-DD") must not go through Date parsing — that
+  // reads them as UTC midnight and can shift a day back in western timezones.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return `${day}/${month}/${year}`;
+  }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('pt-BR');

@@ -9,7 +9,9 @@ export const caixaApi = {
       .get<CaixaMovimentoResponse[]>('/api/v1/caixa/movimentos/periodo', { params: { inicio, fim } })
       .then((r) => r.data),
   saldo: (inicio: string, fim: string) =>
-    apiClient.get<number>('/api/v1/caixa/saldo', { params: { inicio, fim } }).then((r) => r.data),
+    apiClient
+      .get<{ saldo: number }>('/api/v1/caixa/saldo', { params: { inicio, fim } })
+      .then((r) => r.data.saldo),
   registrar: (payload: CaixaMovimentoRequest) =>
     apiClient.post<CaixaMovimentoResponse>('/api/v1/caixa/movimentos', payload).then((r) => r.data),
 };

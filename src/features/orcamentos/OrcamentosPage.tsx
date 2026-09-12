@@ -20,7 +20,7 @@ import type { OrcamentoResponse } from '@/api/types';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orcamentoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { orcamentosApi } from '@/api/endpoints/orcamentos';
-import { openBlobInNewTab } from '@/lib/downloadBlob';
+import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -49,8 +49,7 @@ export function OrcamentosPage() {
 
   async function baixarPdf(row: OrcamentoResponse) {
     try {
-      const blob = await orcamentosApi.pdf(row.id!);
-      openBlobInNewTab(blob, `orcamento-${row.id}.pdf`);
+      await openPdfInNewTab(() => orcamentosApi.pdf(row.id!), `orcamento-${row.id}.pdf`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível gerar o PDF.'));
     }
