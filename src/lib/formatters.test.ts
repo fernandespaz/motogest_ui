@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatCep,
   formatCnpj,
   formatCpf,
   formatCurrency,
@@ -90,6 +91,20 @@ describe('formatPhone', () => {
 
   it('masks a mobile (11 digits)', () => {
     expect(formatPhone('11912345678')).toBe('(11) 91234-5678');
+  });
+});
+
+describe('formatCep', () => {
+  it('masks a full 8-digit CEP', () => {
+    expect(formatCep('01310100')).toBe('01310-100');
+  });
+
+  it('ignores extra digits beyond 8', () => {
+    expect(formatCep('013101009999')).toBe('01310-100');
+  });
+
+  it('leaves a partial CEP unmasked', () => {
+    expect(formatCep('0131')).toBe('0131');
   });
 });
 

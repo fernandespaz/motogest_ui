@@ -12,7 +12,7 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { useClientes } from '@/hooks/useClientes';
-import { useVeiculos } from '@/hooks/useVeiculos';
+import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useUsuarios } from '@/hooks/useUsuarios';
 import {
   useCreateOrdemServico,
@@ -80,7 +80,7 @@ export function OrdemServicoFormPage() {
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { itens: [] } });
   const { control, register, handleSubmit, watch, reset, formState: { errors } } = methods;
   const clienteId = watch('clienteId');
-  const { data: veiculos } = useVeiculos({ clienteId: clienteId || undefined, size: 100 });
+  const { data: veiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const encerrada = isEditing && ['CONCLUIDA', 'CANCELADA', 'ENTREGUE'].includes(os?.status ?? '');
 
@@ -223,7 +223,7 @@ export function OrdemServicoFormPage() {
                       render={({ field }) => (
                         <Select label="Veículo" required error={errors.veiculoId?.message} value={field.value ?? 0} onChange={(e) => field.onChange(Number(e.target.value))}>
                           <option value={0}>Selecione um veículo</option>
-                          {veiculos?.content?.map((v: VeiculoResponse) => (
+                          {veiculos?.map((v: VeiculoResponse) => (
                             <option key={v.id} value={v.id}>
                               {v.placa} — {v.marca} {v.modelo}
                             </option>

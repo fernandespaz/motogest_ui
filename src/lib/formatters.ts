@@ -57,6 +57,11 @@ export function formatPhone(value: string): string {
   return digits.replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, a, b, c) => (c ? `(${a}) ${b}-${c}` : `(${a}) ${b}`));
 }
 
+export function formatCep(value: string): string {
+  const digits = onlyDigits(value).slice(0, 8);
+  return digits.replace(/^(\d{5})(\d)/, '$1-$2');
+}
+
 export function toDateInputValue(value: string | undefined | null): string {
   if (!value) return '';
   return value.slice(0, 10);

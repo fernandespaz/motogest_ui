@@ -235,7 +235,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os veiculos da oficina corrente */
+        /**
+         * Lista os veiculos da oficina corrente
+         * @description Para os veiculos de um cliente especifico, use GET /clientes/{id} (ja devolve a lista embutida)
+         */
         get: operations["listar"];
         put?: never;
         /** Cadastra um novo veiculo vinculado a um cliente */
@@ -638,10 +641,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os clientes da oficina corrente, com filtro opcional por nome */
+        /**
+         * Lista os clientes da oficina corrente
+         * @description Filtro opcional por nome, ou por 'busca' (nome, CPF/CNPJ ou placa de qualquer veiculo vinculado — tem prioridade sobre 'nome' quando os dois sao informados)
+         */
         get: operations["listar_12"];
         put?: never;
-        /** Cadastra um novo cliente (PF ou PJ) */
+        /**
+         * Cadastra um novo cliente (PF ou PJ)
+         * @description Aceita uma lista opcional de veiculos para cadastrar junto, no mesmo fluxo inicial
+         */
         post: operations["criar_10"];
         delete?: never;
         options?: never;
@@ -1311,6 +1320,21 @@ export interface components {
             cep?: string;
             observacoes?: string;
             ativo?: boolean;
+            veiculos?: components["schemas"]["VeiculoDoClienteRequest"][];
+        };
+        VeiculoDoClienteRequest: {
+            placa: string;
+            marca?: string;
+            modelo?: string;
+            /** Format: int32 */
+            anoFabricacao?: number;
+            /** Format: int32 */
+            anoModelo?: number;
+            cor?: string;
+            /** Format: int32 */
+            kmAtual?: number;
+            chassi?: string;
+            observacoes?: string;
         };
         ClienteResponse: {
             /** Format: int64 */
@@ -1329,6 +1353,7 @@ export interface components {
             cep?: string;
             observacoes?: string;
             ativo?: boolean;
+            veiculos?: components["schemas"]["VeiculoResponse"][];
         };
         AgendamentoRequest: {
             /** Format: int64 */
@@ -2464,7 +2489,6 @@ export interface operations {
     listar: {
         parameters: {
             query: {
-                clienteId?: number;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -3269,6 +3293,7 @@ export interface operations {
         parameters: {
             query: {
                 nome?: string;
+                busca?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;

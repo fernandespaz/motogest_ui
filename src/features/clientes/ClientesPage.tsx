@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
 import { formatDocumento } from '@/lib/formatters';
@@ -17,12 +18,21 @@ import { extractErrorMessage } from '@/api/client';
 
 export function ClientesPage() {
   const [page, setPage] = useState(0);
-  const [nome, setNome] = useState('');
+  const [busca, setBusca] = useState('');
   const [modalCliente, setModalCliente] = useState<ClienteResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<ClienteResponse | null>(null);
+  const [notFoundDismissed, setNotFoundDismissed] = useState(true);
 
-  const { data, isLoading } = useClientes({ page, size: 20, nome: nome || undefined });
+  const { data, isLoading, isFetching } = useClientes({ page, size: 20, busca: busca || undefined });
   const deleteMutation = useDeleteCliente();
+
+  // Only pops up once per completed search, and only when the user actually typed
+  // something — an empty tenant on first load shouldn't be treated as "not found".
+  useEffect(() => {
+    if (busca && !isFetching && data && data.totalElements === 0) {
+      setNotFoundDismissed(false);
+    }
+  }, [busca, isFetching, data]);
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -39,7 +49,7 @@ export function ClientesPage() {
     <div>
       <PageHeader
         title="Clientes"
-        subtitle="Cadastro de pessoas físicas e jurídicas"
+        subtitle="Cadastro de pessoas físicas e jurídicas, com os veículos vinculados"
         action={
           <Button onClick={() => setModalCliente(null)}>
             <Plus size={18} /> Novo cliente
@@ -49,10 +59,10 @@ export function ClientesPage() {
 
       <div className="mb-4 max-w-sm">
         <Input
-          placeholder="Buscar por nome..."
-          value={nome}
+          placeholder="Buscar por nome, CPF/CNPJ ou placa..."
+          value={busca}
           onChange={(e) => {
-            setNome(e.target.value);
+            setBusca(e.target.value);
             setPage(0);
           }}
         />
@@ -79,6 +89,18 @@ export function ClientesPage() {
             },
             { header: 'Tipo', render: (row) => <Badge>{row.tipoPessoa === 'PJ' ? 'Jurídica' : 'Física'}</Badge>, hideBelow: 'sm' },
             { header: 'Contato', render: (row) => row.telefone || row.email || '—', hideBelow: 'md' },
+            {
+              header: 'Veículos',
+              render: (row) =>
+                row.veiculos && row.veiculos.length > 0 ? (
+                  <span className="text-xs text-ink-muted">
+                    {row.veiculos.map((v) => v.placa).join(', ')}
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-muted">—</span>
+                ),
+              hideBelow: 'md',
+            },
             {
               header: 'Status',
               render: (row) => <Badge tone={row.ativo === false ? 'neutral' : 'success'}>{row.ativo === false ? 'Inativo' : 'Ativo'}</Badge>,
@@ -130,6 +152,13 @@ export function ClientesPage() {
         loading={deleteMutation.isPending}
         onConfirm={confirmDelete}
         onCancel={() => setDeleting(null)}
+      />
+
+      <InfoDialog
+        open={!notFoundDismissed}
+        title="Nada encontrado"
+        description="Nenhum dado encontrado para o cliente ou veículo informado."
+        onClose={() => setNotFoundDismissed(true)}
       />
     </div>
   );

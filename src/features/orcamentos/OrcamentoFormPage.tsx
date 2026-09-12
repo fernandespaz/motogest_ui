@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Field';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useClientes } from '@/hooks/useClientes';
-import { useVeiculos } from '@/hooks/useVeiculos';
+import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import type { ClienteResponse, VeiculoResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
@@ -56,7 +56,7 @@ export function OrcamentoFormPage() {
   });
   const { control, register, handleSubmit, watch, reset, formState: { errors } } = methods;
   const clienteId = watch('clienteId');
-  const { data: veiculos } = useVeiculos({ clienteId: clienteId || undefined, size: 100 });
+  const { data: veiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
 
@@ -154,7 +154,7 @@ export function OrcamentoFormPage() {
                     render={({ field }) => (
                       <Select label="Veículo" required error={errors.veiculoId?.message} value={field.value ?? 0} onChange={(e) => field.onChange(Number(e.target.value))}>
                         <option value={0}>Selecione um veículo</option>
-                        {veiculos?.content?.map((v: VeiculoResponse) => (
+                        {veiculos?.map((v: VeiculoResponse) => (
                           <option key={v.id} value={v.id}>
                             {v.placa} — {v.marca} {v.modelo}
                           </option>

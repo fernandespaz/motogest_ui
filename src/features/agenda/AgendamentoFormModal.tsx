@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea, Checkbox } from '@/components/ui/Field';
 import { useCreateAgendamento, useUpdateAgendamento } from '@/hooks/useAgenda';
 import { useClientes } from '@/hooks/useClientes';
-import { useVeiculos } from '@/hooks/useVeiculos';
+import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useServicos } from '@/hooks/useServicos';
 import type { AgendamentoResponse, ClienteResponse, ServicoResponse, VeiculoResponse } from '@/api/types';
 import { toDateTimeLocalValue } from '@/lib/formatters';
@@ -53,7 +53,7 @@ export function AgendamentoFormModal({
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { servicoIds: [] } });
 
   const clienteId = watch('clienteId');
-  const { data: veiculos } = useVeiculos({ clienteId: clienteId || undefined, size: 100 });
+  const { data: veiculos } = useVeiculosDoCliente(clienteId || undefined);
   const { data: servicos } = useServicos({ size: 100 });
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export function AgendamentoFormModal({
           render={({ field }) => (
             <Select label="Veículo" required error={errors.veiculoId?.message} value={field.value ?? 0} onChange={(e) => field.onChange(Number(e.target.value))}>
               <option value={0}>Selecione um veículo</option>
-              {veiculos?.content?.map((v: VeiculoResponse) => (
+              {veiculos?.map((v: VeiculoResponse) => (
                 <option key={v.id} value={v.id}>
                   {v.placa} — {v.marca} {v.modelo}
                 </option>

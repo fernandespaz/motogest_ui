@@ -11,6 +11,7 @@ export type TipoPessoa = NonNullable<ClienteRequest['tipoPessoa']>;
 
 export type VeiculoRequest = Schemas['VeiculoRequest'];
 export type VeiculoResponse = Schemas['VeiculoResponse'];
+export type VeiculoDoClienteRequest = Schemas['VeiculoDoClienteRequest'];
 
 export type AgendamentoRequest = Schemas['AgendamentoRequest'];
 export type AgendamentoResponse = Schemas['AgendamentoResponse'];
