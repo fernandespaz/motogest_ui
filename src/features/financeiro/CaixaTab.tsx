@@ -2,15 +2,21 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format, startOfMonth } from 'date-fns';
-import { Plus, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { format, startOfMonth, addDays } from 'date-fns';
+import { Plus, ArrowUpCircle, ArrowDownCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { DataTable } from '@/components/ui/DataTable';
 import { Badge } from '@/components/ui/Badge';
-import { useCaixaPeriodo, useCaixaSaldo, useRegistrarCaixa } from '@/hooks/useFinanceiro';
+import {
+  useCaixaPeriodo,
+  useCaixaSaldo,
+  useRegistrarCaixa,
+  useContasPagarPendentes,
+  useContasReceberPendentes,
+} from '@/hooks/useFinanceiro';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -35,6 +41,13 @@ export function CaixaTab() {
   const { data: saldo } = useCaixaSaldo(inicioIso, fimIso);
   const registrar = useRegistrarCaixa();
 
+  const proximos7dInicio = format(new Date(), 'yyyy-MM-dd');
+  const proximos7dFim = format(addDays(new Date(), 7), 'yyyy-MM-dd');
+  const { data: contasPagarProximas } = useContasPagarPendentes(proximos7dInicio, proximos7dFim);
+  const { data: contasReceberProximas } = useContasReceberPendentes(proximos7dInicio, proximos7dFim);
+  const totalAPagar = (contasPagarProximas ?? []).reduce((sum, c) => sum + (c.valor ?? 0), 0);
+  const totalAReceber = (contasReceberProximas ?? []).reduce((sum, c) => sum + (c.valor ?? 0), 0);
+
   const {
     register,
     handleSubmit,
@@ -55,6 +68,31 @@ export function CaixaTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Card>
+          <CardBody className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-50 text-danger">
+              <ArrowDownRight size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-ink-muted">A pagar nos próximos 7 dias</p>
+              <p className="text-lg font-semibold text-ink">{formatCurrency(totalAPagar)}</p>
+            </div>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardBody className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-success">
+              <ArrowUpRight size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-ink-muted">A receber nos próximos 7 dias</p>
+              <p className="text-lg font-semibold text-ink">{formatCurrency(totalAReceber)}</p>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
       <div className="flex flex-wrap items-end gap-3">
         <Input label="De" type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
         <Input label="Até" type="date" value={fim} onChange={(e) => setFim(e.target.value)} />

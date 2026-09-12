@@ -11,6 +11,8 @@ import { formatCnpj, formatCpf, onlyDigits } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'cliente-form';
+
 const schema = z.object({
   tipoPessoa: z.enum(['PF', 'PJ']),
   nome: z.string().min(1, 'Informe o nome'),
@@ -99,8 +101,23 @@ export function ClienteFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar cliente' : 'Novo cliente'} size="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar cliente' : 'Novo cliente'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select label="Tipo de pessoa" required {...register('tipoPessoa')}>
             <option value="PF">Pessoa física</option>
@@ -139,15 +156,6 @@ export function ClienteFormModal({
         </div>
         <Textarea label="Observações" {...register('observacoes')} />
         {isEditing && <Checkbox label="Cliente ativo" {...register('ativo')} />}
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

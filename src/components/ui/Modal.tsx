@@ -11,6 +11,9 @@ interface ModalProps {
   title?: ReactNode;
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Rendered in a bar pinned to the modal's bottom, outside the scrollable body — for
+   *  long forms whose Salvar/Cancelar buttons would otherwise scroll out of view. */
+  footer?: ReactNode;
 }
 
 const sizeStyles = {
@@ -20,7 +23,7 @@ const sizeStyles = {
   xl: 'max-w-4xl',
 };
 
-export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -49,12 +52,12 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             exit={{ opacity: 0, y: 12, scale: 0.98, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={clsx(
-              'relative z-10 max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl',
+              'relative z-10 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl',
               sizeStyles[size],
             )}
           >
             {title && (
-              <div className="sticky top-0 flex items-center justify-between border-b border-border bg-surface/95 px-5 py-4 backdrop-blur">
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
                 <h2 className="text-base font-semibold text-ink">{title}</h2>
                 <button
                   onClick={onClose}
@@ -65,7 +68,10 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
                 </button>
               </div>
             )}
-            <div className="p-5">{children}</div>
+            <div className="overflow-y-auto p-5">{children}</div>
+            {footer && (
+              <div className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4">{footer}</div>
+            )}
           </motion.div>
         </div>
       )}

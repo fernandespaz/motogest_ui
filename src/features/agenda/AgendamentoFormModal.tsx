@@ -14,6 +14,8 @@ import { toDateTimeLocalValue } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'agendamento-form';
+
 const schema = z.object({
   clienteId: z.coerce.number().positive('Selecione o cliente'),
   veiculoId: z.coerce.number().positive('Selecione o veículo'),
@@ -89,8 +91,23 @@ export function AgendamentoFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar agendamento' : 'Novo agendamento'} size="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar agendamento' : 'Novo agendamento'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Controller
           control={control}
           name="clienteId"
@@ -155,15 +172,6 @@ export function AgendamentoFormModal({
         </div>
 
         <Textarea label="Observações" {...register('observacoes')} />
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

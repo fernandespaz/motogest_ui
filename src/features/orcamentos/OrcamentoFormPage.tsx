@@ -3,7 +3,7 @@ import { FormProvider, useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,6 +16,7 @@ import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/us
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { formatCurrency } from '@/lib/formatters';
 
 const itemSchema = z.object({
   tipoItem: z.enum(['SERVICO', 'PRODUTO']),
@@ -99,14 +100,28 @@ export function OrcamentoFormPage() {
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
+  function compartilharWhatsApp() {
+    if (!orcamento?.tokenAprovacao) return;
+    const link = `${window.location.origin}/orcamentos/publico/${orcamento.tokenAprovacao}`;
+    const texto = `Olá! Segue o orçamento nº ${orcamento.id}${orcamento.clienteNome ? ` para ${orcamento.clienteNome}` : ''}, no valor de ${formatCurrency(orcamento.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
   return (
     <div>
       <PageHeader
         title={isEditing ? `Orçamento #${orcamentoId}` : 'Novo orçamento'}
         action={
-          <Button variant="secondary" onClick={() => navigate('/orcamentos')}>
-            <ArrowLeft size={16} /> Voltar
-          </Button>
+          <div className="flex items-center gap-2">
+            {orcamento?.tokenAprovacao && (
+              <Button variant="secondary" onClick={compartilharWhatsApp}>
+                <MessageCircle size={16} /> Compartilhar
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => navigate('/orcamentos')}>
+              <ArrowLeft size={16} /> Voltar
+            </Button>
+          </div>
         }
       />
 

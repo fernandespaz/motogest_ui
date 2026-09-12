@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileDown, Send, Check, X, Wrench, Trash2 } from 'lucide-react';
+import { Plus, FileDown, Send, Check, X, Wrench, Trash2, MessageCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,7 +19,7 @@ import { useCriarOSAPartirDeOrcamento } from '@/hooks/useOrdensServico';
 import type { OrcamentoResponse } from '@/api/types';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orcamentoStatusMeta, metaFor } from '@/lib/statusMeta';
-import { orcamentosApi } from '@/api/endpoints/orcamentos';
+import { buildOrcamentoPdfBlob } from './orcamentoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -49,10 +49,20 @@ export function OrcamentosPage() {
 
   async function baixarPdf(row: OrcamentoResponse) {
     try {
-      await openPdfInNewTab(() => orcamentosApi.pdf(row.id!), `orcamento-${row.id}.pdf`);
+      await openPdfInNewTab(() => buildOrcamentoPdfBlob(row), `orcamento-${row.id}.pdf`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível gerar o PDF.'));
     }
+  }
+
+  function compartilharWhatsApp(row: OrcamentoResponse) {
+    if (!row.tokenAprovacao) {
+      toast.error('Envie o orçamento ao cliente antes de compartilhar o link.');
+      return;
+    }
+    const link = `${window.location.origin}/orcamentos/publico/${row.tokenAprovacao}`;
+    const texto = `Olá! Segue o orçamento nº ${row.id} da ${row.clienteNome ? `oficina para ${row.clienteNome}` : 'oficina'}, no valor de ${formatCurrency(row.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
   }
 
   async function handleConverter(row: OrcamentoResponse) {
@@ -109,6 +119,18 @@ export function OrcamentosPage() {
                   >
                     <FileDown size={16} />
                   </button>
+                  {row.tokenAprovacao && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        compartilharWhatsApp(row);
+                      }}
+                      className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success"
+                      title="Compartilhar via WhatsApp"
+                    >
+                      <MessageCircle size={16} />
+                    </button>
+                  )}
                   {row.status === 'RASCUNHO' && (
                     <>
                       <button

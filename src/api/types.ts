@@ -20,6 +20,7 @@ export type AgendamentoStatus = NonNullable<AgendamentoRequest['status']>;
 export type OrcamentoRequest = Schemas['OrcamentoRequest'];
 export type OrcamentoResponse = Schemas['OrcamentoResponse'];
 export type OrcamentoStatus = NonNullable<OrcamentoResponse['status']>;
+export type OrcamentoPublicoResponse = Schemas['OrcamentoPublicoResponse'];
 
 export type ItemRequest = Schemas['ItemRequest'];
 export type ItemResponse = Schemas['ItemResponse'];
@@ -71,6 +72,7 @@ export type UsuarioResponse = Schemas['UsuarioResponse'];
 export type OficinaResponse = Schemas['OficinaResponse'];
 export type OficinaRegistrationRequest = Schemas['OficinaRegistrationRequest'];
 export type OficinaUpdateRequest = Schemas['OficinaUpdateRequest'];
+export type AdminOficinaResponse = Schemas['AdminOficinaResponse'];
 
 export type LicencaResponse = Schemas['LicencaResponse'];
 export type UpgradeLicencaRequest = Schemas['UpgradeLicencaRequest'];

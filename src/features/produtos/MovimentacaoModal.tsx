@@ -10,6 +10,8 @@ import type { ProdutoResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'movimentacao-form';
+
 const schema = z.object({
   tipo: z.enum(['ENTRADA', 'SAIDA', 'RESERVA', 'LIBERACAO_RESERVA', 'AJUSTE']),
   quantidade: z.coerce.number({ invalid_type_error: 'Informe a quantidade' }).positive('Informe uma quantidade positiva'),
@@ -59,8 +61,22 @@ export function MovimentacaoModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={`Movimentar estoque — ${produto?.nome ?? ''}`}>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Movimentar estoque — ${produto?.nome ?? ''}`}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={registrar.isPending}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={registrar.isPending}>
+            Registrar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <p className="text-sm text-ink-muted">
           Disponível: <span className="font-medium text-ink">{produto?.quantidadeDisponivel ?? 0}</span> · Reservado:{' '}
           <span className="font-medium text-ink">{produto?.quantidadeReservada ?? 0}</span>
@@ -74,15 +90,6 @@ export function MovimentacaoModal({
         </Select>
         <Input label="Quantidade" type="number" step="0.01" required error={errors.quantidade?.message} {...register('quantidade')} />
         <Textarea label="Observação" {...register('observacao')} />
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={registrar.isPending}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={registrar.isPending}>
-            Registrar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

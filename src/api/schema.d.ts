@@ -282,6 +282,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/orcamentos/{token}/rejeitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O cliente rejeita o orçamento (ENVIADO -> REJEITADO) */
+        post: operations["rejeitar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/orcamentos/{token}/aprovar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O cliente aprova o orçamento (ENVIADO -> APROVADO) */
+        post: operations["aprovar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/produtos": {
         parameters: {
             query?: never;
@@ -435,7 +469,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca o orcamento como rejeitado pelo cliente (ENVIADO -> REJEITADO) */
-        post: operations["rejeitar"];
+        post: operations["rejeitar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -469,24 +503,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca o orcamento como aprovado pelo cliente (ENVIADO -> APROVADO) */
-        post: operations["aprovar"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/oficinas/registrar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Registra uma nova oficina (tenant) e seu usuario administrador. Endpoint publico. */
-        post: operations["registrar_1"];
+        post: operations["aprovar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -643,7 +660,7 @@ export interface paths {
         get: operations["listar_13"];
         put?: never;
         /** Registra um lancamento manual de caixa */
-        post: operations["registrar_2"];
+        post: operations["registrar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -685,6 +702,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/oficinas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
+         * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
+         */
+        get: operations["listar_15"];
+        put?: never;
+        /**
+         * Cadastra uma nova oficina (tenant) e seu usuario administrador
+         * @description Requer o header X-Admin-Token. So o usuario root de plataforma cadastra novas oficinas.
+         */
+        post: operations["criar_12"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ordens-servico/{id}/status": {
         parameters: {
             query?: never;
@@ -717,6 +758,23 @@ export interface paths {
         head?: never;
         /** Atualiza apenas o status do agendamento */
         patch: operations["atualizarStatus_1"];
+        trace?: never;
+    };
+    "/api/v1/public/orcamentos/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta um orçamento pelo token do link público */
+        get: operations["buscar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/produtos/abaixo-do-minimo": {
@@ -1159,6 +1217,7 @@ export interface components {
             itens?: components["schemas"]["ItemResponse"][];
             /** Format: date-time */
             createdAt?: string;
+            tokenAprovacao?: string;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -1171,6 +1230,7 @@ export interface components {
             cidade?: string;
             uf?: string;
             cep?: string;
+            logoUrl?: string;
         };
         OficinaResponse: {
             /** Format: int64 */
@@ -1187,6 +1247,7 @@ export interface components {
             uf?: string;
             cep?: string;
             ativo?: boolean;
+            logoUrl?: string;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -1302,6 +1363,22 @@ export interface components {
             id?: number;
             nome?: string;
         };
+        OrcamentoPublicoResponse: {
+            /** Format: int64 */
+            id?: number;
+            oficinaNomeFantasia?: string;
+            clienteNome?: string;
+            veiculoPlaca?: string;
+            /** @enum {string} */
+            status?: "RASCUNHO" | "ENVIADO" | "APROVADO" | "REJEITADO" | "EXPIRADO" | "CONVERTIDO";
+            valorTotal?: number;
+            /** Format: int32 */
+            validadeDias?: number;
+            observacoes?: string;
+            itens?: components["schemas"]["ItemResponse"][];
+            /** Format: date-time */
+            createdAt?: string;
+        };
         MovimentacaoEstoqueRequest: {
             /** @enum {string} */
             tipo: "ENTRADA" | "SAIDA" | "RESERVA" | "LIBERACAO_RESERVA" | "AJUSTE";
@@ -1377,22 +1454,6 @@ export interface components {
             observacoesGerais?: string;
             itens?: components["schemas"]["ChecklistItemResponse"][];
         };
-        OficinaRegistrationRequest: {
-            razaoSocial: string;
-            nomeFantasia?: string;
-            cnpj: string;
-            email: string;
-            telefone?: string;
-            logradouro?: string;
-            numero?: string;
-            bairro?: string;
-            cidade?: string;
-            uf?: string;
-            cep?: string;
-            adminNome: string;
-            adminEmail: string;
-            adminSenha: string;
-        };
         UpgradeLicencaRequest: {
             plano: string;
             provedorPagamento: string;
@@ -1439,8 +1500,7 @@ export interface components {
             usuarioNome?: string;
         };
         LoginRequest: {
-            cnpj: string;
-            email: string;
+            identificador: string;
             senha: string;
         };
         LoginResponse: {
@@ -1456,6 +1516,22 @@ export interface components {
             email?: string;
             perfil?: string;
             permissoes?: string[];
+        };
+        OficinaRegistrationRequest: {
+            razaoSocial: string;
+            nomeFantasia?: string;
+            cnpj: string;
+            email: string;
+            telefone?: string;
+            logradouro?: string;
+            numero?: string;
+            bairro?: string;
+            cidade?: string;
+            uf?: string;
+            cep?: string;
+            adminNome: string;
+            adminEmail: string;
+            adminSenha: string;
         };
         Pageable: {
             /** Format: int32 */
@@ -1604,6 +1680,36 @@ export interface components {
         };
         PageResponseAgendamentoResponse: {
             content?: components["schemas"]["AgendamentoResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        AdminOficinaResponse: {
+            /** Format: int64 */
+            tenantId?: number;
+            razaoSocial?: string;
+            nomeFantasia?: string;
+            cnpj?: string;
+            email?: string;
+            logoUrl?: string;
+            ativo?: boolean;
+            /** @enum {string} */
+            statusLicenca?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
+            /** Format: date-time */
+            dataAtivacaoLicenca?: string;
+            /** Format: date-time */
+            dataExpiracaoLicenca?: string;
+            plano?: string;
+            licencaExpirada?: boolean;
+        };
+        PageResponseAdminOficinaResponse: {
+            content?: components["schemas"]["AdminOficinaResponse"][];
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
@@ -2492,6 +2598,50 @@ export interface operations {
             };
         };
     };
+    rejeitar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrcamentoPublicoResponse"];
+                };
+            };
+        };
+    };
+    aprovar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrcamentoPublicoResponse"];
+                };
+            };
+        };
+    };
     listar_3: {
         parameters: {
             query: {
@@ -2845,7 +2995,7 @@ export interface operations {
             };
         };
     };
-    rejeitar: {
+    rejeitar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2889,7 +3039,7 @@ export interface operations {
             };
         };
     };
-    aprovar: {
+    aprovar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2907,30 +3057,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrcamentoResponse"];
-                };
-            };
-        };
-    };
-    registrar_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OficinaRegistrationRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["OficinaResponse"];
                 };
             };
         };
@@ -3208,7 +3334,7 @@ export interface operations {
             };
         };
     };
-    registrar_2: {
+    registrar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -3302,6 +3428,52 @@ export interface operations {
             };
         };
     };
+    listar_15: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAdminOficinaResponse"];
+                };
+            };
+        };
+    };
+    criar_12: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OficinaRegistrationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OficinaResponse"];
+                };
+            };
+        };
+    };
     atualizarStatus: {
         parameters: {
             query: {
@@ -3346,6 +3518,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgendamentoResponse"];
+                };
+            };
+        };
+    };
+    buscar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrcamentoPublicoResponse"];
                 };
             };
         };

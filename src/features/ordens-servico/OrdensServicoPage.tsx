@@ -12,7 +12,7 @@ import { useOrdensServico } from '@/hooks/useOrdensServico';
 import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
-import { ordensServicoApi } from '@/api/endpoints/ordensServico';
+import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -28,7 +28,7 @@ export function OrdensServicoPage() {
 
   async function baixarPdf(row: OrdemServicoResponse) {
     try {
-      await openPdfInNewTab(() => ordensServicoApi.pdf(row.id!), `os-${row.numero ?? row.id}.pdf`);
+      await openPdfInNewTab(() => buildOrdemServicoPdfBlob(row), `os-${row.numero ?? row.id}.pdf`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível gerar o PDF.'));
     }

@@ -22,6 +22,7 @@ export function useCriarOSAPartirDeOrcamento() {
     mutationFn: ({ orcamentoId, usuarioResponsavelId }: { orcamentoId: number; usuarioResponsavelId?: number }) =>
       ordensServicoApi.criarAPartirDeOrcamento(orcamentoId, usuarioResponsavelId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -31,5 +32,6 @@ export function useAtualizarStatusOS() {
     mutationFn: ({ id, status }: { id: number; status: OrdemServicoStatus }) =>
       ordensServicoApi.atualizarStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

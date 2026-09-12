@@ -1,0 +1,430 @@
+<title>MotoGest Redesign</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#F6F3EC; --surface:#FFFDF8; --surface-2:#FBF8F1; --line:#E1D9C8;
+    --ink:#20242C; --ink-soft:#5C6270;
+    --graphite:#1C1F26; --graphite-2:#262B35; --graphite-3:#333A47; --line-dark:#3A4150;
+    --orange:#FF5A1F; --orange-dark:#D9450F; --orange-bg:#FFE9DF;
+    --green:#3FA772; --green-bg:#E4F3EB;
+    --amber:#C9820A; --amber-bg:#FBF0D9;
+    --red:#D8383D; --red-bg:#FBE6E6;
+    --blue:#3468B0; --blue-bg:#E6EDF7;
+    --steel:#6B7280; --steel-bg:#EEF0F2;
+    --shadow:0 1px 2px rgba(28,31,38,.06), 0 6px 20px rgba(28,31,38,.06);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14161B; --surface:#1C1F26; --surface-2:#20242C; --line:#333A47;
+      --ink:#F1EFE9; --ink-soft:#9BA1AE;
+      --graphite:#0F1115; --graphite-2:#1C1F26; --graphite-3:#262B35; --line-dark:#3A4150;
+      --orange:#FF7A45; --orange-dark:#FF5A1F; --orange-bg:#3A2318;
+      --green:#5FC492; --green-bg:#173225;
+      --amber:#E0A83C; --amber-bg:#332608;
+      --red:#F0696D; --red-bg:#341717;
+      --blue:#6C97CE; --blue-bg:#1B2836;
+      --steel:#9AA1AC; --steel-bg:#22262D;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161B; --surface:#1C1F26; --surface-2:#20242C; --line:#333A47;
+    --ink:#F1EFE9; --ink-soft:#9BA1AE;
+    --graphite:#0F1115; --graphite-2:#1C1F26; --graphite-3:#262B35; --line-dark:#3A4150;
+    --orange:#FF7A45; --orange-dark:#FF5A1F; --orange-bg:#3A2318;
+    --green:#5FC492; --green-bg:#173225;
+    --amber:#E0A83C; --amber-bg:#332608;
+    --red:#F0696D; --red-bg:#341717;
+    --blue:#6C97CE; --blue-bg:#1B2836;
+    --steel:#9AA1AC; --steel-bg:#22262D;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;line-height:1.5;}
+  h1,h2,h3,h4{font-family:'Archivo',sans-serif;letter-spacing:-0.01em;color:var(--ink);margin:0;text-wrap:balance;}
+  .mono{font-family:'IBM Plex Mono',monospace;letter-spacing:.01em;}
+  a{color:var(--orange-dark);}
+
+  .shell{display:flex;min-height:100vh;max-width:1400px;margin:0 auto;}
+  .toc{width:250px;flex-shrink:0;background:var(--graphite);color:#C4C8D2;position:sticky;top:0;height:100vh;overflow-y:auto;padding:26px 18px;}
+  .toc .brand{display:flex;align-items:center;gap:9px;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;margin-bottom:22px;padding:0 6px;}
+  .toc .brand span.o{color:var(--orange);}
+  .toc a{display:block;color:#C4C8D2;text-decoration:none;font-size:13.2px;font-weight:500;padding:7px 10px;border-radius:7px;margin-bottom:1px;}
+  .toc a:hover{background:var(--graphite-2);color:#fff;}
+  .toc .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:#6C7383;font-weight:700;padding:14px 10px 5px;}
+
+  .main{flex:1;min-width:0;padding:44px 48px 100px;}
+  .hero{margin-bottom:40px;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--orange-dark);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+  .hero h1{font-size:34px;font-weight:800;max-width:700px;}
+  .hero .lead{color:var(--ink-soft);font-size:15.5px;max-width:640px;margin-top:12px;}
+  .hero .source{margin-top:18px;padding:12px 14px;border:1px dashed var(--line);border-radius:10px;background:var(--surface);font-size:12.8px;color:var(--ink-soft);display:flex;gap:8px;align-items:flex-start;}
+
+  section{margin-bottom:52px;scroll-margin-top:20px;}
+  section > h2{font-size:21px;margin-bottom:6px;}
+  section > .sec-sub{color:var(--ink-soft);font-size:13.8px;margin-bottom:20px;max-width:680px;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);}
+  .card + .card{margin-top:14px;}
+  .card-pad{padding:18px 20px;}
+
+  /* swatches */
+  .swatch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+  .swatch{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);}
+  .swatch .chip{height:56px;}
+  .swatch .lbl{padding:9px 11px;}
+  .swatch .lbl b{display:block;font-size:12.5px;font-weight:700;}
+  .swatch .lbl span{display:block;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);margin-top:1px;}
+
+  /* type specimen */
+  .type-row{display:flex;align-items:baseline;gap:18px;padding:14px 0;border-bottom:1px solid var(--line);}
+  .type-row:last-child{border-bottom:none;}
+  .type-row .tag{width:150px;flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);}
+  .type-row .sample-archivo{font-family:'Archivo',sans-serif;font-weight:700;font-size:22px;}
+  .type-row .sample-inter{font-family:'Inter',sans-serif;font-size:16px;}
+  .type-row .sample-mono{font-family:'IBM Plex Mono',monospace;font-size:14px;}
+
+  /* pills, matching prototype exactly */
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:100px;font-size:12.5px;font-weight:600;white-space:nowrap;}
+  .pill-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+  .pill-steel{background:var(--steel-bg);color:var(--steel);}
+  .pill-amber{background:var(--amber-bg);color:var(--amber);}
+  .pill-green{background:var(--green-bg);color:var(--green);}
+  .pill-red{background:var(--red-bg);color:var(--red);}
+  .pill-blue{background:var(--blue-bg);color:var(--blue);}
+  .pill-orange{background:var(--orange-bg);color:var(--orange-dark);}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-weight:600;font-size:13.8px;border:1px solid transparent;}
+  .btn-primary{background:var(--orange);color:#fff;}
+  .btn-dark{background:var(--graphite);color:#fff;}
+  .btn-outline{background:transparent;border-color:var(--line);color:var(--ink);}
+
+  /* comparison table */
+  table.cmp{width:100%;border-collapse:collapse;font-size:13.6px;}
+  table.cmp th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;padding:9px 14px;border-bottom:1px solid var(--line);}
+  table.cmp td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  table.cmp tr:last-child td{border-bottom:none;}
+  table.cmp td.col-req{font-weight:600;width:22%;}
+  table.cmp td.col-now{color:var(--ink-soft);width:26%;}
+  table.cmp td.col-prop{width:32%;}
+  table.cmp td.col-status{width:20%;}
+
+  .status-ok{color:var(--green);font-weight:700;}
+  .status-gap{color:var(--red);font-weight:700;}
+  .status-partial{color:var(--amber);font-weight:700;}
+  .status-new{color:var(--blue);font-weight:700;}
+
+  ul.plain{margin:0;padding-left:20px;}
+  ul.plain li{margin-bottom:8px;font-size:13.8px;}
+  ul.plain li b{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);}
+  .flow b{color:var(--ink);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr;}}
+
+  .shell-preview{border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .shell-preview .bar{background:var(--graphite);color:#fff;padding:10px 14px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .shell-preview .bar .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);}
+  .shell-preview .body{padding:16px;background:var(--surface);}
+
+  .decision{background:var(--orange-bg);border:1px solid var(--orange);border-radius:10px;padding:14px 16px;margin-top:10px;}
+  .decision .tag{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--orange-dark);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+  .decision p{font-size:13.5px;margin:0;color:var(--ink);}
+
+  .checklist{list-style:none;margin:0;padding:0;}
+  .checklist li{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.8px;}
+  .checklist li:last-child{border-bottom:none;}
+  .checklist .box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line);flex-shrink:0;margin-top:1px;}
+
+  .phase{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line);}
+  .phase:last-child{border-bottom:none;}
+  .phase .n{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;color:var(--orange);width:28px;flex-shrink:0;}
+  .phase h4{font-size:14.5px;margin-bottom:4px;}
+  .phase p{font-size:13px;color:var(--ink-soft);margin:0;}
+
+  @media (max-width:860px){
+    .shell{flex-direction:column;}
+    .toc{position:static;width:100%;height:auto;display:flex;overflow-x:auto;gap:4px;white-space:nowrap;}
+    .toc .brand{display:none;}
+    .toc .grp{display:none;}
+    .main{padding:28px 20px 80px;}
+  }
+</style>
+
+<div class="shell">
+  <nav class="toc">
+    <div class="brand">MOTO<span class="o">GEST</span></div>
+    <div class="grp">Visão geral</div>
+    <a href="#sistema">Sistema visual extraído</a>
+    <a href="#comparacao">Atual vs. proposto</a>
+    <div class="grp">Fluxos</div>
+    <a href="#login">Tela de login</a>
+    <a href="#perfis">Perfis de acesso</a>
+    <a href="#layout">Layout por perfil</a>
+    <div class="grp">Execução</div>
+    <a href="#componentes">Componentes novos</a>
+    <a href="#gaps">Gaps de backend</a>
+    <a href="#plano">Plano de implementação</a>
+    <a href="#decisoes">Decisões pendentes</a>
+  </nav>
+
+  <main class="main">
+    <div class="hero">
+      <div class="eyebrow">Análise de UI/UX · Handoff para implementação</div>
+      <h1>Redesign do MotoGest a partir do protótipo</h1>
+      <p class="lead">Li o protótipo estático (<span class="mono">prototipo-oficina.html</span>) e organizei abaixo o sistema visual, os fluxos e os pontos que dependem de decisão ou de backend antes de qualquer linha de código ser trocada na aplicação real.</p>
+      <div class="source">
+        <span>📎</span>
+        <span>Fonte: protótipo HTML com dados mock (clientes, veículos, OS, estoque, financeiro), dois "shells" (Admin e Operador/Mecânico) e uma tela de login com seletor manual de perfil.</span>
+      </div>
+    </div>
+
+    <section id="sistema">
+      <h2>Sistema visual extraído do protótipo</h2>
+      <p class="sec-sub">Paleta, tipografia e componentes exatamente como definidos no protótipo — é o que vira o novo <span class="mono">tailwind.config.js</span> e os tokens em <span class="mono">src/index.css</span>.</p>
+
+      <div class="card card-pad">
+        <h4 style="margin-bottom:12px;font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Cores de base</h4>
+        <div class="swatch-grid">
+          <div class="swatch"><div class="chip" style="background:var(--graphite)"></div><div class="lbl"><b>Graphite</b><span>#1C1F26</span></div></div>
+          <div class="swatch"><div class="chip" style="background:#F6F3EC;border-bottom:1px solid var(--line)"></div><div class="lbl"><b>Paper</b><span>#F6F3EC</span></div></div>
+          <div class="swatch"><div class="chip" style="background:#FFFDF8;border-bottom:1px solid var(--line)"></div><div class="lbl"><b>Paper 2 (surface)</b><span>#FFFDF8</span></div></div>
+          <div class="swatch"><div class="chip" style="background:var(--orange)"></div><div class="lbl"><b>Signal Orange</b><span>#FF5A1F</span></div></div>
+          <div class="swatch"><div class="chip" style="background:#20242C"></div><div class="lbl"><b>Ink</b><span>#20242C</span></div></div>
+          <div class="swatch"><div class="chip" style="background:#E1D9C8"></div><div class="lbl"><b>Line</b><span>#E1D9C8</span></div></div>
+        </div>
+        <h4 style="margin:20px 0 12px;font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Semânticas (status)</h4>
+        <div class="swatch-grid">
+          <div class="swatch"><div class="chip" style="background:var(--green)"></div><div class="lbl"><b>Green</b><span>#3FA772 · concluído</span></div></div>
+          <div class="swatch"><div class="chip" style="background:var(--amber)"></div><div class="lbl"><b>Amber</b><span>#C9820A · aguardando</span></div></div>
+          <div class="swatch"><div class="chip" style="background:var(--red)"></div><div class="lbl"><b>Red</b><span>#D8383D · crítico/cancelado</span></div></div>
+          <div class="swatch"><div class="chip" style="background:var(--blue)"></div><div class="lbl"><b>Blue</b><span>#3468B0 · aprovado</span></div></div>
+          <div class="swatch"><div class="chip" style="background:var(--steel)"></div><div class="lbl"><b>Steel</b><span>#6B7280 · neutro</span></div></div>
+        </div>
+      </div>
+
+      <div class="card card-pad" style="margin-top:14px;">
+        <h4 style="margin-bottom:4px;font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Tipografia — 3 famílias, cada uma com um papel fixo</h4>
+        <div class="type-row"><div class="tag">Archivo 700–800</div><div class="sample-archivo">Ordem de Serviço #1042</div></div>
+        <div class="type-row"><div class="tag">Inter 400–600</div><div class="sample-inter">Barulho na suspensão dianteira ao passar por buracos.</div></div>
+        <div class="type-row"><div class="tag">IBM Plex Mono</div><div class="sample-mono">BRA2E19 · CR-3002 · 09/09 08:20</div></div>
+      </div>
+
+      <div class="card card-pad" style="margin-top:14px;">
+        <h4 style="margin-bottom:12px;font-size:13px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;">Componentes-chave</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <span class="pill pill-steel"><span class="pill-dot"></span>Aguardando triagem</span>
+          <span class="pill pill-amber"><span class="pill-dot"></span>Orçamento</span>
+          <span class="pill pill-blue"><span class="pill-dot"></span>Aprovado</span>
+          <span class="pill pill-orange"><span class="pill-dot"></span>Em execução</span>
+          <span class="pill pill-green"><span class="pill-dot"></span>Finalizado</span>
+          <span class="pill pill-red"><span class="pill-dot"></span>Crítico</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary">Novo orçamento</button>
+          <button class="btn btn-dark">Entrar</button>
+          <button class="btn btn-outline">Cancelar</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="comparacao">
+      <h2>Paleta atual vs. proposta</h2>
+      <p class="sec-sub">O app hoje usa uma escala indigo genérica (Tailwind default-like) e uma única família (Inter). É um reskin completo de tokens — não muda estrutura de componentes.</p>
+      <div class="grid2">
+        <div class="card card-pad">
+          <b style="font-size:12.5px;color:var(--ink-soft);text-transform:uppercase;">Atual (<span class="mono">index.css</span>)</b>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <div style="width:32px;height:32px;border-radius:6px;background:#4f46e5" title="#4f46e5"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#eef2ff;border:1px solid #e5e7eb" title="#eef2ff"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#0f172a" title="#0f172a"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#64748b" title="#64748b"></div>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">--brand-600: #4f46e5 · fonte única: Inter</p>
+        </div>
+        <div class="card card-pad">
+          <b style="font-size:12.5px;color:var(--ink-soft);text-transform:uppercase;">Proposto (protótipo)</b>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <div style="width:32px;height:32px;border-radius:6px;background:#FF5A1F" title="#FF5A1F"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#F6F3EC;border:1px solid #E1D9C8" title="#F6F3EC"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#1C1F26" title="#1C1F26"></div>
+            <div style="width:32px;height:32px;border-radius:6px;background:#6B7280" title="#6B7280"></div>
+          </div>
+          <p style="font-size:12.5px;color:var(--ink-soft);margin-top:10px;">--orange: #FF5A1F · Archivo + Inter + IBM Plex Mono</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="login">
+      <h2>Tela de login</h2>
+      <p class="sec-sub">Requisito do protótipo, o que já existe na aplicação real (implementado nas sessões anteriores) e o que falta.</p>
+      <div class="card">
+        <table class="cmp">
+          <tr><th>Requisito</th><th>Estado atual</th><th>Proposta</th><th>Status</th></tr>
+          <tr>
+            <td class="col-req">Remover seleção manual de perfil</td>
+            <td class="col-now">Nunca existiu essa seleção no app real — só no protótipo (era um atalho de demonstração)</td>
+            <td class="col-prop">Nada a fazer</td>
+            <td class="col-status"><span class="status-ok">Já atende</span></td>
+          </tr>
+          <tr>
+            <td class="col-req">Campo único CNPJ ou e-mail</td>
+            <td class="col-now"><span class="mono">identificador</span> + senha, backend já valida o tipo</td>
+            <td class="col-prop">Nada a fazer</td>
+            <td class="col-status"><span class="status-ok">Já atende</span></td>
+          </tr>
+          <tr>
+            <td class="col-req">Limpar cache/estado após login (evitar vazamento entre contas)</td>
+            <td class="col-now"><span class="mono">authStore.login()</span> já roda <span class="mono">queryClient.clear()</span> + <span class="mono">persist.clearStorage()</span></td>
+            <td class="col-prop">Nada a fazer</td>
+            <td class="col-status"><span class="status-ok">Já atende</span></td>
+          </tr>
+          <tr>
+            <td class="col-req">Nome fantasia da oficina em vez do nome fixo do sistema</td>
+            <td class="col-now"><span class="mono">nomeFantasia</span> e logo já aparecem no Sidebar/Topbar <b>depois</b> do login</td>
+            <td class="col-prop">Antes do login não dá pra saber qual oficina é — o campo é um identificador único (CNPJ ou e-mail) resolvido só no backend. Ver decisão em <a href="#decisoes">Decisões pendentes</a>.</td>
+            <td class="col-status"><span class="status-partial">Parcial</span></td>
+          </tr>
+          <tr>
+            <td class="col-req">Imagem lateral = foto da loja enviada pelo cliente, por tenant</td>
+            <td class="col-now">Não existe upload de imagem no backend — só <span class="mono">logoUrl</span> (string, ≤500 car., já implementado como campo de URL)</td>
+            <td class="col-prop">Reaproveitar a ilustração do protótipo (SVG estático) como fallback; usar a foto real assim que existir endpoint de upload</td>
+            <td class="col-status"><span class="status-gap">Gap de backend</span></td>
+          </tr>
+          <tr>
+            <td class="col-req">Painel dividido (marca à esquerda / formulário à direita)</td>
+            <td class="col-now"><span class="mono">LoginPage.tsx</span> hoje é um card único centralizado</td>
+            <td class="col-prop">Novo layout de duas colunas, colapsando para uma coluna abaixo de 860px (exatamente como o protótipo)</td>
+            <td class="col-status"><span class="status-new">Novo</span></td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <section id="perfis">
+      <h2>Perfis de acesso</h2>
+      <p class="sec-sub">O protótipo assume 4 papéis fixos. O backend real não tem papéis fixos — tem um <span class="mono">perfil</span> (nome livre) com um conjunto de códigos de permissão. A tabela abaixo traduz um modelo para o outro.</p>
+      <div class="card">
+        <table class="cmp">
+          <tr><th>Papel do protótipo</th><th>Tradução no backend real</th><th>Módulos</th></tr>
+          <tr>
+            <td class="col-req">Root</td>
+            <td class="col-now">Não é um perfil de tenant — é o <span class="mono">X-Admin-Token</span> da plataforma, já implementado no Console do Root (<span class="mono">/root/oficinas</span>), fora do app de tenant.</td>
+            <td>Cadastro de oficinas, visão de todas as licenças</td>
+          </tr>
+          <tr>
+            <td class="col-req">Admin</td>
+            <td class="col-now">Preset de perfil <span class="mono">ADMIN</span> (já existe em <span class="mono">perfilPresets.ts</span>) = todos os códigos de permissão do catálogo</td>
+            <td>Todos os módulos do tenant</td>
+          </tr>
+          <tr>
+            <td class="col-req">Mecânico</td>
+            <td class="col-now"><b>Novo preset</b> — só <span class="mono">ORDEM_SERVICO_READ/WRITE</span>, <span class="mono">CHECKLIST_WRITE</span>, <span class="mono">FOTO_WRITE</span></td>
+            <td>Ordens de Serviço (visão restrita) + Agenda de leitura</td>
+          </tr>
+          <tr>
+            <td class="col-req">Consultor Técnico</td>
+            <td class="col-now">Já existe (<span class="mono">CONSULTOR</span> em <span class="mono">perfilPresets.ts</span>) — ajustar para garantir <span class="mono">ESTOQUE_READ</span>, <span class="mono">CLIENTE_*</span>, <span class="mono">VEICULO_*</span>, <span class="mono">ORCAMENTO_WRITE</span></td>
+            <td>Estoque (leitura), Clientes, Veículos, Orçamentos + envio por WhatsApp (já implementado)</td>
+          </tr>
+        </table>
+      </div>
+      <div class="decision">
+        <div class="tag">⚠ Ponto de atenção</div>
+        <p>"Root" no protótipo aparece como mais um item de um seletor de papéis dentro do mesmo app — na arquitetura real ele é propositalmente um sistema separado (token de plataforma, nunca exposto no bundle público). Não dá pra tratar Root como um <span class="mono">perfil</span> comum sem reabrir a discussão de segurança já resolvida com vocês.</p>
+      </div>
+    </section>
+
+    <section id="layout">
+      <h2>Layout diferenciado por perfil</h2>
+      <p class="sec-sub">O protótipo tem dois "shells" completamente diferentes: um desktop (sidebar + topbar + Kanban) para Admin, e um app de cartões com bottom nav para o Mecânico. Hoje o MotoGest real tem <b>um único shell responsivo</b> (sidebar que vira bottom nav) para todos os perfis.</p>
+      <div class="grid2">
+        <div class="shell-preview">
+          <div class="bar"><span class="dot"></span> Admin / Root — desktop-first</div>
+          <div class="body">
+            <p style="font-size:13.5px;margin-bottom:10px;"><b>Mantém</b> o AppShell atual (sidebar fixa + topbar), só re-estilizado com os novos tokens. Ganha visão Kanban opcional nas Ordens de Serviço.</p>
+            <span class="pill pill-steel">Sidebar 242px</span> <span class="pill pill-steel">Topbar + busca</span>
+          </div>
+        </div>
+        <div class="shell-preview">
+          <div class="bar"><span class="dot"></span> Mecânico / Consultor — mobile-first</div>
+          <div class="body">
+            <p style="font-size:13.5px;margin-bottom:10px;"><b>Shell novo</b> (<span class="mono">OperatorShell</span>): topo escuro fixo, abas "Aguardando início / Em andamento", cartões grandes de OS, bottom nav de 3 itens.</p>
+            <span class="pill pill-orange">Cartões touch-friendly</span> <span class="pill pill-orange">Bottom nav</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:13.5px;color:var(--ink-soft);margin-top:16px;">
+        Na arquitetura MVVM já adotada, isso é só uma <b>segunda View</b> — o Model (<span class="mono">api/</span>) e o ViewModel (<span class="mono">hooks/</span>) continuam únicos e reaproveitados por ambos os shells. Qual shell renderizar é decidido por <span class="mono">hasPermission()</span>, do mesmo jeito que hoje decidimos o que aparece no menu.
+      </p>
+    </section>
+
+    <section id="componentes">
+      <h2>Componentes novos a construir</h2>
+      <div class="card card-pad">
+        <ul class="plain">
+          <li><b>Kanban de Ordens de Serviço</b> — uma coluna por status (hoje é só tabela), com cartão compacto (placa, veículo, mecânico). Visão desktop, alternável com a tabela atual.</li>
+          <li><b>Stepper de status</b> — trilha horizontal de status clicáveis (substitui o <span class="mono">Select</span> de status atual no admin; no Mecânico vira uma versão restrita, só com os status operacionais).</li>
+          <li><b>OS Card (mobile)</b> — cartão de OS estilo "ticket" para o shell do Mecânico, com reclamação do cliente, previsão e botão de ação primária.</li>
+          <li><b>Categorias de estoque em cards</b> — filtro visual por categoria (Lubrificantes/Peças/Filtros) antes da tabela, com contagem de itens críticos.</li>
+          <li><b>Login split-screen</b> — painel de marca (esquerda) + formulário (direita), com fallback de ilustração SVG quando a oficina não tem imagem cadastrada.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="gaps">
+      <h2>Gaps de backend identificados</h2>
+      <div class="card card-pad">
+        <ul class="plain">
+          <li><b>Upload real de imagem por tenant</b> — hoje só existe <span class="mono">logoUrl</span> (string ≤500 caracteres) em <span class="mono">OficinaUpdateRequest</span>. Não há endpoint de upload multipart nem armazenamento de arquivo. Sem isso, "imagem da loja enviada pelo cliente" continua sendo, na prática, colar uma URL já hospedada em outro lugar.</li>
+          <li><b>Branding pré-login</b> — não existe (nem faria sentido existir) um endpoint público que devolva nome/logo da oficina a partir do identificador antes da autenticação, sem abrir uma brecha de enumeração de tenants. Login mostra a marca da oficina só depois de autenticar.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="plano">
+      <h2>Plano de implementação sugerido</h2>
+      <div class="card card-pad">
+        <div class="phase">
+          <div class="n">01</div>
+          <div><h4>Retokenização visual</h4><p>Trocar paleta/tipografia em <span class="mono">index.css</span> + <span class="mono">tailwind.config.js</span> (Archivo/Inter/IBM Plex Mono via Google Fonts, cores graphite/paper/orange). Impacto visual em 100% das telas, zero mudança estrutural.</p></div>
+        </div>
+        <div class="phase">
+          <div class="n">02</div>
+          <div><h4>Login split-screen</h4><p>Reestruturar <span class="mono">LoginPage.tsx</span> em duas colunas com a ilustração SVG de fallback.</p></div>
+        </div>
+        <div class="phase">
+          <div class="n">03</div>
+          <div><h4>Novos presets de perfil</h4><p>Adicionar preset <span class="mono">MECANICO</span> em <span class="mono">perfilPresets.ts</span>, revisar <span class="mono">CONSULTOR</span>.</p></div>
+        </div>
+        <div class="phase">
+          <div class="n">04</div>
+          <div><h4>OperatorShell</h4><p>Novo shell mobile-first para Mecânico/Consultor, roteado por permissão — reaproveitando os hooks existentes de OS/Orçamentos.</p></div>
+        </div>
+        <div class="phase">
+          <div class="n">05</div>
+          <div><h4>Kanban + Stepper</h4><p>Componentes novos na tela de Ordens de Serviço (admin), com fallback para a tabela atual.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisoes">
+      <h2>Decisões pendentes antes de implementar</h2>
+      <p class="sec-sub">Para não construir a tela duas vezes, preciso da sua confirmação nestes pontos:</p>
+      <div class="card card-pad">
+        <ul class="checklist">
+          <li><span class="box"></span> Reskin completo de cores/tipografia agora, ou manter o indigo atual e só aplicar a paleta nova nas telas novas (Login, OperatorShell)?</li>
+          <li><span class="box"></span> "Nome fantasia no login" fica só pós-autenticação (como já é), ou vale investir num fluxo de 2 passos (identificador → mostra marca → senha) mesmo sabendo o custo de contrato de API?</li>
+          <li><span class="box"></span> Shell separado para Mecânico/Consultor (mobile-first, como o protótipo) ou continuar com um único shell responsivo, só priorizando os itens certos no bottom nav (como já fizemos antes)?</li>
+          <li><span class="box"></span> Preset "Mecânico" deve ser só um ponto de partida editável (como os outros presets hoje) ou uma trava rígida de permissões?</li>
+          <li><span class="box"></span> Kanban de OS é uma visão alternativa (com toggle) ou substitui a tabela atual?</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>

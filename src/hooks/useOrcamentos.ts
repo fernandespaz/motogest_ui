@@ -17,6 +17,7 @@ function useTransition(fn: (id: number) => Promise<OrcamentoResponse>) {
   return useMutation({
     mutationFn: fn,
     onSuccess: () => qc.invalidateQueries({ queryKey: orcamentosKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 

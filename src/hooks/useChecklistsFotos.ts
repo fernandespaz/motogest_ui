@@ -16,6 +16,7 @@ export function useCriarChecklist(ordemServicoId: number) {
   return useMutation({
     mutationFn: (payload: ChecklistRequest) => checklistsApi.criar(ordemServicoId, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['checklists', ordemServicoId] }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -32,6 +33,7 @@ export function useAdicionarFoto(ordemServicoId: number) {
   return useMutation({
     mutationFn: (payload: FotoRequest) => fotosApi.adicionar(ordemServicoId, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['fotos', ordemServicoId] }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -40,5 +42,6 @@ export function useRemoverFoto(ordemServicoId: number) {
   return useMutation({
     mutationFn: (id: number) => fotosApi.remover(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['fotos', ordemServicoId] }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

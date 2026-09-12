@@ -26,7 +26,7 @@ import { FotosTab } from './FotosTab';
 import type { ClienteResponse, OrdemServicoStatus, VeiculoResponse } from '@/api/types';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toDateTimeLocalValue } from '@/lib/formatters';
-import { ordensServicoApi } from '@/api/endpoints/ordensServico';
+import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -136,9 +136,9 @@ export function OrdemServicoFormPage() {
   }
 
   async function baixarPdf() {
-    if (!osId) return;
+    if (!osId || !os) return;
     try {
-      await openPdfInNewTab(() => ordensServicoApi.pdf(osId), `os-${os?.numero ?? osId}.pdf`);
+      await openPdfInNewTab(() => buildOrdemServicoPdfBlob(os), `os-${os.numero ?? osId}.pdf`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível gerar o PDF.'));
     }

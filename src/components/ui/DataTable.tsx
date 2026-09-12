@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { PageSpinner } from './Spinner';
 import { EmptyState } from './EmptyState';
@@ -18,6 +19,8 @@ interface DataTableProps<T> {
   loading?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
+  emptyIcon?: LucideIcon;
+  emptyAction?: ReactNode;
   onRowClick?: (row: T) => void;
 }
 
@@ -30,10 +33,14 @@ export function DataTable<T>({
   loading,
   emptyTitle = 'Nenhum registro encontrado',
   emptyDescription,
+  emptyIcon,
+  emptyAction,
   onRowClick,
 }: DataTableProps<T>) {
   if (loading) return <PageSpinner label="Carregando registros..." />;
-  if (rows.length === 0) return <EmptyState title={emptyTitle} description={emptyDescription} />;
+  if (rows.length === 0) {
+    return <EmptyState icon={emptyIcon} title={emptyTitle} description={emptyDescription} action={emptyAction} />;
+  }
 
   return (
     <div className="overflow-x-auto">

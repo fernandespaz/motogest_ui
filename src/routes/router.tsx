@@ -3,6 +3,8 @@ import { RequireAuth } from '@/auth/RequireAuth';
 import { AppShell } from '@/layout/AppShell';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterOficinaPage } from '@/features/auth/RegisterOficinaPage';
+import { RootConsolePage } from '@/features/root/RootConsolePage';
+import { OrcamentoPublicoPage } from '@/features/orcamentos/OrcamentoPublicoPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { VeiculosPage } from '@/features/veiculos/VeiculosPage';
@@ -21,6 +23,11 @@ import { OficinaPage } from '@/features/oficina/OficinaPage';
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/cadastro', element: <RegisterOficinaPage /> },
+  // Uso interno do root da plataforma — não fica em nenhum menu do app nem exige
+  // sessão de tenant; o próprio X-Admin-Token é o gate (ver RootConsolePage).
+  { path: '/root/oficinas', element: <RootConsolePage /> },
+  // Página pública aberta pelo cliente final (link de WhatsApp/e-mail) — sem RequireAuth.
+  { path: '/orcamentos/publico/:token', element: <OrcamentoPublicoPage /> },
   {
     element: <RequireAuth />,
     children: [

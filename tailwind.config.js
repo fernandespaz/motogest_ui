@@ -25,9 +25,17 @@ export default {
         success: 'var(--success)',
         warning: 'var(--warning)',
         danger: 'var(--danger)',
+        graphite: {
+          DEFAULT: 'var(--graphite)',
+          2: 'var(--graphite-2)',
+          3: 'var(--graphite-3)',
+        },
+        'line-dark': 'var(--line-dark)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Archivo', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {
         xl: '0.875rem',

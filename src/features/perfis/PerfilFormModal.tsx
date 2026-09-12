@@ -4,11 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input, Textarea, Checkbox } from '@/components/ui/Field';
+import { Input, Textarea, Select, Checkbox } from '@/components/ui/Field';
 import { useCreatePerfil, useUpdatePerfil, usePermissoesDisponiveis } from '@/hooks/usePerfis';
 import type { PerfilResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { PERFIL_PRESETS, type PerfilPresetKey } from './perfilPresets';
+
+const FORM_ID = 'perfil-form';
 
 const schema = z.object({
   nome: z.string().min(1, 'Informe o nome'),
@@ -37,6 +40,7 @@ export function PerfilFormModal({
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { permissoes: [] } });
 
@@ -53,6 +57,14 @@ export function PerfilFormModal({
       );
     }
   }, [open, perfil, reset]);
+
+  function applyPreset(key: PerfilPresetKey | '') {
+    if (!key) return;
+    const preset = PERFIL_PRESETS[key];
+    const codigos =
+      key === 'ADMIN' ? (permissoesDisponiveis?.map((p) => p.codigo!).filter(Boolean) ?? []) : preset.permissoes;
+    setValue('permissoes', codigos, { shouldValidate: true, shouldDirty: true });
+  }
 
   async function onSubmit(values: FormValues) {
     try {
@@ -72,10 +84,43 @@ export function PerfilFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar perfil de acesso' : 'Novo perfil de acesso'} size="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar perfil de acesso' : 'Novo perfil de acesso'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
         <Textarea label="Descrição" {...register('descricao')} />
+
+        {!isEditing && (
+          <Select
+            label="Aplicar modelo"
+            hint="Preenche as permissões abaixo como ponto de partida — continue editando à vontade."
+            defaultValue=""
+            onChange={(e) => applyPreset(e.target.value as PerfilPresetKey | '')}
+          >
+            <option value="">Começar em branco</option>
+            {(Object.entries(PERFIL_PRESETS) as [PerfilPresetKey, (typeof PERFIL_PRESETS)[PerfilPresetKey]][]).map(
+              ([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.label}
+                </option>
+              ),
+            )}
+          </Select>
+        )}
 
         <div>
           <p className="mb-2 text-sm font-medium text-ink">
@@ -103,15 +148,6 @@ export function PerfilFormModal({
             ))}
           </div>
           {errors.permissoes && <p className="mt-1 text-xs font-medium text-danger">{errors.permissoes.message}</p>}
-        </div>
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
         </div>
       </form>
     </Modal>

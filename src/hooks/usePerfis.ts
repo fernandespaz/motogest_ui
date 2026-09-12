@@ -29,6 +29,7 @@ export function useCreatePerfil() {
   return useMutation({
     mutationFn: (payload: PerfilRequest) => perfisApi.create(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: perfisKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -37,6 +38,7 @@ export function useUpdatePerfil() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: PerfilRequest }) => perfisApi.update(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: perfisKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -45,5 +47,6 @@ export function useDeletePerfil() {
   return useMutation({
     mutationFn: (id: number) => perfisApi.remove(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: perfisKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

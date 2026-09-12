@@ -39,6 +39,11 @@ export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
     return useMutation({
       mutationFn: (payload: TRequest) => api.create(payload),
       onSuccess: () => qc.invalidateQueries({ queryKey: keys.all }),
+      // Call sites use mutateAsync + their own try/catch to show a
+      // action-specific error message; this only stops a duplicate toast,
+      // it does not remove error handling (the global cache still surfaces
+      // any mutation that forgets this flag).
+      meta: { hasLocalErrorHandling: true },
     });
   }
 
@@ -50,6 +55,7 @@ export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
         qc.invalidateQueries({ queryKey: keys.all });
         qc.invalidateQueries({ queryKey: keys.detail(variables.id) });
       },
+      meta: { hasLocalErrorHandling: true },
     });
   }
 
@@ -58,6 +64,7 @@ export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
     return useMutation({
       mutationFn: (id: number) => api.remove(id),
       onSuccess: () => qc.invalidateQueries({ queryKey: keys.all }),
+      meta: { hasLocalErrorHandling: true },
     });
   }
 

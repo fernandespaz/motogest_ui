@@ -32,5 +32,6 @@ export function useRegistrarMovimentacao() {
       qc.invalidateQueries({ queryKey: produtosKeys.all });
       qc.invalidateQueries({ queryKey: produtosKeys.detail(variables.produtoId) });
     },
+    meta: { hasLocalErrorHandling: true },
   });
 }

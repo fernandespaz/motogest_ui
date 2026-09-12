@@ -11,16 +11,22 @@ import type { ClienteResponse, VeiculoResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'veiculo-form';
+const CURRENT_YEAR = new Date().getFullYear();
+
 const schema = z.object({
   clienteId: z.coerce.number({ invalid_type_error: 'Selecione o cliente' }).positive('Selecione o cliente'),
   placa: z.string().min(1, 'Informe a placa'),
   marca: z.string().optional(),
-  modelo: z.string().optional(),
-  anoFabricacao: z.coerce.number().optional(),
+  modelo: z.string().min(1, 'Informe o modelo'),
+  anoFabricacao: z.coerce
+    .number({ invalid_type_error: 'Informe o ano de fabricação' })
+    .min(1900, 'Ano inválido')
+    .max(CURRENT_YEAR + 1, 'Ano inválido'),
   anoModelo: z.coerce.number().optional(),
-  cor: z.string().optional(),
+  cor: z.string().min(1, 'Informe a cor'),
   kmAtual: z.coerce.number().optional(),
-  chassi: z.string().optional(),
+  chassi: z.string().min(1, 'Informe o chassi'),
   observacoes: z.string().optional(),
 });
 
@@ -90,8 +96,23 @@ export function VeiculoFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar veículo' : 'Novo veículo'} size="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar veículo' : 'Novo veículo'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Controller
           control={control}
           name="clienteId"
@@ -113,23 +134,20 @@ export function VeiculoFormModal({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Placa" required error={errors.placa?.message} {...register('placa')} />
           <Input label="Marca" {...register('marca')} />
-          <Input label="Modelo" {...register('modelo')} />
-          <Input label="Cor" {...register('cor')} />
-          <Input label="Ano de fabricação" type="number" {...register('anoFabricacao')} />
+          <Input label="Modelo" required error={errors.modelo?.message} {...register('modelo')} />
+          <Input label="Cor" required error={errors.cor?.message} {...register('cor')} />
+          <Input
+            label="Ano de fabricação"
+            type="number"
+            required
+            error={errors.anoFabricacao?.message}
+            {...register('anoFabricacao')}
+          />
           <Input label="Ano do modelo" type="number" {...register('anoModelo')} />
           <Input label="KM atual" type="number" {...register('kmAtual')} />
-          <Input label="Chassi" {...register('chassi')} />
+          <Input label="Chassi" required error={errors.chassi?.message} {...register('chassi')} />
         </div>
         <Textarea label="Observações" {...register('observacoes')} />
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

@@ -24,6 +24,7 @@ export function useCreateUsuario() {
   return useMutation({
     mutationFn: (payload: UsuarioRequest) => usuariosApi.create(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: usuariosKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -32,6 +33,7 @@ export function useUpdateUsuario() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: UsuarioRequest }) => usuariosApi.update(id, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: usuariosKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -40,5 +42,6 @@ export function useDeleteUsuario() {
   return useMutation({
     mutationFn: (id: number) => usuariosApi.remove(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: usuariosKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

@@ -12,6 +12,7 @@ export function useAtualizarOficina() {
   return useMutation({
     mutationFn: (payload: OficinaUpdateRequest) => oficinasApi.atualizar(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['oficina', 'atual'] }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -24,5 +25,6 @@ export function useUpgradeLicenca() {
   return useMutation({
     mutationFn: (payload: UpgradeLicencaRequest) => licencaApi.upgrade(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['licenca', 'atual'] }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

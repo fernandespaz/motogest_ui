@@ -10,6 +10,8 @@ import type { ProdutoResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'produto-form';
+
 const schema = z.object({
   codigo: z.string().min(1, 'Informe o código'),
   nome: z.string().min(1, 'Informe o nome'),
@@ -80,8 +82,23 @@ export function ProdutoFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar produto' : 'Novo produto'} size="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar produto' : 'Novo produto'}
+      size="lg"
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Código" required error={errors.codigo?.message} {...register('codigo')} />
           <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
@@ -92,15 +109,6 @@ export function ProdutoFormModal({
         </div>
         <Textarea label="Descrição" {...register('descricao')} />
         {isEditing && <Checkbox label="Produto ativo" {...register('ativo')} />}
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

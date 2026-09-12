@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { PageSpinner } from '@/components/ui/Spinner';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { useOficinaAtual, useAtualizarOficina } from '@/hooks/useOficina';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -22,6 +23,11 @@ const schema = z.object({
   cidade: z.string().optional(),
   uf: z.string().max(2).optional(),
   cep: z.string().optional(),
+  logoUrl: z
+    .string()
+    .max(500, 'A URL deve ter no máximo 500 caracteres')
+    .refine((v) => v === '' || /^https?:\/\//i.test(v), 'Informe uma URL válida (http:// ou https://)')
+    .optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -31,11 +37,14 @@ export function OficinaDadosTab() {
   const atualizar = useAtualizarOficina();
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const logoUrlPreview = useWatch({ control, name: 'logoUrl' });
 
   useEffect(() => {
     if (oficina) {
@@ -50,6 +59,7 @@ export function OficinaDadosTab() {
         cidade: oficina.cidade ?? '',
         uf: oficina.uf ?? '',
         cep: oficina.cep ?? '',
+        logoUrl: oficina.logoUrl ?? '',
       });
     }
   }, [oficina, reset]);
@@ -69,6 +79,18 @@ export function OficinaDadosTab() {
     <Card>
       <CardBody>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          <div className="flex items-center gap-4 border-b border-border pb-4">
+            <BrandMark logoUrl={logoUrlPreview} size="lg" />
+            <div className="flex-1">
+              <Input
+                label="URL do logo"
+                placeholder="https://minha-oficina.com/logo.png"
+                hint="Usado na barra lateral, no topo do app e (em breve) na tela de login"
+                error={errors.logoUrl?.message}
+                {...register('logoUrl')}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="CNPJ" value={formatCnpj(oficina?.cnpj ?? '')} disabled />
             <Input label="Razão social" required error={errors.razaoSocial?.message} {...register('razaoSocial')} />

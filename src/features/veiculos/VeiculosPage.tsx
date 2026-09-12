@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, UserPlus, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,18 +8,25 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
+import { useClientes } from '@/hooks/useClientes';
 import type { VeiculoResponse } from '@/api/types';
 import { VeiculoFormModal } from './VeiculoFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
 export function VeiculosPage() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [modalVeiculo, setModalVeiculo] = useState<VeiculoResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<VeiculoResponse | null>(null);
 
   const { data, isLoading } = useVeiculos({ page, size: 20 });
+  const { data: clientesCheck, isLoading: loadingClientesCheck } = useClientes({ size: 1 });
   const deleteMutation = useDeleteVeiculo();
+
+  // A veículo always belongs to a cliente — sending someone to an empty selector
+  // is the exact friction this page used to have, so redirect the intent instead.
+  const semClientes = !loadingClientesCheck && (clientesCheck?.totalElements ?? 0) === 0;
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -37,9 +45,15 @@ export function VeiculosPage() {
         title="Veículos"
         subtitle="Veículos vinculados aos clientes da oficina"
         action={
-          <Button onClick={() => setModalVeiculo(null)}>
-            <Plus size={18} /> Novo veículo
-          </Button>
+          semClientes ? (
+            <Button onClick={() => navigate('/clientes')}>
+              <UserPlus size={18} /> Cadastrar cliente
+            </Button>
+          ) : (
+            <Button onClick={() => setModalVeiculo(null)}>
+              <Plus size={18} /> Novo veículo
+            </Button>
+          )
         }
       />
 
@@ -48,8 +62,24 @@ export function VeiculosPage() {
           loading={isLoading}
           rows={data?.content ?? []}
           rowKey={(row) => row.id!}
-          emptyTitle="Nenhum veículo cadastrado"
-          emptyDescription="Cadastre o primeiro veículo vinculado a um cliente."
+          emptyIcon={semClientes ? UserPlus : Bike}
+          emptyTitle={semClientes ? 'Cadastre um cliente primeiro' : 'Nenhum veículo cadastrado'}
+          emptyDescription={
+            semClientes
+              ? 'Todo veículo precisa estar vinculado a um cliente — comece por lá.'
+              : 'Cadastre o primeiro veículo vinculado a um cliente.'
+          }
+          emptyAction={
+            semClientes ? (
+              <Button size="sm" onClick={() => navigate('/clientes')}>
+                <UserPlus size={16} /> Cadastrar cliente
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setModalVeiculo(null)}>
+                <Plus size={16} /> Novo veículo
+              </Button>
+            )
+          }
           columns={[
             {
               header: 'Placa',

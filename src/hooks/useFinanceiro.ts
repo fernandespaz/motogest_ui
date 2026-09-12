@@ -45,6 +45,7 @@ export function useRegistrarCaixa() {
   return useMutation({
     mutationFn: (payload: CaixaMovimentoRequest) => caixaApi.registrar(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: caixaKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -76,6 +77,7 @@ export function usePagarConta() {
       qc.invalidateQueries({ queryKey: contasPagarKeys.all });
       qc.invalidateQueries({ queryKey: caixaKeys.all });
     },
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -84,6 +86,7 @@ export function useCancelarContaPagar() {
   return useMutation({
     mutationFn: (id: number) => contasPagarApi.cancelar(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: contasPagarKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -115,6 +118,7 @@ export function useReceberConta() {
       qc.invalidateQueries({ queryKey: contasReceberKeys.all });
       qc.invalidateQueries({ queryKey: caixaKeys.all });
     },
+    meta: { hasLocalErrorHandling: true },
   });
 }
 
@@ -123,5 +127,6 @@ export function useCancelarContaReceber() {
   return useMutation({
     mutationFn: (id: number) => contasReceberApi.cancelar(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: contasReceberKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

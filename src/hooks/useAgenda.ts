@@ -25,5 +25,6 @@ export function useAtualizarStatusAgendamento() {
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: AgendamentoStatus }) => agendaApi.atualizarStatus(id, status),
     onSuccess: () => qc.invalidateQueries({ queryKey: agendaKeys.all }),
+    meta: { hasLocalErrorHandling: true },
   });
 }

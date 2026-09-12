@@ -33,6 +33,8 @@ Outros scripts:
 npm run build     # type-check (tsc -b) + build de produção em /dist
 npm run preview   # serve o build de produção localmente
 npm run lint      # eslint
+npm run test      # roda a suíte de testes unitários (Vitest) uma vez
+npm run test:watch # Vitest em modo watch
 npm run gen:api   # regenera src/api/schema.d.ts a partir de openapi.json
 ```
 
@@ -49,10 +51,20 @@ Isso regrava `src/api/schema.d.ts` — nenhum outro arquivo precisa ser editado 
 
 ## Arquitetura e organização de pastas
 
+O projeto segue **MVVM**: cada camada só conhece a camada imediatamente abaixo, nunca pula degraus.
+
+| Camada MVVM | Onde vive | Responsabilidade |
+|---|---|---|
+| **Model** | `api/types.ts`, `api/schema.d.ts` | Formato dos dados — gerado a partir do contrato real do backend |
+| **View** | `features/**` (páginas e modais), `components/ui/**` | Só renderiza e captura eventos do usuário; não conhece Axios nem query keys |
+| **ViewModel** | `hooks/use<Recurso>.ts` | Estado de servidor (TanStack Query), invalidação de cache, é a única camada que a View importa para obter/mudar dados |
+| **Data access** | `api/endpoints/*.ts`, `api/client.ts`, `api/routes.ts` | HTTP puro — sem React, sem estado |
+
 ```
 src/
 ├── api/            # Camada de acesso à API — nenhuma UI aqui
 │   ├── client.ts       # instância Axios + interceptors (auth header, 401/403)
+│   ├── routes.ts       # ÚNICA fonte de verdade dos paths do backend (ver abaixo)
 │   ├── crud.ts         # factory genérica de list/get/create/update/remove
 │   ├── schema.d.ts     # GERADO — tipos a partir do openapi.json (não editar à mão)
 │   ├── types.ts        # tipos "de fachada" reexportados do schema gerado
@@ -126,6 +138,23 @@ Axios client (api/client.ts) ──→ Backend MotoGest
 - **`features`** só conhece hooks e componentes de `components/ui` — nunca chama `axios` ou `api/endpoints` diretamente.
 - Toda mutação que muda dados relacionados invalida as query keys certas (ex.: pagar uma conta invalida a conta **e** o caixa, já que o backend gera um lançamento automático).
 
+### Paths do backend como variáveis (`api/routes.ts`)
+
+Nenhum módulo de `api/endpoints/*` escreve um path da API como string solta — todos importam de `API_ROUTES` (`src/api/routes.ts`), que centraliza cada path (estático ou com parâmetro) num único objeto:
+
+```ts
+// api/endpoints/orcamentos.ts
+apiClient.post<OrcamentoResponse>(API_ROUTES.orcamentos.aprovar(id))
+```
+
+Se o backend mudar um path, o ajuste é em um único arquivo — nenhuma busca por strings espalhadas pelo projeto. A URL base (`VITE_API_BASE_URL`) já vinha de variável de ambiente (`.env.development`); `routes.ts` cobre a outra metade do problema, os paths relativos.
+
+### Tratamento de erro de toda chamada de API
+
+- `api/client.ts` normaliza qualquer erro do Axios em uma mensagem legível (`extractErrorMessage`), incluindo o caso de permissão negada (403 → `ApiForbiddenError`).
+- `lib/queryClient.ts` registra um `QueryCache`/`MutationCache` global: **toda** query ou mutation que falhar sem tratamento próprio cai automaticamente num toast de erro — nenhuma chamada de API pode falhar silenciosamente. Mutations que já mostram sua própria mensagem (a maioria, via `mutateAsync` + `try/catch` na tela) marcam `meta: { hasLocalErrorHandling: true }` para não duplicar o toast; uma query/mutation que preferir não notificar o usuário usa `meta: { silentError: true }`.
+- `hooks/factory.ts` (a factory de CRUD usada por todo recurso) já aplica esse flag por padrão em `useCreate`/`useUpdate`/`useRemove`.
+
 ### Autenticação e sessão
 
 - O login (`POST /auth/login`) exige `cnpj + email + senha` — não existe usuário "root" nem seletor de tenant: **um login = uma oficina**, o isolamento é feito pelo backend via JWT.
@@ -144,3 +173,16 @@ O contrato consumido é o exposto pelo Swagger do backend (`/v3/api-docs`). Duas
 
 - Não existe endpoint de **usuário root** nem de listagem cross-tenant de oficinas — cadastro de oficina é público e self-service (`POST /oficinas/registrar`), e cada oficina só enxerga os próprios dados.
 - Controle de trial/licença é auto-atendido pela própria oficina via `GET /licenca/atual` e `POST /licenca/upgrade` (este último é um stub, sem integração de pagamento real ainda).
+
+## Testes
+
+Suíte de testes unitários com **Vitest** + **Testing Library** (`npm run test`), cobrindo a lógica que não depende de renderização visual:
+
+- `lib/formatters.test.ts`, `lib/statusMeta.test.ts` — funções puras de formatação e mapeamento de status.
+- `api/client.test.ts` — normalização de erro (`extractErrorMessage`) para os formatos de erro que o backend realmente devolve.
+- `api/routes.test.ts` — os paths gerados por `API_ROUTES` batem com o contrato esperado.
+- `api/crud.test.ts` — `createCrudApi` chama o método HTTP certo, no path certo, e propaga falhas em vez de engoli-las.
+- `hooks/factory.test.tsx` — `createCrudHooks` (list/detail/create/update/remove) contra um `QueryClient` de teste, incluindo o caminho de erro de uma mutation.
+- `lib/queryClient.test.ts` — o `QueryCache`/`MutationCache` global dispara (ou não, quando `meta` pede silêncio) o toast de erro esperado.
+
+Arquivos de teste ficam ao lado do código que testam (`*.test.ts(x)`); `src/test/` guarda apenas o setup compartilhado (jest-dom matchers, wrapper de `QueryClientProvider` para testar hooks).

@@ -3,27 +3,34 @@
 @tailwind utilities;
 
 :root {
-  /* Brand ramp — swappable per-tenant in the future without touching components */
-  --brand-50: #eef2ff;
-  --brand-100: #e0e7ff;
-  --brand-200: #c7d2fe;
-  --brand-300: #a5b4fc;
-  --brand-400: #818cf8;
-  --brand-500: #6366f1;
-  --brand-600: #4f46e5;
-  --brand-700: #4338ca;
-  --brand-800: #3730a3;
-  --brand-900: #312e81;
+  /* Brand ramp — swappable per-tenant in the future without touching components.
+     Base is the "signal orange" (#FF5A1F) from the MotoGest visual identity. */
+  --brand-50: #fff3ee;
+  --brand-100: #ffe9df;
+  --brand-200: #ffd1bd;
+  --brand-300: #ffaf8c;
+  --brand-400: #ff8b5b;
+  --brand-500: #ff6e38;
+  --brand-600: #ff5a1f;
+  --brand-700: #d9450f;
+  --brand-800: #b33a0e;
+  --brand-900: #8c2e0c;
 
-  --surface: #ffffff;
-  --surface-alt: #f8fafc;
-  --border: #e2e8f0;
-  --ink: #0f172a;
-  --ink-muted: #64748b;
+  --surface: #fffdf8;
+  --surface-alt: #f6f3ec;
+  --border: #e1d9c8;
+  --ink: #20242c;
+  --ink-muted: #5c6270;
 
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
+  --success: #3fa772;
+  --warning: #c9820a;
+  --danger: #d8383d;
+
+  /* Dark "graphite" surfaces — sidebar, topbar branding, login panel */
+  --graphite: #1c1f26;
+  --graphite-2: #262b35;
+  --graphite-3: #333a47;
+  --line-dark: #3a4150;
 }
 
 * {
@@ -39,6 +46,18 @@ body,
 body {
   @apply bg-surface-alt text-ink antialiased;
   font-feature-settings: 'cv11', 'ss01';
+}
+
+h1,
+h2,
+h3,
+h4 {
+  @apply font-display tracking-tight;
+}
+
+/* Data-ish values (placas, IDs, valores tabulares) — matches the visual identity's use of IBM Plex Mono */
+.mono {
+  @apply font-mono tracking-wide;
 }
 
 ::-webkit-scrollbar {

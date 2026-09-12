@@ -11,6 +11,8 @@ import type { UsuarioResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'usuario-form';
+
 const baseSchema = {
   nome: z.string().min(1, 'Informe o nome'),
   email: z.string().email('E-mail inválido'),
@@ -80,8 +82,22 @@ export function UsuarioFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar usuário' : 'Novo usuário'}>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar usuário' : 'Novo usuário'}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
         <Input label="E-mail" type="email" required error={errors.email?.message} {...register('email')} />
         <Select label="Perfil de acesso" required error={errors.perfilId?.message} {...register('perfilId')}>
@@ -101,15 +117,6 @@ export function UsuarioFormModal({
           {...register('senha')}
         />
         {isEditing && <Checkbox label="Usuário ativo" {...register('ativo')} />}
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );

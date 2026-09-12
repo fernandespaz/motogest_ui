@@ -10,6 +10,8 @@ import type { ServicoResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const FORM_ID = 'servico-form';
+
 const schema = z.object({
   nome: z.string().min(1, 'Informe o nome'),
   descricao: z.string().optional(),
@@ -74,8 +76,22 @@ export function ServicoFormModal({
   const saving = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar serviço' : 'Novo serviço'}>
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={isEditing ? 'Editar serviço' : 'Novo serviço'}
+      footer={
+        <>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button type="submit" form={FORM_ID} loading={saving}>
+            Salvar
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
         <Textarea label="Descrição" {...register('descricao')} />
         <div className="grid grid-cols-2 gap-4">
@@ -83,15 +99,6 @@ export function ServicoFormModal({
           <Input label="Duração (min)" type="number" {...register('duracaoMinutos')} />
         </div>
         {isEditing && <Checkbox label="Serviço ativo" {...register('ativo')} />}
-
-        <div className="mt-2 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving}>
-            Salvar
-          </Button>
-        </div>
       </form>
     </Modal>
   );
