@@ -5,6 +5,7 @@ import type { OrdemServicoResponse } from '@/api/types';
 import { formatCnpj, formatDateTime, formatDocumento } from '@/lib/formatters';
 import { metaFor, ordemServicoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
+import { carregarLogoParaPdf } from '@/features/shared/pdf/logo';
 import type { OSDocumentLineItem } from '@/features/shared/pdf/types';
 
 function toLineItems(os: OrdemServicoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
@@ -24,6 +25,7 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
     os.veiculoId ? veiculosApi.get(os.veiculoId) : Promise.resolve(null),
     oficinasApi.atual(),
   ]);
+  const logo = await carregarLogoParaPdf(oficina);
 
   const servicos = toLineItems(os, 'SERVICO');
   const pecas = toLineItems(os, 'PRODUTO');
@@ -39,6 +41,7 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
       nomeFantasia: oficina.nomeFantasia || oficina.razaoSocial || 'MotoGest',
       razaoSocial: oficina.razaoSocial ?? '',
       cnpj: formatCnpj(oficina.cnpj ?? ''),
+      logo: logo ?? undefined,
     },
     cliente: cliente
       ? {

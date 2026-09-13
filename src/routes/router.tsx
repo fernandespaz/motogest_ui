@@ -5,6 +5,7 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { RegisterOficinaPage } from '@/features/auth/RegisterOficinaPage';
 import { RootConsolePage } from '@/features/root/RootConsolePage';
 import { OrcamentoPublicoPage } from '@/features/orcamentos/OrcamentoPublicoPage';
+import { OrdemServicoPublicoPage } from '@/features/ordens-servico/OrdemServicoPublicoPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { ClientesPage } from '@/features/clientes/ClientesPage';
 import { VeiculosPage } from '@/features/veiculos/VeiculosPage';
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
   { path: '/root/oficinas', element: <RootConsolePage /> },
   // Página pública aberta pelo cliente final (link de WhatsApp/e-mail) — sem RequireAuth.
   { path: '/orcamentos/publico/:token', element: <OrcamentoPublicoPage /> },
+  { path: '/ordens-servico/publico/:token', element: <OrdemServicoPublicoPage /> },
   {
     element: <RequireAuth />,
     children: [

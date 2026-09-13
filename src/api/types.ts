@@ -30,6 +30,9 @@ export type TipoItem = NonNullable<ItemRequest['tipoItem']>;
 export type OrdemServicoRequest = Schemas['OrdemServicoRequest'];
 export type OrdemServicoResponse = Schemas['OrdemServicoResponse'];
 export type OrdemServicoStatus = NonNullable<OrdemServicoResponse['status']>;
+export type OrdemServicoPublicoResponse = Schemas['OrdemServicoPublicoResponse'];
+export type OrdemServicoPausaResponse = Schemas['OrdemServicoPausaResponse'];
+export type PausarOrdemServicoRequest = Schemas['PausarOrdemServicoRequest'];
 
 export type ProdutoRequest = Schemas['ProdutoRequest'];
 export type ProdutoResponse = Schemas['ProdutoResponse'];

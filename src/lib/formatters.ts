@@ -82,3 +82,13 @@ export function toDateTimeLocalValue(value: string | undefined | null): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+/** Minutos totais → "HH:MM" (ex.: 90 → "01:30"). Negativo vira "-HH:MM". */
+export function formatMinutosParaHoras(minutos: number | undefined | null): string {
+  const total = minutos ?? 0;
+  const sinal = total < 0 ? '-' : '';
+  const abs = Math.abs(Math.round(total));
+  const horas = Math.floor(abs / 60);
+  const mins = abs % 60;
+  return `${sinal}${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}

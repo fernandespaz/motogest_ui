@@ -39,8 +39,11 @@ export const orcamentoStatusMeta: Record<string, { label: string; tone: Tone }> 
 
 export const ordemServicoStatusMeta: Record<string, { label: string; tone: Tone }> = {
   ABERTA: meta('Aberta', 'aguardando'),
+  AGUARDANDO_APROVACAO: meta('Aguardando aprovação', 'aguardando'),
+  APROVADA: meta('Aprovada', 'concluido'),
   EM_ANDAMENTO: meta('Em andamento', 'andamento'),
   AGUARDANDO_PECA: meta('Aguardando peça', 'andamento'),
+  PAUSADA: meta('Pausada', 'andamento'),
   CONCLUIDA: meta('Concluída', 'concluido'),
   CANCELADA: meta('Cancelada', 'cancelado'),
   ENTREGUE: meta('Entregue', 'concluido'),

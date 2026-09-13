@@ -34,6 +34,15 @@ export const API_ROUTES = {
     base: '/api/v1/ordens-servico',
     aPartirDeOrcamento: (orcamentoId: number) => `/api/v1/ordens-servico/a-partir-de-orcamento/${orcamentoId}`,
     status: (id: number) => `/api/v1/ordens-servico/${id}/status`,
+    enviar: (id: number) => `/api/v1/ordens-servico/${id}/enviar`,
+    timerStart: (id: number) => `/api/v1/ordens-servico/${id}/timer/start`,
+    timerPause: (id: number) => `/api/v1/ordens-servico/${id}/timer/pause`,
+    timerResume: (id: number) => `/api/v1/ordens-servico/${id}/timer/resume`,
+  },
+  ordensServicoPublico: {
+    buscar: (token: string) => `/api/v1/public/ordens-servico/${token}`,
+    aprovar: (token: string) => `/api/v1/public/ordens-servico/${token}/aprovar`,
+    rejeitar: (token: string) => `/api/v1/public/ordens-servico/${token}/rejeitar`,
   },
   produtos: {
     base: '/api/v1/produtos',

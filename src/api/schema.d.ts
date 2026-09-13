@@ -108,7 +108,10 @@ export interface paths {
         };
         /** Busca uma Ordem de Servico pelo id */
         get: operations["buscarPorId_5"];
-        /** Atualiza uma Ordem de Servico */
+        /**
+         * Atualiza uma Ordem de Servico
+         * @description Se a OS ja estava Aprovada, qualquer alteracao a devolve para Aguardando Aprovacao. Bloqueada por completo a partir de Em Andamento/Aguardando Peca/Pausada/Concluida/Entregue/Cancelada.
+         */
         put: operations["atualizar_5"];
         post?: never;
         delete?: never;
@@ -285,6 +288,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/ordens-servico/{token}/rejeitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O cliente rejeita a OS (Aguardando Aprovacao -> Aberta, para o consultor revisar e reenviar) */
+        post: operations["rejeitar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/ordens-servico/{token}/aprovar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** O cliente aprova a OS (Aguardando Aprovacao -> Aprovada) */
+        post: operations["aprovar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/orcamentos/{token}/rejeitar": {
         parameters: {
             query?: never;
@@ -295,7 +332,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** O cliente rejeita o orçamento (ENVIADO -> REJEITADO) */
-        post: operations["rejeitar"];
+        post: operations["rejeitar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -312,7 +349,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** O cliente aprova o orçamento (ENVIADO -> APROVADO) */
-        post: operations["aprovar"];
+        post: operations["aprovar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -380,7 +417,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista as Ordens de Servico da oficina corrente, com filtro opcional por status */
+        /**
+         * Lista as Ordens de Servico da oficina corrente
+         * @description Filtros opcionais combinaveis: status, numero (contains) e tecnico responsavel (usuarioResponsavelId)
+         */
         get: operations["listar_5"];
         put?: never;
         /** Cria uma nova Ordem de Servico a partir do zero */
@@ -421,6 +461,74 @@ export interface paths {
         put?: never;
         /** Registra um novo checklist (entrada ou saida) para a Ordem de Servico */
         post: operations["criar_6"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/timer/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tecnico inicia o cronometro (Aprovada -> Em Andamento) */
+        post: operations["timerStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/timer/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tecnico retoma o cronometro (Pausada -> Em Andamento) */
+        post: operations["timerResume"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/timer/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tecnico pausa o cronometro, com justificativa obrigatoria (Em Andamento -> Pausada) */
+        post: operations["timerPause"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ordens-servico/{id}/enviar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Envia a OS para o link publico de aprovacao do cliente final (Aberta -> Aguardando Aprovacao) */
+        post: operations["enviarParaAprovacao"];
         delete?: never;
         options?: never;
         head?: never;
@@ -472,7 +580,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca o orcamento como rejeitado pelo cliente (ENVIADO -> REJEITADO) */
-        post: operations["rejeitar_1"];
+        post: operations["rejeitar_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -506,7 +614,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca o orcamento como aprovado pelo cliente (ENVIADO -> APROVADO) */
-        post: operations["aprovar_1"];
+        post: operations["aprovar_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -773,7 +881,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Atualiza o status da Ordem de Servico */
+        /**
+         * Atualiza o status da Ordem de Servico
+         * @description Nao aceita Em Andamento nem Pausada como destino (exceto retorno de Aguardando Peca) - use os endpoints de cronometro para essas transicoes.
+         */
         patch: operations["atualizarStatus"];
         trace?: never;
     };
@@ -794,6 +905,23 @@ export interface paths {
         patch: operations["atualizarStatus_1"];
         trace?: never;
     };
+    "/api/v1/public/ordens-servico/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta uma Ordem de Serviço pelo token do link público */
+        get: operations["buscar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/orcamentos/{token}": {
         parameters: {
             query?: never;
@@ -802,7 +930,7 @@ export interface paths {
             cookie?: never;
         };
         /** Consulta um orçamento pelo token do link público */
-        get: operations["buscar"];
+        get: operations["buscar_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1161,6 +1289,8 @@ export interface components {
             descricao: string;
             quantidade: number;
             valorUnitario: number;
+            /** Format: int32 */
+            tempoVendidoMinutos?: number;
         };
         OrdemServicoRequest: {
             /** Format: int64 */
@@ -1189,6 +1319,17 @@ export interface components {
             quantidade?: number;
             valorUnitario?: number;
             valorTotal?: number;
+            /** Format: int32 */
+            tempoVendidoMinutos?: number;
+        };
+        OrdemServicoPausaResponse: {
+            /** Format: int64 */
+            id?: number;
+            motivo?: string;
+            /** Format: date-time */
+            inicio?: string;
+            /** Format: date-time */
+            fim?: string;
         };
         OrdemServicoResponse: {
             /** Format: int64 */
@@ -1206,7 +1347,7 @@ export interface components {
             usuarioResponsavelId?: number;
             usuarioResponsavelNome?: string;
             /** @enum {string} */
-            status?: "ABERTA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
             /** Format: date-time */
             dataAbertura?: string;
             /** Format: date-time */
@@ -1218,6 +1359,13 @@ export interface components {
             valorTotal?: number;
             observacoes?: string;
             itens?: components["schemas"]["ItemResponse"][];
+            tokenAprovacao?: string;
+            /** Format: int32 */
+            tempoVendidoMinutos?: number;
+            /** Format: int32 */
+            tempoConsumidoMinutos?: number;
+            tempoEstourado?: boolean;
+            pausas?: components["schemas"]["OrdemServicoPausaResponse"][];
         };
         OrcamentoRequest: {
             /** Format: int64 */
@@ -1414,6 +1562,21 @@ export interface components {
             id?: number;
             nome?: string;
         };
+        OrdemServicoPublicoResponse: {
+            /** Format: int64 */
+            id?: number;
+            numero?: string;
+            oficinaNomeFantasia?: string;
+            clienteNome?: string;
+            veiculoPlaca?: string;
+            /** @enum {string} */
+            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+            valorTotal?: number;
+            observacoes?: string;
+            itens?: components["schemas"]["ItemResponse"][];
+            /** Format: date-time */
+            dataAbertura?: string;
+        };
         OrcamentoPublicoResponse: {
             /** Format: int64 */
             id?: number;
@@ -1504,6 +1667,9 @@ export interface components {
             dataHora?: string;
             observacoesGerais?: string;
             itens?: components["schemas"]["ChecklistItemResponse"][];
+        };
+        PausarOrdemServicoRequest: {
+            motivo: string;
         };
         UpgradeLicencaRequest: {
             plano: string;
@@ -2665,12 +2831,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["OrcamentoPublicoResponse"];
+                    "*/*": components["schemas"]["OrdemServicoPublicoResponse"];
                 };
             };
         };
     };
     aprovar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoPublicoResponse"];
+                };
+            };
+        };
+    };
+    rejeitar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrcamentoPublicoResponse"];
+                };
+            };
+        };
+    };
+    aprovar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2835,7 +3045,9 @@ export interface operations {
     listar_5: {
         parameters: {
             query: {
-                status?: "ABERTA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+                status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+                numero?: string;
+                usuarioResponsavelId?: number;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -2975,6 +3187,98 @@ export interface operations {
             };
         };
     };
+    timerStart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoResponse"];
+                };
+            };
+        };
+    };
+    timerResume: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoResponse"];
+                };
+            };
+        };
+    };
+    timerPause: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PausarOrdemServicoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoResponse"];
+                };
+            };
+        };
+    };
+    enviarParaAprovacao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoResponse"];
+                };
+            };
+        };
+    };
     criarAPartirDeOrcamento: {
         parameters: {
             query?: {
@@ -3045,7 +3349,7 @@ export interface operations {
             };
         };
     };
-    rejeitar_1: {
+    rejeitar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3089,7 +3393,7 @@ export interface operations {
             };
         };
     };
-    aprovar_1: {
+    aprovar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -3595,7 +3899,7 @@ export interface operations {
     atualizarStatus: {
         parameters: {
             query: {
-                status: "ABERTA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+                status: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
             };
             header?: never;
             path: {
@@ -3641,6 +3945,28 @@ export interface operations {
         };
     };
     buscar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrdemServicoPublicoResponse"];
+                };
+            };
+        };
+    };
+    buscar_1: {
         parameters: {
             query?: never;
             header?: never;

@@ -1,12 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ordensServicoApi } from '@/api/endpoints/ordensServico';
-import type { OrdemServicoRequest, OrdemServicoResponse, OrdemServicoStatus, PageParams } from '@/api/types';
+import { ordensServicoApi, type OrdensServicoListParams } from '@/api/endpoints/ordensServico';
+import type { OrdemServicoRequest, OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
 import { createCrudHooks } from './factory';
 import { orcamentosKeys } from './useOrcamentos';
 
-type ListParams = PageParams & { status?: OrdemServicoStatus };
-
-const hooks = createCrudHooks<OrdemServicoResponse, OrdemServicoRequest, ListParams>(
+const hooks = createCrudHooks<OrdemServicoResponse, OrdemServicoRequest, OrdensServicoListParams>(
   'ordens-servico',
   ordensServicoApi,
 );
@@ -38,6 +36,42 @@ export function useAtualizarStatusOS() {
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: OrdemServicoStatus }) =>
       ordensServicoApi.atualizarStatus(id, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useEnviarOS() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => ordensServicoApi.enviar(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useTimerStartOS() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => ordensServicoApi.timerStart(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useTimerPauseOS() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: number; motivo: string }) => ordensServicoApi.timerPause(id, motivo),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useTimerResumeOS() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => ordensServicoApi.timerResume(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
     meta: { hasLocalErrorHandling: true },
   });
