@@ -5,6 +5,7 @@ import type { OrcamentoResponse } from '@/api/types';
 import { formatCnpj, formatCurrency, formatDateTime, formatDocumento } from '@/lib/formatters';
 import { metaFor, orcamentoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
+import { carregarLogoParaPdf } from '@/features/shared/pdf/logo';
 import type { OSDocumentLineItem } from '@/features/shared/pdf/types';
 
 function toLineItems(orcamento: OrcamentoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
@@ -24,6 +25,7 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
     orcamento.veiculoId ? veiculosApi.get(orcamento.veiculoId) : Promise.resolve(null),
     oficinasApi.atual(),
   ]);
+  const logo = await carregarLogoParaPdf(oficina);
 
   const servicos = toLineItems(orcamento, 'SERVICO');
   const pecas = toLineItems(orcamento, 'PRODUTO');
@@ -39,6 +41,7 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
       nomeFantasia: oficina.nomeFantasia || oficina.razaoSocial || 'MotoGest',
       razaoSocial: oficina.razaoSocial ?? '',
       cnpj: formatCnpj(oficina.cnpj ?? ''),
+      logo: logo ?? undefined,
     },
     cliente: cliente
       ? {

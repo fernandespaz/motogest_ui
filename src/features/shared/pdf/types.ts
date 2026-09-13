@@ -5,6 +5,12 @@
  * osDocumentPdf.ts never talks to the API or knows about Orçamento vs OS —
  * it only lays out this shape on the page.
  */
+export interface OSDocumentLogo {
+  dataUrl: string;
+  largura: number;
+  altura: number;
+}
+
 export interface OSDocumentLineItem {
   descricao: string;
   quantidade: number;
@@ -25,6 +31,8 @@ export interface OSDocumentData {
     razaoSocial: string;
     cnpj: string;
     telefone?: string;
+    /** Logo já carregada como PNG base64 — o renderer só desenha, nunca busca. */
+    logo?: OSDocumentLogo;
   };
 
   cliente: {

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordensServicoApi } from '@/api/endpoints/ordensServico';
 import type { OrdemServicoRequest, OrdemServicoResponse, OrdemServicoStatus, PageParams } from '@/api/types';
 import { createCrudHooks } from './factory';
+import { orcamentosKeys } from './useOrcamentos';
 
 type ListParams = PageParams & { status?: OrdemServicoStatus };
 
@@ -21,7 +22,13 @@ export function useCriarOSAPartirDeOrcamento() {
   return useMutation({
     mutationFn: ({ orcamentoId, usuarioResponsavelId }: { orcamentoId: number; usuarioResponsavelId?: number }) =>
       ordensServicoApi.criarAPartirDeOrcamento(orcamentoId, usuarioResponsavelId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ordensServicoKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ordensServicoKeys.all });
+      // O orçamento de origem muda de status (vira CONVERTIDO) nessa mesma
+      // chamada — sem isso, a lista de orçamentos ficava mostrando "Aprovado"
+      // (com o botão de converter) mesmo depois de já virar OS.
+      qc.invalidateQueries({ queryKey: orcamentosKeys.all });
+    },
     meta: { hasLocalErrorHandling: true },
   });
 }

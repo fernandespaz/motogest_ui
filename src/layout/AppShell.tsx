@@ -5,9 +5,14 @@ import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { TrialBanner } from './TrialBanner';
 import { PageTransition } from '@/components/ui/PageTransition';
+import { useAutoConversaoOrcamentosAprovados } from '@/hooks/useAutoConversaoOrcamentos';
 
 export function AppShell() {
   const location = useLocation();
+  // Roda em qualquer tela autenticada — não só na de Orçamentos — pra
+  // orçamentos aprovados pelo cliente virarem OS sem depender de alguém
+  // lembrar de clicar em "Converter em OS" (ver o hook pra detalhes/limites).
+  useAutoConversaoOrcamentosAprovados();
 
   return (
     <div className="flex h-full min-h-screen bg-surface-alt">

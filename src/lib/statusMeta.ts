@@ -30,7 +30,7 @@ export const agendamentoStatusMeta: Record<string, { label: string; tone: Tone }
 
 export const orcamentoStatusMeta: Record<string, { label: string; tone: Tone }> = {
   RASCUNHO: meta('Rascunho', 'aguardando'),
-  ENVIADO: meta('Enviado', 'aguardando'),
+  ENVIADO: meta('Aguardando aprovação', 'aguardando'),
   APROVADO: meta('Aprovado', 'concluido'),
   REJEITADO: meta('Rejeitado', 'cancelado'),
   EXPIRADO: meta('Expirado', 'cancelado'),

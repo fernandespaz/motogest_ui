@@ -58,6 +58,18 @@ function CampoBloqueado({ label, value }: { label: string; value: string }) {
 }
 
 export function OrcamentoFormPage() {
+  // "/orcamentos/novo" e "/orcamentos/:id" apontam pro mesmo elemento de rota,
+  // então o React Router reaproveita a mesma instância do componente ao
+  // navegar entre os dois (ou entre dois orçamentos diferentes) — sem isso, o
+  // useForm mantém os valores antigos em memória, já que só é resetado
+  // reativamente quando existe um `orcamento` carregado (fluxo de edição). O
+  // `key` força um remount completo (useForm do zero) toda vez que o alvo
+  // muda, seja "novo" ou outro id.
+  const { id } = useParams();
+  return <OrcamentoFormContent key={id ?? 'novo'} />;
+}
+
+function OrcamentoFormContent() {
   const { id } = useParams();
   const orcamentoId = id ? Number(id) : undefined;
   const isEditing = !!orcamentoId;
@@ -171,7 +183,7 @@ export function OrcamentoFormPage() {
         title={isEditing ? `Orçamento #${orcamentoId}` : 'Novo orçamento'}
         action={
           <div className="flex items-center gap-2">
-            {orcamento?.tokenAprovacao && (
+            {orcamento?.tokenAprovacao && orcamento.status !== 'RASCUNHO' && (
               <Button variant="secondary" onClick={compartilharWhatsApp}>
                 <MessageCircle size={16} /> Compartilhar
               </Button>

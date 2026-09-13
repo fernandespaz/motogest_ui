@@ -70,14 +70,23 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   let y = PAGE_MARGIN;
 
   // ---- Letterhead ----
+  let letterheadX = PAGE_MARGIN;
+  if (data.oficina.logo) {
+    const alturaLogo = 15;
+    let larguraLogo = alturaLogo * (data.oficina.logo.largura / data.oficina.logo.altura);
+    if (!Number.isFinite(larguraLogo) || larguraLogo <= 0) larguraLogo = alturaLogo;
+    larguraLogo = Math.min(larguraLogo, 30);
+    doc.addImage(data.oficina.logo.dataUrl, 'PNG', PAGE_MARGIN, y - 1, larguraLogo, alturaLogo);
+    letterheadX = PAGE_MARGIN + larguraLogo + 4;
+  }
   doc.setFontSize(15);
   doc.setTextColor(BRAND);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.oficina.nomeFantasia || data.oficina.razaoSocial, PAGE_MARGIN, y + 4);
+  doc.text(data.oficina.nomeFantasia || data.oficina.razaoSocial, letterheadX, y + 4);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(INK_MUTED);
-  doc.text(`${data.oficina.razaoSocial} · CNPJ ${data.oficina.cnpj}`, PAGE_MARGIN, y + 9);
+  doc.text(`${data.oficina.razaoSocial} · CNPJ ${data.oficina.cnpj}`, letterheadX, y + 9);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);

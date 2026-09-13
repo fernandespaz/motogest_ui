@@ -63,7 +63,7 @@ export function LoginPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
+      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
         <div className="flex flex-col items-center text-center lg:w-2/5 lg:items-start lg:text-left">
           {!logoFixada && (
             <div className="mb-8 flex items-center gap-2.5 text-white">
@@ -94,7 +94,7 @@ export function LoginPage() {
                 <img
                   src={logoFixada}
                   alt="Logo da sua oficina"
-                  className="relative h-[78%] w-[78%] object-contain drop-shadow-[0_20px_45px_rgba(0,0,0,0.6)]"
+                  className="relative h-[97%] w-[97%] rounded-full object-cover drop-shadow-[0_20px_45px_rgba(0,0,0,0.6)]"
                 />
               </>
             ) : (

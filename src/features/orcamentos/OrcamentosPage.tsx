@@ -30,6 +30,10 @@ export function OrcamentosPage() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useOrcamentos({ page, size: 20, sort: 'id,desc' });
+  // Um orçamento convertido já existe como Ordem de Serviço — mantê-lo aqui
+  // seria mostrar a mesma coisa em dois lugares. O backend não tem filtro de
+  // status na listagem, então isso é feito no cliente.
+  const rows = (data?.content ?? []).filter((o: OrcamentoResponse) => o.status !== 'CONVERTIDO');
   const deleteMutation = useDeleteOrcamento();
   const enviar = useEnviarOrcamento();
   const aprovar = useAprovarOrcamento();
@@ -75,6 +79,21 @@ export function OrcamentosPage() {
     }
   }
 
+  // Enviar e compartilhar eram duas ações separadas — dava pra compartilhar o
+  // link (o token já existe desde a criação) antes de marcar como enviado, e
+  // aí o cliente abria um orçamento que a tela pública ainda tratava como
+  // rascunho, sem opção de aprovar. Uma única ação resolve os dois passos
+  // juntos, na ordem certa.
+  async function handleEnviarECompartilhar(row: OrcamentoResponse) {
+    try {
+      const atualizado = await enviar.mutateAsync(row.id!);
+      toast.success('Orçamento enviado — aguardando aprovação do cliente.');
+      compartilharWhatsApp(atualizado);
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível enviar o orçamento.'));
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -90,7 +109,7 @@ export function OrcamentosPage() {
       <Card>
         <DataTable<OrcamentoResponse>
           loading={isLoading}
-          rows={data?.content ?? []}
+          rows={rows}
           rowKey={(row) => row.id!}
           emptyTitle="Nenhum orçamento cadastrado"
           columns={[
@@ -119,32 +138,15 @@ export function OrcamentosPage() {
                   >
                     <FileDown size={16} />
                   </button>
-                  {row.tokenAprovacao && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        compartilharWhatsApp(row);
-                      }}
-                      className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success"
-                      title="Compartilhar via WhatsApp"
-                    >
-                      <MessageCircle size={16} />
-                    </button>
-                  )}
                   {row.status === 'RASCUNHO' && (
                     <>
                       <button
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          try {
-                            await enviar.mutateAsync(row.id!);
-                            toast.success('Orçamento enviado ao cliente.');
-                          } catch (error) {
-                            toast.error(extractErrorMessage(error));
-                          }
+                          handleEnviarECompartilhar(row);
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                        title="Enviar ao cliente"
+                        className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success"
+                        title="Enviar para aprovação (WhatsApp)"
                       >
                         <Send size={16} />
                       </button>
@@ -162,6 +164,16 @@ export function OrcamentosPage() {
                   )}
                   {row.status === 'ENVIADO' && (
                     <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          compartilharWhatsApp(row);
+                        }}
+                        className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
+                        title="Reenviar link via WhatsApp"
+                      >
+                        <MessageCircle size={16} />
+                      </button>
                       <button
                         onClick={async (e) => {
                           e.stopPropagation();
