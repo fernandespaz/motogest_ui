@@ -19,10 +19,11 @@ export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
     detail: (id: number) => [resourceKey, 'detail', id] as const,
   };
 
-  function useList(params?: TListParams) {
+  function useList(params?: TListParams, options?: { enabled?: boolean }) {
     return useQuery({
       queryKey: keys.list(params),
       queryFn: () => api.list(params),
+      enabled: options?.enabled,
     });
   }
 

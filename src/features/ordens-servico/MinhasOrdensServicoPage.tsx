@@ -1,0 +1,324 @@
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Pause, CheckCircle2, AlertTriangle, ChevronRight, LogOut, RefreshCw, Inbox } from 'lucide-react';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Textarea } from '@/components/ui/Field';
+import { PageSpinner } from '@/components/ui/Spinner';
+import { useOrdensServico, useTimerStartOS, useTimerPauseOS, useTimerResumeOS, useAtualizarStatusOS } from '@/hooks/useOrdensServico';
+import { useAuthStore } from '@/store/authStore';
+import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
+import { formatMinutosParaHoras, formatDateTime, getInitials } from '@/lib/formatters';
+import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
+import { toast } from '@/store/toastStore';
+import { extractErrorMessage } from '@/api/client';
+
+// "Aguardando início" = já aprovada pelo cliente, só falta o técnico clicar em
+// Iniciar. "Em andamento" agrupa tudo que já foi iniciado — em execução,
+// pausada ou esperando peça — já que pra quem está no box, essas três são
+// "trabalho em curso", só o motivo de estar parado muda.
+const STATUS_AGUARDANDO_INICIO: OrdemServicoStatus[] = ['APROVADA'];
+const STATUS_EM_ANDAMENTO: OrdemServicoStatus[] = ['EM_ANDAMENTO', 'PAUSADA', 'AGUARDANDO_PECA'];
+
+export function MinhasOrdensServicoPage() {
+  const navigate = useNavigate();
+  const nome = useAuthStore((s) => s.nome);
+  const usuarioId = useAuthStore((s) => s.usuarioId);
+  const logout = useAuthStore((s) => s.logout);
+
+  const [aba, setAba] = useState<'inicio' | 'andamento'>('inicio');
+  const [busca, setBusca] = useState('');
+  const [pausando, setPausando] = useState<OrdemServicoResponse | null>(null);
+  const [motivoPausa, setMotivoPausa] = useState('');
+
+  const { data, isLoading, isFetching, refetch } = useOrdensServico({
+    size: 100,
+    sort: 'dataPrevisao,asc',
+    usuarioResponsavelId: usuarioId ?? undefined,
+  });
+
+  const timerStart = useTimerStartOS();
+  const timerPause = useTimerPauseOS();
+  const timerResume = useTimerResumeOS();
+  const atualizarStatus = useAtualizarStatusOS();
+
+  const todas: OrdemServicoResponse[] = data?.content ?? [];
+  const aguardandoInicio = todas.filter((os) => STATUS_AGUARDANDO_INICIO.includes(os.status as OrdemServicoStatus));
+  const emAndamento = todas.filter((os) => STATUS_EM_ANDAMENTO.includes(os.status as OrdemServicoStatus));
+
+  const listaAtual = aba === 'inicio' ? aguardandoInicio : emAndamento;
+  const filtradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const base = !termo
+      ? listaAtual
+      : listaAtual.filter((os: OrdemServicoResponse) => os.numero?.toLowerCase().includes(termo));
+    // Mais urgente primeiro: tempo estourado sobe pro topo, resto mantém a
+    // ordenação por previsão de conclusão que já veio da API.
+    return [...base].sort((a, b) => Number(b.tempoEstourado) - Number(a.tempoEstourado));
+  }, [listaAtual, busca]);
+
+  async function handleIniciar(os: OrdemServicoResponse) {
+    try {
+      await timerStart.mutateAsync(os.id!);
+      toast.success(`OS ${os.numero} iniciada.`);
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível iniciar a OS.'));
+    }
+  }
+
+  async function handleRetomar(os: OrdemServicoResponse) {
+    try {
+      if (os.status === 'AGUARDANDO_PECA') {
+        await atualizarStatus.mutateAsync({ id: os.id!, status: 'EM_ANDAMENTO' });
+      } else {
+        await timerResume.mutateAsync(os.id!);
+      }
+      toast.success(`OS ${os.numero} retomada.`);
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível retomar a OS.'));
+    }
+  }
+
+  async function handleFinalizar(os: OrdemServicoResponse) {
+    try {
+      await atualizarStatus.mutateAsync({ id: os.id!, status: 'CONCLUIDA' });
+      toast.success(`OS ${os.numero} concluída.`);
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível concluir a OS.'));
+    }
+  }
+
+  async function handleConfirmarPausa() {
+    if (!pausando || !motivoPausa.trim()) return;
+    try {
+      await timerPause.mutateAsync({ id: pausando.id!, motivo: motivoPausa.trim() });
+      toast.success(`OS ${pausando.numero} pausada.`);
+      setPausando(null);
+      setMotivoPausa('');
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
+    }
+  }
+
+  return (
+    <div className="-m-4 min-h-screen bg-surface-alt sm:-m-6">
+      <div className="flex items-center justify-between bg-graphite px-4 py-4 text-white sm:px-6">
+        <div>
+          <h1 className="font-display text-lg font-bold">Minhas Ordens de Serviço</h1>
+          <p className="text-sm text-slate-400">Olá, {nome?.split(' ')[0]}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold">
+            {getInitials(nome ?? '?')}
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/login', { replace: true });
+            }}
+            className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+            aria-label="Sair"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 sm:px-6">
+        <div className="mb-4 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setAba('inicio')}
+            className={
+              aba === 'inicio'
+                ? 'flex items-center justify-center gap-2 rounded-xl bg-graphite px-3 py-3 text-sm font-semibold text-white'
+                : 'flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-semibold text-ink-muted'
+            }
+          >
+            Aguardando início
+            <span
+              className={
+                aba === 'inicio'
+                  ? 'flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-xs'
+                  : 'flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-alt px-1 text-xs text-ink-muted'
+              }
+            >
+              {aguardandoInicio.length}
+            </span>
+          </button>
+          <button
+            onClick={() => setAba('andamento')}
+            className={
+              aba === 'andamento'
+                ? 'flex items-center justify-center gap-2 rounded-xl bg-graphite px-3 py-3 text-sm font-semibold text-white'
+                : 'flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-3 py-3 text-sm font-semibold text-ink-muted'
+            }
+          >
+            Em andamento
+            <span
+              className={
+                aba === 'andamento'
+                  ? 'flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-xs'
+                  : 'flex h-5 min-w-5 items-center justify-center rounded-full bg-surface-alt px-1 text-xs text-ink-muted'
+              }
+            >
+              {emAndamento.length}
+            </span>
+          </button>
+        </div>
+
+        <div className="mb-4 flex items-center gap-2">
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por número da OS..." className="flex-1" />
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label="Atualizar lista"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-ink-muted hover:bg-surface-alt disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
+          </button>
+        </div>
+
+        {isLoading ? (
+          <PageSpinner />
+        ) : filtradas.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-14 text-center">
+            <Inbox size={32} className="text-ink-muted" />
+            <p className="text-sm font-medium text-ink-muted">
+              {busca
+                ? 'Nenhuma OS encontrada com esse número.'
+                : aba === 'inicio'
+                  ? 'Nenhuma OS aguardando início atribuída a você.'
+                  : 'Nenhuma OS em andamento atribuída a você.'}
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => refetch()} loading={isFetching}>
+              <RefreshCw size={14} /> Atualizar
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filtradas.map((os) => {
+              const meta = metaFor(ordemServicoStatusMeta, os.status);
+              const estourado = !!os.tempoEstourado;
+              return (
+                <div
+                  key={os.id}
+                  className={
+                    estourado
+                      ? 'rounded-xl border-l-4 border-l-danger bg-red-50/60 p-4 shadow-card'
+                      : 'rounded-xl border-l-4 border-l-brand-600 bg-surface p-4 shadow-card'
+                  }
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-mono text-xs text-ink-muted">
+                      OS {os.numero} · entrada {formatDateTime(os.dataAbertura)}
+                    </p>
+                    <Badge tone={meta.tone}>{meta.label}</Badge>
+                  </div>
+
+                  <p className="mt-1.5 text-base font-semibold text-ink">{os.veiculoPlaca}</p>
+                  <p className="text-sm text-ink-muted">{os.clienteNome}</p>
+                  {os.itens && os.itens.length > 0 && (
+                    <p className="mt-1 text-sm text-ink">
+                      {os.itens.map((item) => item.descricao).join(' · ')}
+                    </p>
+                  )}
+                  {os.observacoes && <p className="mt-1 text-sm text-ink-muted">{os.observacoes}</p>}
+
+                  {(os.tempoVendidoMinutos || os.tempoConsumidoMinutos) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">Vendido</p>
+                        <p className="font-mono text-sm font-semibold text-ink">
+                          {formatMinutosParaHoras(os.tempoVendidoMinutos)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">Consumido</p>
+                        <p className="font-mono text-sm font-semibold text-ink">
+                          {formatMinutosParaHoras(os.tempoConsumidoMinutos)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                          {estourado ? 'Estouro' : 'Restante'}
+                        </p>
+                        <p className={estourado ? 'font-mono text-sm font-semibold text-danger' : 'font-mono text-sm font-semibold text-success'}>
+                          {formatMinutosParaHoras((os.tempoVendidoMinutos ?? 0) - (os.tempoConsumidoMinutos ?? 0))}
+                        </p>
+                      </div>
+                      {estourado && (
+                        <span className="ml-auto flex items-center gap-1 text-xs font-medium text-danger">
+                          <AlertTriangle size={13} /> Tempo estourado
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    {os.status === 'APROVADA' && (
+                      <Button size="sm" fullWidth onClick={() => handleIniciar(os)} loading={timerStart.isPending}>
+                        <Play size={14} /> Iniciar
+                      </Button>
+                    )}
+                    {os.status === 'EM_ANDAMENTO' && (
+                      <>
+                        <Button size="sm" variant="secondary" fullWidth onClick={() => setPausando(os)}>
+                          <Pause size={14} /> Pausar
+                        </Button>
+                        <Button size="sm" fullWidth onClick={() => handleFinalizar(os)} loading={atualizarStatus.isPending}>
+                          <CheckCircle2 size={14} /> Finalizar
+                        </Button>
+                      </>
+                    )}
+                    {(os.status === 'PAUSADA' || os.status === 'AGUARDANDO_PECA') && (
+                      <>
+                        <Button size="sm" variant="secondary" fullWidth onClick={() => handleRetomar(os)} loading={timerResume.isPending || atualizarStatus.isPending}>
+                          <Play size={14} /> Retomar
+                        </Button>
+                        <Button size="sm" fullWidth onClick={() => handleFinalizar(os)} loading={atualizarStatus.isPending}>
+                          <CheckCircle2 size={14} /> Finalizar
+                        </Button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => navigate(`/ordens-servico/${os.id}`)}
+                      className="flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium text-ink-muted hover:bg-surface-alt"
+                    >
+                      Detalhes <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Modal
+        open={!!pausando}
+        onClose={() => setPausando(null)}
+        title={`Pausar OS ${pausando?.numero ?? ''}`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPausando(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarPausa} loading={timerPause.isPending} disabled={!motivoPausa.trim()}>
+              Confirmar pausa
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Motivo da pausa"
+          required
+          placeholder="Ex.: aguardando peça, aguardando cliente..."
+          value={motivoPausa}
+          onChange={(e) => setMotivoPausa(e.target.value)}
+        />
+      </Modal>
+    </div>
+  );
+}

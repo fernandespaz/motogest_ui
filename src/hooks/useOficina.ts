@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { oficinasApi } from '@/api/endpoints/oficinas';
 import { licencaApi } from '@/api/endpoints/licenca';
+import { useAuthStore } from '@/store/authStore';
 import type { OficinaUpdateRequest, UpgradeLicencaRequest } from '@/api/types';
 
 const oficinaLogoBlobKey = ['oficina', 'logo-blob'] as const;
@@ -72,6 +73,11 @@ export function getNomeFixadoParaLogin(): string | null {
 }
 
 export function useOficinaAtual() {
+  // Sidebar/Topbar chamam esse hook em toda tela pra mostrar o nome/logo da
+  // oficina, mas perfis operacionais (Mecânico, Consultor Técnico) não têm
+  // OFICINA_READ — sem esse gate, todo carregamento de página disparava um
+  // 403 real pra esses perfis, estourando o toast de erro global.
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   return useQuery({
     queryKey: ['oficina', 'atual'],
     queryFn: async () => {
@@ -79,6 +85,7 @@ export function useOficinaAtual() {
       fixarNomeParaLogin(oficina.nomeFantasia || oficina.razaoSocial);
       return oficina;
     },
+    enabled: hasPermission('OFICINA_READ'),
   });
 }
 

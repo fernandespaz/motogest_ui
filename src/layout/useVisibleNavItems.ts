@@ -5,7 +5,11 @@ import { filterNavByPermission, MOBILE_PRIMARY_PATHS, type NavItem } from './nav
 /** The nav items the current session actually has permission to see. */
 export function useVisibleNavItems(): NavItem[] {
   const permissoes = useAuthStore((s) => s.permissoes);
-  return useMemo(() => filterNavByPermission((codigo) => permissoes?.includes(codigo) ?? false), [permissoes]);
+  const perfil = useAuthStore((s) => s.perfil);
+  return useMemo(
+    () => filterNavByPermission((codigo) => permissoes?.includes(codigo) ?? false, perfil),
+    [permissoes, perfil],
+  );
 }
 
 /** Same as above, pre-split into the mobile bottom bar's primary slots and the "Mais" drawer. */

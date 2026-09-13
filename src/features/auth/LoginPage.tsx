@@ -44,7 +44,9 @@ export function LoginPage() {
     try {
       const response = await authApi.login(values);
       login(response);
-      const redirectTo = location.state?.from?.pathname ?? getLandingPath(useAuthStore.getState().hasPermission);
+      const redirectTo =
+        location.state?.from?.pathname ??
+        getLandingPath(useAuthStore.getState().hasPermission, useAuthStore.getState().perfil);
       navigate(redirectTo, { replace: true });
     } catch (error) {
       setServerError(extractErrorMessage(error, 'CNPJ, e-mail ou senha inválidos.'));

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { usuariosApi } from '@/api/endpoints/usuarios';
+import { useAuthStore } from '@/store/authStore';
 import type { UsuarioRequest } from '@/api/types';
 
 export const usuariosKeys = {
@@ -8,7 +9,15 @@ export const usuariosKeys = {
 };
 
 export function useUsuarios() {
-  return useQuery({ queryKey: usuariosKeys.all, queryFn: () => usuariosApi.list() });
+  // Perfis operacionais (ex.: Mecânico) não têm USUARIO_READ — sem esse gate,
+  // qualquer tela que monta um seletor de "Responsável" (Orçamento, OS)
+  // estourava um 403 real só de carregar a lista pra popular o dropdown.
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  return useQuery({
+    queryKey: usuariosKeys.all,
+    queryFn: () => usuariosApi.list(),
+    enabled: hasPermission('USUARIO_READ'),
+  });
 }
 
 export function useUsuario(id: number | undefined) {

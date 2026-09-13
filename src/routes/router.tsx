@@ -14,6 +14,7 @@ import { OrcamentosPage } from '@/features/orcamentos/OrcamentosPage';
 import { OrcamentoFormPage } from '@/features/orcamentos/OrcamentoFormPage';
 import { OrdensServicoPage } from '@/features/ordens-servico/OrdensServicoPage';
 import { OrdemServicoFormPage } from '@/features/ordens-servico/OrdemServicoFormPage';
+import { MinhasOrdensServicoPage } from '@/features/ordens-servico/MinhasOrdensServicoPage';
 import { ProdutosPage } from '@/features/produtos/ProdutosPage';
 import { ServicosPage } from '@/features/servicos/ServicosPage';
 import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
           { path: '/ordens-servico', element: <OrdensServicoPage /> },
           { path: '/ordens-servico/nova', element: <OrdemServicoFormPage /> },
           { path: '/ordens-servico/:id', element: <OrdemServicoFormPage /> },
+          { path: '/minhas-os', element: <MinhasOrdensServicoPage /> },
           { path: '/produtos', element: <ProdutosPage /> },
           { path: '/servicos', element: <ServicosPage /> },
           { path: '/financeiro', element: <FinanceiroPage /> },

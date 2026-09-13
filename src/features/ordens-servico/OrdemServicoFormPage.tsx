@@ -125,6 +125,12 @@ export function OrdemServicoFormPage() {
   const buscaCliente = useDebouncedValue(buscaClienteInput, 300);
   const { data: clientes, isFetching: buscandoClientes } = useClientes({ size: 20, busca: buscaCliente || undefined });
   const { data: usuarios } = useUsuarios();
+  // Perfis sem USUARIO_READ (ex.: Mecânico) não carregam a lista completa —
+  // sem isso, o próprio responsável já atribuído à OS apareceria em branco no
+  // seletor, mesmo com o valor certo salvo por trás.
+  const responsavelOptions = usuarios ?? (os?.usuarioResponsavelId && os.usuarioResponsavelNome
+    ? [{ id: os.usuarioResponsavelId, nome: os.usuarioResponsavelNome }]
+    : []);
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { itens: [] } });
   const {
@@ -488,7 +494,7 @@ export function OrdemServicoFormPage() {
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                         >
                           <option value="">Não definido</option>
-                          {usuarios?.map((u) => (
+                          {responsavelOptions.map((u) => (
                             <option key={u.id} value={u.id}>
                               {u.nome}
                             </option>

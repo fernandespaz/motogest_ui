@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Field';
 import { useServicos } from '@/hooks/useServicos';
 import { useProdutos } from '@/hooks/useProdutos';
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/lib/formatters';
 import type { ProdutoResponse, ServicoResponse } from '@/api/types';
 
@@ -29,8 +30,12 @@ export function ItemsEditor({
 }) {
   const { control, register, watch, setValue } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
-  const { data: servicos } = useServicos({ size: 100 });
-  const { data: produtos } = useProdutos({ size: 100 });
+  // Perfis operacionais (ex.: Mecânico) podem não ter SERVICO_READ/ESTOQUE_READ
+  // — sem esse gate, o catálogo tentava carregar de qualquer forma e estourava
+  // um 403 real toda vez que a tela de OS abria pra esse perfil.
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const { data: servicos } = useServicos({ size: 100 }, { enabled: hasPermission('SERVICO_READ') });
+  const { data: produtos } = useProdutos({ size: 100 }, { enabled: hasPermission('ESTOQUE_READ') });
 
   const items: ItemFormValue[] = watch(name) ?? [];
   const total = items.reduce((sum, item) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnitario) || 0), 0);
