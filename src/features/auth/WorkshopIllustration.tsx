@@ -1,8 +1,8 @@
 /**
- * Decorative fallback for the login brand panel, shown while the oficina has
- * no cadastro image yet (no upload endpoint exists on the backend today —
- * see the redesign spec's "Gaps de backend"). Colors come from CSS vars so
- * it stays in sync with the graphite/orange identity without duplicating hexes.
+ * Decorative fallback for the login brand panel, shown until a oficina logo
+ * has been cached in this browser (see getLogoFixadaParaLogin em useOficina.ts).
+ * Colors come from CSS vars so it stays in sync with the graphite/orange
+ * identity without duplicating hexes.
  */
 export function WorkshopIllustration({ className }: { className?: string }) {
   return (

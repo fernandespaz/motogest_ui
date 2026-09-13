@@ -4,13 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LogIn, Wrench } from 'lucide-react';
+import { LogIn, Wrench, IdCard, Lock, AlertCircle, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { authApi } from '@/api/endpoints/auth';
 import { useAuthStore } from '@/store/authStore';
 import { extractErrorMessage } from '@/api/client';
 import { getLandingPath } from '@/layout/nav';
+import { getLogoFixadaParaLogin, getNomeFixadoParaLogin } from '@/hooks/useOficina';
 import { WorkshopIllustration } from './WorkshopIllustration';
 
 const schema = z.object({
@@ -20,8 +21,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const FLOW_STEPS = ['Cliente', 'Veículo', 'Orçamento', 'OS', 'Execução', 'Entrega'];
-
 export function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -30,6 +29,8 @@ export function LoginPage() {
   const location = useLocation() as { state?: { from?: { pathname: string } } };
   const [searchParams] = useSearchParams();
   const sessaoExpirada = searchParams.get('sessao') === 'expirada';
+  const [logoFixada] = useState(getLogoFixadaParaLogin);
+  const [nomeFixado] = useState(getNomeFixadoParaLogin);
 
   const {
     register,
@@ -53,89 +54,121 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      {/* Brand panel — generic MotoGest identity: the tenant isn't known until the
-          identificador is submitted, so this can't show oficina-specific branding
-          (see redesign spec, "Tela de login" — decisão registrada). */}
-      <div className="relative flex flex-col justify-between overflow-hidden bg-graphite px-8 py-10 text-white sm:px-10 lg:flex-[1.15] lg:px-12 lg:py-12">
-        <div className="relative z-10 flex items-center gap-2.5">
-          <Wrench size={22} className="text-brand-500" />
-          <span className="font-display text-lg font-bold tracking-tight">
-            MOTO<span className="text-brand-500">GEST</span>
-          </span>
-        </div>
+    <div
+      className="relative flex min-h-screen items-center overflow-hidden p-4 sm:p-10 lg:p-24"
+      style={{
+        backgroundImage: 'url(/images/login-bg.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'left center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center gap-12 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
+        <div className="flex flex-col items-center text-center lg:w-2/5 lg:items-start lg:text-left">
+          {!logoFixada && (
+            <div className="mb-8 flex items-center gap-2.5 text-white">
+              <Wrench size={22} className="text-brand-500" />
+              <span className="font-display text-lg font-bold tracking-tight">
+                {nomeFixado || (
+                  <>
+                    MOTO<span className="text-brand-500">GEST</span>
+                  </>
+                )}
+              </span>
+            </div>
+          )}
 
-        <div className="relative z-10 max-w-md">
-          <h1 className="text-3xl font-extrabold leading-tight sm:text-[38px]">
-            Simplicidade para o usuário.
-            <br />
-            Profundidade na gestão.
-          </h1>
-          <p className="mt-4 max-w-sm text-base leading-relaxed text-slate-300">
-            Uma plataforma para organizar clientes, veículos, ordens de serviço, estoque e financeiro da sua oficina
-            em um único lugar.
+          <motion.div
+            initial={{ opacity: 0, scale: 0.88 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className="relative flex h-60 w-60 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-sm sm:h-80 sm:w-80 lg:h-96 lg:w-96"
+          >
+            {logoFixada ? (
+              <>
+                <div
+                  className="absolute inset-0 scale-110 rounded-full bg-contain bg-center bg-no-repeat opacity-80 blur-xl saturate-150"
+                  style={{ backgroundImage: `url(${logoFixada})` }}
+                  aria-hidden="true"
+                />
+                <img
+                  src={logoFixada}
+                  alt="Logo da sua oficina"
+                  className="relative h-[78%] w-[78%] object-contain drop-shadow-[0_20px_45px_rgba(0,0,0,0.6)]"
+                />
+              </>
+            ) : (
+              <WorkshopIllustration className="h-[78%] w-[78%] opacity-90" />
+            )}
+          </motion.div>
+
+          <p className="mt-7 max-w-md font-display text-2xl font-bold leading-snug tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)] sm:text-[28px]">
+            Gestão simples, <span className="text-brand-500">resultados extraordinários.</span>
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-1.5 font-mono text-xs text-slate-400">
-          {FLOW_STEPS.map((step, i) => (
-            <span key={step} className="flex items-center gap-1.5">
-              <b className="font-semibold text-white">{step}</b>
-              {i < FLOW_STEPS.length - 1 && <span>›</span>}
-            </span>
-          ))}
-        </div>
-
-        <WorkshopIllustration className="pointer-events-none absolute -right-4 bottom-0 z-0 hidden w-[54%] max-w-[430px] opacity-95 sm:block" />
-      </div>
-
-      {/* Form panel */}
-      <div className="flex flex-1 items-center justify-center bg-surface-alt px-4 py-10 sm:px-10">
+        {/* Card — vidro escuro translúcido, sem borda laranja */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
           className="w-full max-w-sm"
         >
-          <h2 className="text-2xl font-semibold text-ink">Acessar plataforma</h2>
-          <p className="mb-7 mt-1.5 text-sm text-ink-muted">Entre com sua conta da oficina para continuar.</p>
+          <div className="rounded-xl border border-white/10 bg-white/[0.06] p-6 shadow-[0_25px_70px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl sm:p-8">
+            <h2 className="font-display text-2xl font-semibold text-white">Acessar plataforma</h2>
+            <p className="mb-7 mt-1.5 text-sm text-slate-400">Entre com sua conta da oficina para continuar.</p>
 
-          {sessaoExpirada && (
-            <p className="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-warning">
-              Sua sessão expirou. Faça login novamente para continuar.
-            </p>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-            <Input
-              label="CNPJ ou e-mail"
-              autoComplete="username"
-              placeholder="00.000.000/0000-00 ou voce@oficina.com"
-              error={errors.identificador?.message}
-              required
-              {...register('identificador')}
-            />
-            <Input
-              label="Senha"
-              type="password"
-              autoComplete="current-password"
-              error={errors.senha?.message}
-              required
-              {...register('senha')}
-            />
-
-            {serverError && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-danger">{serverError}</p>
+            {sessaoExpirada && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                <span>Sua sessão expirou. Faça login novamente para continuar.</span>
+              </div>
             )}
 
-            <Button type="submit" size="lg" loading={submitting} fullWidth className="mt-1">
-              <LogIn size={18} /> Entrar
-            </Button>
-          </form>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+              <Input
+                variant="dark"
+                label="CNPJ ou e-mail"
+                icon={IdCard}
+                autoComplete="username"
+                placeholder="00.000.000/0000-00 ou voce@oficina.com"
+                error={errors.identificador?.message}
+                required
+                {...register('identificador')}
+              />
+              <Input
+                variant="dark"
+                label="Senha"
+                icon={Lock}
+                type="password"
+                autoComplete="current-password"
+                error={errors.senha?.message}
+                required
+                {...register('senha')}
+              />
 
-          <p className="mt-6 text-center text-sm text-ink-muted">
+              {serverError && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-300">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                  <span>{serverError}</span>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                size="lg"
+                loading={submitting}
+                fullWidth
+                className="mt-1 bg-gradient-to-r from-brand-600 to-brand-700 shadow-md shadow-brand-600/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-brand-600/40"
+              >
+                <LogIn size={18} /> Entrar
+              </Button>
+            </form>
+          </div>
+
+          <p className="mt-6 text-center text-sm text-slate-400">
             Ainda não tem uma oficina cadastrada?{' '}
-            <Link to="/cadastro" className="font-medium text-brand-700 hover:underline">
+            <Link to="/cadastro" className="font-medium text-brand-400 hover:text-brand-300 hover:underline">
               Cadastre-se
             </Link>
           </p>

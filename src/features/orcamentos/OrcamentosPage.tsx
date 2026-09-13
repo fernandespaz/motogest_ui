@@ -29,7 +29,7 @@ export function OrcamentosPage() {
   const [deleting, setDeleting] = useState<OrcamentoResponse | null>(null);
   const navigate = useNavigate();
 
-  const { data, isLoading } = useOrcamentos({ page, size: 20 });
+  const { data, isLoading } = useOrcamentos({ page, size: 20, sort: 'id,desc' });
   const deleteMutation = useDeleteOrcamento();
   const enviar = useEnviarOrcamento();
   const aprovar = useAprovarOrcamento();

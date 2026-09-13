@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useVisibleNavItems } from './useVisibleNavItems';
 import { groupLabels } from './nav';
 import { useAuthStore } from '@/store/authStore';
-import { useOficinaAtual } from '@/hooks/useOficina';
+import { useOficinaAtual, useOficinaLogoSrc } from '@/hooks/useOficina';
 import { BrandMark } from '@/components/ui/BrandMark';
 
 export function Sidebar() {
@@ -11,13 +11,14 @@ export function Sidebar() {
   const perfil = useAuthStore((s) => s.perfil);
   const visibleItems = useVisibleNavItems();
   const { data: oficina } = useOficinaAtual();
+  const logoSrc = useOficinaLogoSrc();
 
   const groups = ['operacao', 'gestao', 'admin'] as const;
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-line-dark bg-graphite lg:flex">
       <div className="flex items-center gap-2 border-b border-line-dark px-5 py-5">
-        <BrandMark logoUrl={oficina?.logoUrl} />
+        <BrandMark logoUrl={logoSrc} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-white">{oficina?.nomeFantasia || 'MotoGest'}</p>
           <p className="text-xs text-slate-400">Gestão de oficinas</p>

@@ -79,6 +79,7 @@ export const API_ROUTES = {
   },
   oficinas: {
     atual: '/api/v1/oficinas/atual',
+    logo: '/api/v1/oficinas/atual/logo',
     // Público (POST /oficinas/registrar) foi removido pelo backend — cadastro de
     // oficina agora é exclusivo do time root, via admin.base (X-Admin-Token).
     admin: '/api/v1/admin/oficinas',

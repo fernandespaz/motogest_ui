@@ -513,6 +513,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oficinas/atual/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixa o logo da oficina do usuario autenticado
+         * @description Devolve os bytes da imagem com o Content-Type original. Como e' uma rota autenticada por JWT (Authorization: Bearer), uma tag <img src> direta nao funciona no browser — o front precisa buscar via fetch()/XHR com o header de autenticacao e montar um blob URL.
+         */
+        get: operations["buscarLogo"];
+        put?: never;
+        /**
+         * Envia (ou substitui) o logo da oficina do usuario autenticado
+         * @description PNG, JPEG ou WEBP, ate 5MB. Armazenado em alta qualidade (sem recompressao) no proprio banco, sempre escopado ao tenant do usuario autenticado — nunca a um id informado na request.
+         */
+        post: operations["atualizarLogo"];
+        /** Remove o logo da oficina do usuario autenticado (volta a nao ter nenhum) */
+        delete: operations["removerLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/licenca/upgrade": {
         parameters: {
             query?: never;
@@ -1257,6 +1282,7 @@ export interface components {
             cep?: string;
             ativo?: boolean;
             logoUrl?: string;
+            logoImagemDisponivel?: boolean;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -3081,6 +3107,73 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrcamentoResponse"];
+                };
+            };
+        };
+    };
+    buscarLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    atualizarLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    arquivo: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OficinaResponse"];
+                };
+            };
+        };
+    };
+    removerLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OficinaResponse"];
                 };
             };
         };

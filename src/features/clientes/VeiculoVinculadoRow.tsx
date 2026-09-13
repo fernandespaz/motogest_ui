@@ -25,18 +25,17 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Input label="Placa" required error={rowErrors?.placa?.message} {...register(`veiculosExistentes.${index}.placa`)} />
           <Input label="Marca" {...register(`veiculosExistentes.${index}.marca`)} />
-          <Input label="Modelo" required error={rowErrors?.modelo?.message} {...register(`veiculosExistentes.${index}.modelo`)} />
-          <Input label="Cor" required error={rowErrors?.cor?.message} {...register(`veiculosExistentes.${index}.cor`)} />
+          <Input label="Modelo" error={rowErrors?.modelo?.message} {...register(`veiculosExistentes.${index}.modelo`)} />
+          <Input label="Cor" error={rowErrors?.cor?.message} {...register(`veiculosExistentes.${index}.cor`)} />
           <Input
             label="Ano fabricação"
             type="number"
-            required
             error={rowErrors?.anoFabricacao?.message}
             {...register(`veiculosExistentes.${index}.anoFabricacao`)}
           />
           <Input label="Ano modelo" type="number" {...register(`veiculosExistentes.${index}.anoModelo`)} />
           <Input label="KM atual" type="number" {...register(`veiculosExistentes.${index}.kmAtual`)} />
-          <Input label="Chassi" required error={rowErrors?.chassi?.message} {...register(`veiculosExistentes.${index}.chassi`)} />
+          <Input label="Chassi" error={rowErrors?.chassi?.message} {...register(`veiculosExistentes.${index}.chassi`)} />
         </div>
         <div className="mt-2 flex justify-end">
           <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(false)}>

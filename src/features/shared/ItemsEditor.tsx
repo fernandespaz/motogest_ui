@@ -38,106 +38,129 @@ export function ItemsEditor({ name }: { name: string }) {
         </Button>
       </div>
 
-      {fields.length === 0 && <p className="text-sm text-ink-muted">Nenhum item adicionado ainda.</p>}
-
-      <div className="flex flex-col gap-3">
-        {fields.map((field, index) => {
-          const tipoItem = watch(`${name}.${index}.tipoItem`);
-          return (
-            <div key={field.id} className="grid grid-cols-1 gap-2 rounded-lg border border-border p-3 sm:grid-cols-12 sm:items-end">
-              <div className="sm:col-span-2">
-                <Select label="Tipo" {...register(`${name}.${index}.tipoItem`)}>
-                  <option value="SERVICO">Serviço</option>
-                  <option value="PRODUTO">Produto</option>
-                </Select>
-              </div>
-
-              <div className="sm:col-span-4">
-                {tipoItem === 'SERVICO' ? (
-                  <Controller
-                    control={control}
-                    name={`${name}.${index}.servicoId`}
-                    render={({ field: f }) => (
-                      <Select
-                        label="Serviço"
-                        value={f.value ?? 0}
-                        onChange={(e) => {
-                          const id = Number(e.target.value);
-                          f.onChange(id);
-                          const s = servicos?.content?.find((x: ServicoResponse) => x.id === id);
-                          if (s) {
-                            setValue(`${name}.${index}.descricao`, s.nome);
-                            setValue(`${name}.${index}.valorUnitario`, s.preco ?? 0);
-                          }
-                        }}
-                      >
-                        <option value={0}>Selecione...</option>
-                        {servicos?.content?.map((s: ServicoResponse) => (
-                          <option key={s.id} value={s.id}>
-                            {s.nome}
-                          </option>
-                        ))}
+      {fields.length === 0 ? (
+        <p className="text-sm text-ink-muted">Nenhum item adicionado ainda.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface-alt text-xs uppercase tracking-wide text-ink-muted">
+                <th className="w-28 px-2 py-2 font-medium">Tipo</th>
+                <th className="px-2 py-2 font-medium">Serviço / Produto</th>
+                <th className="w-48 px-2 py-2 font-medium">Descrição</th>
+                <th className="w-20 px-2 py-2 font-medium">Qtd.</th>
+                <th className="w-28 px-2 py-2 font-medium">Valor un.</th>
+                <th className="w-28 px-2 py-2 text-right font-medium">Subtotal</th>
+                <th className="w-9 px-2 py-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {fields.map((field, index) => {
+                const tipoItem = watch(`${name}.${index}.tipoItem`);
+                const quantidade = Number(watch(`${name}.${index}.quantidade`)) || 0;
+                const valorUnitario = Number(watch(`${name}.${index}.valorUnitario`)) || 0;
+                return (
+                  <tr key={field.id} className="border-b border-border last:border-0">
+                    <td className="p-1.5 align-top">
+                      <Select {...register(`${name}.${index}.tipoItem`)}>
+                        <option value="SERVICO">Serviço</option>
+                        <option value="PRODUTO">Produto</option>
                       </Select>
-                    )}
-                  />
-                ) : (
-                  <Controller
-                    control={control}
-                    name={`${name}.${index}.produtoId`}
-                    render={({ field: f }) => (
-                      <Select
-                        label="Produto"
-                        value={f.value ?? 0}
-                        onChange={(e) => {
-                          const id = Number(e.target.value);
-                          f.onChange(id);
-                          const p = produtos?.content?.find((x: ProdutoResponse) => x.id === id);
-                          if (p) {
-                            setValue(`${name}.${index}.descricao`, p.nome);
-                            setValue(`${name}.${index}.valorUnitario`, p.precoVenda ?? 0);
-                          }
-                        }}
+                    </td>
+
+                    <td className="p-1.5 align-top">
+                      {tipoItem === 'SERVICO' ? (
+                        <Controller
+                          control={control}
+                          name={`${name}.${index}.servicoId`}
+                          render={({ field: f }) => (
+                            <Select
+                              value={f.value ?? 0}
+                              onChange={(e) => {
+                                const id = Number(e.target.value);
+                                f.onChange(id);
+                                const s = servicos?.content?.find((x: ServicoResponse) => x.id === id);
+                                if (s) {
+                                  setValue(`${name}.${index}.descricao`, s.nome);
+                                  setValue(`${name}.${index}.valorUnitario`, s.preco ?? 0);
+                                }
+                              }}
+                            >
+                              <option value={0}>Selecione...</option>
+                              {servicos?.content?.map((s: ServicoResponse) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.nome}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        />
+                      ) : (
+                        <Controller
+                          control={control}
+                          name={`${name}.${index}.produtoId`}
+                          render={({ field: f }) => (
+                            <Select
+                              value={f.value ?? 0}
+                              onChange={(e) => {
+                                const id = Number(e.target.value);
+                                f.onChange(id);
+                                const p = produtos?.content?.find((x: ProdutoResponse) => x.id === id);
+                                if (p) {
+                                  setValue(`${name}.${index}.descricao`, p.nome);
+                                  setValue(`${name}.${index}.valorUnitario`, p.precoVenda ?? 0);
+                                }
+                              }}
+                            >
+                              <option value={0}>Selecione...</option>
+                              {produtos?.content?.map((p: ProdutoResponse) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.nome}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                        />
+                      )}
+                    </td>
+
+                    <td className="p-1.5 align-top">
+                      <Input {...register(`${name}.${index}.descricao`)} />
+                    </td>
+                    <td className="p-1.5 align-top">
+                      <Input type="number" step="0.01" {...register(`${name}.${index}.quantidade`)} />
+                    </td>
+                    <td className="p-1.5 align-top">
+                      <Input type="number" step="0.01" {...register(`${name}.${index}.valorUnitario`)} />
+                    </td>
+                    <td className="whitespace-nowrap p-1.5 text-right align-middle font-medium text-ink">
+                      {formatCurrency(quantidade * valorUnitario)}
+                    </td>
+                    <td className="p-1.5 text-center align-middle">
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
+                        aria-label="Remover item"
                       >
-                        <option value={0}>Selecione...</option>
-                        {produtos?.content?.map((p: ProdutoResponse) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nome}
-                          </option>
-                        ))}
-                      </Select>
-                    )}
-                  />
-                )}
-              </div>
-
-              <div className="sm:col-span-3">
-                <Input label="Descrição" {...register(`${name}.${index}.descricao`)} />
-              </div>
-              <div className="sm:col-span-1">
-                <Input label="Qtd." type="number" step="0.01" {...register(`${name}.${index}.quantidade`)} />
-              </div>
-              <div className="sm:col-span-1">
-                <Input label="Valor un." type="number" step="0.01" {...register(`${name}.${index}.valorUnitario`)} />
-              </div>
-              <div className="flex justify-end sm:col-span-1">
-                <button
-                  type="button"
-                  onClick={() => remove(index)}
-                  className="rounded-md p-2 text-ink-muted hover:bg-red-50 hover:text-danger"
-                  aria-label="Remover item"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {fields.length > 0 && (
-        <div className="flex justify-end border-t border-border pt-3 text-sm">
-          <span className="text-ink-muted">Total: </span>
-          <span className="ml-1 font-semibold text-ink">{formatCurrency(total)}</span>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-border bg-surface-alt">
+                <td colSpan={5} className="px-2 py-2.5 text-right text-sm text-ink-muted">
+                  Total
+                </td>
+                <td colSpan={2} className="px-2 py-2.5 text-right text-sm font-semibold text-ink">
+                  {formatCurrency(total)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       )}
     </div>

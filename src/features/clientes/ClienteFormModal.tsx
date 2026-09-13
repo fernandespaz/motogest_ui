@@ -34,19 +34,24 @@ const veiculoNovoSchema = z.object({
   observacoes: z.string().optional(),
 });
 
+// Deliberately lenient (only id + placa required): this row edits a vehicle
+// that may already exist with incomplete legacy data, and saving the client
+// must never be blocked by a field the user isn't even looking at — the
+// dedicated Veículo form (features/veiculos) is what enforces full data
+// quality when someone is actually focused on that vehicle.
 const veiculoExistenteSchema = z.object({
   id: z.number(),
   placa: z.string().min(1, 'Informe a placa'),
   marca: z.string().optional(),
-  modelo: z.string().min(1, 'Informe o modelo'),
+  modelo: z.string().optional(),
   anoFabricacao: z.coerce
-    .number({ invalid_type_error: 'Informe o ano de fabricação' })
-    .min(1900, 'Ano inválido')
-    .max(CURRENT_YEAR + 1, 'Ano inválido'),
+    .number()
+    .optional()
+    .refine((v) => !v || (v >= 1900 && v <= CURRENT_YEAR + 1), 'Ano inválido'),
   anoModelo: z.coerce.number().optional(),
-  cor: z.string().min(1, 'Informe a cor'),
+  cor: z.string().optional(),
   kmAtual: z.coerce.number().optional(),
-  chassi: z.string().min(1, 'Informe o chassi'),
+  chassi: z.string().optional(),
   observacoes: z.string().optional(),
 });
 

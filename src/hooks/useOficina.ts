@@ -3,8 +3,83 @@ import { oficinasApi } from '@/api/endpoints/oficinas';
 import { licencaApi } from '@/api/endpoints/licenca';
 import type { OficinaUpdateRequest, UpgradeLicencaRequest } from '@/api/types';
 
+const oficinaLogoBlobKey = ['oficina', 'logo-blob'] as const;
+// Tracks the one blob: URL currently in use across every consumer of
+// useOficinaLogoSrc (Sidebar + Topbar + Minha Oficina all share the same
+// cached query) — revoked only when superseded by a fresh fetch, never on a
+// single consumer unmounting, since that would break the URL for the others
+// still rendering it.
+let logoBlobUrlEmUso: string | null = null;
+
+// A tela de login não sabe qual oficina está acessando antes da autenticação
+// (o campo identificador é único de propósito, pra não abrir uma rota de
+// enumeração de tenant) — então não dá pra buscar a logo certa nesse momento.
+// Como solução combinada com o usuário: a logo fica "fixada" neste navegador
+// (localStorage) assim que é buscada autenticado, e a tela de login passa a
+// usá-la a partir da próxima vez que carregar nesse mesmo navegador.
+const LOGO_LOGIN_STORAGE_KEY = 'motogest:login-logo';
+
+function fixarLogoParaLogin(blob: Blob) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      localStorage.setItem(LOGO_LOGIN_STORAGE_KEY, reader.result as string);
+    } catch {
+      // localStorage indisponível ou cheio — a logo simplesmente não fica fixada
+      // neste navegador; o upload em si não é afetado.
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function removerLogoFixadaDoLogin() {
+  try {
+    localStorage.removeItem(LOGO_LOGIN_STORAGE_KEY);
+  } catch {
+    // ignora — sem cache local para limpar
+  }
+}
+
+export function getLogoFixadaParaLogin(): string | null {
+  try {
+    return localStorage.getItem(LOGO_LOGIN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+// Mesma ideia da logo: o nome fantasia da oficina fica fixado neste navegador
+// assim que é buscado autenticado, pra substituir o nome fixo "MotoGest" no
+// topo da tela de login nas próximas vezes — sem precisar descobrir o tenant
+// antes do login.
+const NOME_LOGIN_STORAGE_KEY = 'motogest:login-nome';
+
+function fixarNomeParaLogin(nome: string | undefined | null) {
+  if (!nome) return;
+  try {
+    localStorage.setItem(NOME_LOGIN_STORAGE_KEY, nome);
+  } catch {
+    // ignora — o nome simplesmente não fica fixado neste navegador
+  }
+}
+
+export function getNomeFixadoParaLogin(): string | null {
+  try {
+    return localStorage.getItem(NOME_LOGIN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function useOficinaAtual() {
-  return useQuery({ queryKey: ['oficina', 'atual'], queryFn: () => oficinasApi.atual() });
+  return useQuery({
+    queryKey: ['oficina', 'atual'],
+    queryFn: async () => {
+      const oficina = await oficinasApi.atual();
+      fixarNomeParaLogin(oficina.nomeFantasia || oficina.razaoSocial);
+      return oficina;
+    },
+  });
 }
 
 export function useAtualizarOficina() {
@@ -12,6 +87,64 @@ export function useAtualizarOficina() {
   return useMutation({
     mutationFn: (payload: OficinaUpdateRequest) => oficinasApi.atualizar(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['oficina', 'atual'] }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+/**
+ * GET /oficinas/atual/logo requires the JWT bearer header, so a plain <img
+ * src> can't load it — this fetches the bytes once (via apiClient, so the
+ * auth header rides along) and hands back a local blob: URL every consumer
+ * (Sidebar, Topbar, Minha Oficina) can share through the query cache.
+ */
+export function useOficinaLogoSrc(): string | undefined {
+  const { data: oficina } = useOficinaAtual();
+  const { data: blobUrl } = useQuery({
+    queryKey: oficinaLogoBlobKey,
+    queryFn: async () => {
+      const blob = await oficinasApi.buscarLogoBlob();
+      fixarLogoParaLogin(blob);
+      const url = URL.createObjectURL(blob);
+      if (logoBlobUrlEmUso) URL.revokeObjectURL(logoBlobUrlEmUso);
+      logoBlobUrlEmUso = url;
+      return url;
+    },
+    enabled: !!oficina?.logoImagemDisponivel,
+    staleTime: Infinity,
+    meta: { silentError: true },
+  });
+
+  return blobUrl ?? oficina?.logoUrl ?? undefined;
+}
+
+export function useEnviarLogoOficina() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (arquivo: File) => oficinasApi.enviarLogo(arquivo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['oficina', 'atual'] });
+      qc.invalidateQueries({ queryKey: oficinaLogoBlobKey });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useRemoverLogoOficina() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => oficinasApi.removerLogo(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['oficina', 'atual'] });
+      // removeQueries (not just invalidate) so the stale blob URL disappears
+      // immediately — with logoImagemDisponivel now false the query goes
+      // disabled and would otherwise keep serving its last cached data forever.
+      if (logoBlobUrlEmUso) {
+        URL.revokeObjectURL(logoBlobUrlEmUso);
+        logoBlobUrlEmUso = null;
+      }
+      qc.removeQueries({ queryKey: oficinaLogoBlobKey });
+      removerLogoFixadaDoLogin();
+    },
     meta: { hasLocalErrorHandling: true },
   });
 }

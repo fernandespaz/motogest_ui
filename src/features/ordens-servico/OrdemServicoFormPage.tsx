@@ -116,10 +116,10 @@ export function OrdemServicoFormPage() {
         await updateMutation.mutateAsync({ id: osId, payload });
         toast.success('Ordem de Serviço atualizada.');
       } else {
-        const created = await createMutation.mutateAsync(payload);
+        await createMutation.mutateAsync(payload);
         toast.success('Ordem de Serviço criada.');
-        navigate(`/ordens-servico/${created.id}`, { replace: true });
       }
+      navigate('/ordens-servico');
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível salvar a Ordem de Serviço.'));
     }
@@ -256,7 +256,7 @@ export function OrdemServicoFormPage() {
                 {!encerrada && (
                   <div className="flex justify-end gap-2 border-t border-border pt-4">
                     <Button type="submit" loading={saving}>
-                      {isEditing ? 'Salvar alterações' : 'Criar Ordem de Serviço'}
+                      {isEditing ? 'Salvar alterações' : 'Salvar'}
                     </Button>
                   </div>
                 )}
