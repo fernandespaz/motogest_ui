@@ -40,11 +40,12 @@ import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
 const itemSchema = z.object({
+  id: z.number().optional(),
   tipoItem: z.enum(['SERVICO', 'PRODUTO']),
   servicoId: z.coerce.number().optional(),
   produtoId: z.coerce.number().optional(),
   descricao: z.string().min(1, 'Informe a descrição'),
-  quantidade: z.coerce.number().positive('Quantidade inválida'),
+  quantidade: z.coerce.number().int('Quantidade deve ser um número inteiro').positive('Quantidade inválida'),
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
 });
@@ -173,6 +174,7 @@ export function OrdemServicoFormPage() {
         observacoes: os.observacoes ?? '',
         itens:
           os.itens?.map((i) => ({
+            id: i.id,
             tipoItem: i.tipoItem ?? 'SERVICO',
             servicoId: i.servicoId ?? undefined,
             produtoId: i.produtoId ?? undefined,
@@ -215,6 +217,9 @@ export function OrdemServicoFormPage() {
       const payload = {
         ...values,
         dataPrevisao: values.dataPrevisao ? new Date(values.dataPrevisao).toISOString() : undefined,
+        // O "id" do item só existe no form pra ligar as ações de desconto/reserva
+        // ao item certo — ItemRequest não tem esse campo, então ele não vai no payload.
+        itens: values.itens.map(({ id: _id, ...item }) => item),
       };
       if (isEditing && osId) {
         await updateMutation.mutateAsync({ id: osId, payload });
@@ -522,7 +527,13 @@ export function OrdemServicoFormPage() {
                   </div>
 
                   <div className="mt-4 border-t border-border pt-4">
-                    <ItemsEditor name="itens" mostrarTempoVendido disabled={readOnly} limitarQuantidadeAoEstoque />
+                    <ItemsEditor
+                      name="itens"
+                      mostrarTempoVendido
+                      disabled={readOnly}
+                      limitarQuantidadeAoEstoque
+                      origem={osId ? { tipo: 'ORDEM_SERVICO', id: osId } : undefined}
+                    />
                     {errors.itens && !Array.isArray(errors.itens) && (
                       <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
                     )}

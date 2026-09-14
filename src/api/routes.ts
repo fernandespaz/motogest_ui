@@ -52,6 +52,18 @@ export const API_ROUTES = {
     base: '/api/v1/movimentacoes-estoque',
     porProduto: (produtoId: number) => `/api/v1/produtos/${produtoId}/movimentacoes`,
   },
+  reservasEstoque: {
+    base: '/api/v1/reservas-estoque',
+    limparExpiradas: '/api/v1/reservas-estoque/limpar-expiradas',
+    liberar: (id: number) => `/api/v1/reservas-estoque/${id}/liberar`,
+    reservarProduto: (produtoId: number) => `/api/v1/produtos/${produtoId}/reservas`,
+  },
+  descontos: {
+    base: '/api/v1/descontos',
+    detail: (id: number) => `/api/v1/descontos/${id}`,
+    aprovar: (id: number) => `/api/v1/descontos/${id}/aprovar`,
+    rejeitar: (id: number) => `/api/v1/descontos/${id}/rejeitar`,
+  },
   servicos: {
     base: '/api/v1/servicos',
   },

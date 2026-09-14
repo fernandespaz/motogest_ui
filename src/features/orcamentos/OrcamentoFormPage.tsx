@@ -13,7 +13,7 @@ import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
-import type { ClienteResponse } from '@/api/types';
+import type { ClienteResponse, OrcamentoResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
@@ -22,11 +22,12 @@ import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDocumento } from '@/lib/formatters';
 
 const itemSchema = z.object({
+  id: z.number().optional(),
   tipoItem: z.enum(['SERVICO', 'PRODUTO']),
   servicoId: z.coerce.number().optional(),
   produtoId: z.coerce.number().optional(),
   descricao: z.string().min(1, 'Informe a descrição'),
-  quantidade: z.coerce.number().positive('Quantidade inválida'),
+  quantidade: z.coerce.number().int('Quantidade deve ser um número inteiro').positive('Quantidade inválida'),
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
 });
@@ -40,6 +41,24 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
+
+// Usado tanto pra popular o form ao carregar um orçamento existente quanto
+// pra sincronizar os ids reais dos itens depois do auto-save silencioso (ver
+// garantirOrigem) — o mesmo mapeamento de resposta da API pro shape do form.
+function itensParaFormValues(itens: OrcamentoResponse['itens']): FormValues['itens'] {
+  return (
+    itens?.map((i) => ({
+      id: i.id,
+      tipoItem: i.tipoItem ?? 'SERVICO',
+      servicoId: i.servicoId ?? undefined,
+      produtoId: i.produtoId ?? undefined,
+      descricao: i.descricao ?? '',
+      quantidade: i.quantidade ?? 1,
+      valorUnitario: i.valorUnitario ?? 0,
+      tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
+    })) ?? []
+  );
+}
 
 function CampoBloqueado({ label, value }: { label: string; value: string }) {
   return (
@@ -71,6 +90,12 @@ function OrcamentoFormContent() {
   const { data: orcamento, isLoading } = useOrcamento(orcamentoId);
   const createMutation = useCreateOrcamento();
   const updateMutation = useUpdateOrcamento();
+  // Id de um rascunho criado silenciosamente (ver garantirOrigem) antes do
+  // usuário clicar em "Criar rascunho" — a URL continua em /orcamentos/novo
+  // (evita o remount forçado pelo `key` do wrapper), mas a partir daqui o
+  // registro já existe de verdade no backend.
+  const [savedId, setSavedId] = useState<number | undefined>(undefined);
+  const efetivoId = orcamentoId ?? savedId;
 
   const [buscaClienteInput, setBuscaClienteInput] = useState('');
   const [buscaVeiculo, setBuscaVeiculo] = useState('');
@@ -87,6 +112,7 @@ function OrcamentoFormContent() {
     handleSubmit,
     watch,
     setValue,
+    getValues,
     reset,
     formState: { errors },
   } = methods;
@@ -104,16 +130,7 @@ function OrcamentoFormContent() {
         veiculoId: orcamento.veiculoId ?? 0,
         validadeDias: orcamento.validadeDias ?? 7,
         observacoes: orcamento.observacoes ?? '',
-        itens:
-          orcamento.itens?.map((i) => ({
-            tipoItem: i.tipoItem ?? 'SERVICO',
-            servicoId: i.servicoId ?? undefined,
-            produtoId: i.produtoId ?? undefined,
-            descricao: i.descricao ?? '',
-            quantidade: i.quantidade ?? 1,
-            valorUnitario: i.valorUnitario ?? 0,
-            tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
-          })) ?? [],
+        itens: itensParaFormValues(orcamento.itens),
       });
     }
   }, [orcamento, reset]);
@@ -145,18 +162,55 @@ function OrcamentoFormContent() {
       sublabel: `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() || undefined,
     }));
 
+  // O "id" do item só existe no form pra ligar as ações de desconto/reserva
+  // ao item certo — ItemRequest não tem esse campo, então ele não vai no payload.
+  function paraPayload(values: FormValues) {
+    return { ...values, itens: values.itens.map(({ id: _id, ...item }) => item) };
+  }
+
   async function onSubmit(values: FormValues) {
     try {
-      if (isEditing && orcamentoId) {
-        await updateMutation.mutateAsync({ id: orcamentoId, payload: values });
-        toast.success('Orçamento atualizado.');
+      if (efetivoId) {
+        await updateMutation.mutateAsync({ id: efetivoId, payload: paraPayload(values) });
+        toast.success(orcamentoId ? 'Orçamento atualizado.' : 'Orçamento criado como rascunho.');
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(paraPayload(values));
         toast.success('Orçamento criado como rascunho.');
       }
       navigate('/orcamentos');
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível salvar o orçamento.'));
+    }
+  }
+
+  // Chamado pela primeira vez que o consultor pede desconto ou reserva de
+  // estoque num orçamento ainda não salvo — as duas ações do backend exigem
+  // um id de orçamento (e de item) real, então salvamos o rascunho na hora,
+  // silenciosamente, sem esperar o clique em "Criar rascunho". Só roda uma
+  // vez: com efetivoId já definido, devolve a origem existente direto.
+  async function garantirOrigem() {
+    if (efetivoId) return { tipo: 'ORCAMENTO' as const, id: efetivoId };
+    const valores = getValues();
+    if (!valores.clienteId || !valores.veiculoId) {
+      toast.error('Selecione cliente e veículo antes de solicitar desconto ou reservar estoque.');
+      return undefined;
+    }
+    try {
+      const criado = await createMutation.mutateAsync(paraPayload(valores));
+      if (!criado.id) return undefined;
+      setSavedId(criado.id);
+      reset({
+        clienteId: criado.clienteId ?? valores.clienteId,
+        veiculoId: criado.veiculoId ?? valores.veiculoId,
+        validadeDias: criado.validadeDias ?? valores.validadeDias,
+        observacoes: criado.observacoes ?? valores.observacoes,
+        itens: itensParaFormValues(criado.itens),
+      });
+      toast.success('Rascunho salvo automaticamente.');
+      return { tipo: 'ORCAMENTO' as const, id: criado.id };
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível salvar o rascunho automaticamente.'));
+      return undefined;
     }
   }
 
@@ -282,7 +336,13 @@ function OrcamentoFormContent() {
                 </AnimatePresence>
 
                 <div className="mt-4 border-t border-border pt-4">
-                  <ItemsEditor name="itens" mostrarTempoVendido disabled={readOnly} />
+                  <ItemsEditor
+                    name="itens"
+                    mostrarTempoVendido
+                    disabled={readOnly}
+                    origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
+                    onGarantirOrigem={garantirOrigem}
+                  />
                   {errors.itens && !Array.isArray(errors.itens) && (
                     <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
                   )}
@@ -296,7 +356,7 @@ function OrcamentoFormContent() {
               {!readOnly && (
                 <div className="flex justify-end gap-2 border-t border-border pt-4">
                   <Button type="submit" loading={saving}>
-                    {isEditing ? 'Salvar alterações' : 'Criar rascunho'}
+                    {efetivoId ? 'Salvar alterações' : 'Criar rascunho'}
                   </Button>
                 </div>
               )}

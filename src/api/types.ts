@@ -66,6 +66,16 @@ export type MovimentacaoEstoqueRequest = Schemas['MovimentacaoEstoqueRequest'];
 export type MovimentacaoEstoqueResponse = Schemas['MovimentacaoEstoqueResponse'];
 export type MovimentacaoTipo = NonNullable<MovimentacaoEstoqueRequest['tipo']>;
 
+export type ReservarEstoqueRequest = Schemas['ReservarEstoqueRequest'];
+export type ReservaEstoqueResponse = Schemas['ReservaEstoqueResponse'];
+export type ReservaEstoqueStatus = NonNullable<ReservaEstoqueResponse['status']>;
+
+export type SolicitacaoDescontoRequest = Schemas['SolicitacaoDescontoRequest'];
+export type SolicitacaoDescontoResponse = Schemas['SolicitacaoDescontoResponse'];
+export type RejeitarSolicitacaoDescontoRequest = Schemas['RejeitarSolicitacaoDescontoRequest'];
+export type OrigemDesconto = NonNullable<SolicitacaoDescontoRequest['origemTipo']>;
+export type StatusDesconto = NonNullable<SolicitacaoDescontoResponse['status']>;
+
 export type PerfilRequest = Schemas['PerfilRequest'];
 export type PerfilResponse = Schemas['PerfilResponse'];
 export type PermissaoResponse = Schemas['PermissaoResponse'];

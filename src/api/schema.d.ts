@@ -146,7 +146,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Retorna os dados cadastrais da oficina do usuario autenticado */
+        /**
+         * Retorna os dados cadastrais da oficina do usuario autenticado
+         * @description Resposta completa para quem tem OFICINA_READ (Administrador); resumida (so nome/logo/dados operacionais, sem razao social/CNPJ/e-mail/telefone/endereco) para quem so tem ORCAMENTO_READ ou ORDEM_SERVICO_READ (ex.: Consultor).
+         */
         get: operations["buscarAtual"];
         /** Atualiza os dados cadastrais da oficina do usuario autenticado */
         put: operations["atualizarAtual"];
@@ -165,7 +168,7 @@ export interface paths {
             cookie?: never;
         };
         /** Busca uma conta a receber pelo id */
-        get: operations["buscarPorId_7"];
+        get: operations["buscarPorId_8"];
         /** Atualiza uma conta a receber pendente */
         put: operations["atualizar_7"];
         post?: never;
@@ -183,7 +186,7 @@ export interface paths {
             cookie?: never;
         };
         /** Busca uma conta a pagar pelo id */
-        get: operations["buscarPorId_8"];
+        get: operations["buscarPorId_9"];
         /** Atualiza uma conta a pagar pendente */
         put: operations["atualizar_8"];
         post?: never;
@@ -201,7 +204,7 @@ export interface paths {
             cookie?: never;
         };
         /** Busca um cliente pelo id */
-        get: operations["buscarPorId_9"];
+        get: operations["buscarPorId_10"];
         /** Atualiza um cliente existente */
         put: operations["atualizar_9"];
         post?: never;
@@ -220,7 +223,7 @@ export interface paths {
             cookie?: never;
         };
         /** Busca um agendamento pelo id */
-        get: operations["buscarPorId_10"];
+        get: operations["buscarPorId_11"];
         /** Atualiza um agendamento existente */
         put: operations["atualizar_10"];
         post?: never;
@@ -282,6 +285,43 @@ export interface paths {
         put?: never;
         /** Cadastra um novo servico no catalogo */
         post: operations["criar_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservas-estoque/{id}/liberar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Libera manualmente uma reserva ativa, devolvendo a quantidade ao estoque disponivel */
+        post: operations["liberar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservas-estoque/limpar-expiradas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Libera manualmente todas as reservas ja vencidas da oficina corrente
+         * @description Normalmente desnecessario - o job agendado ja faz isso automaticamente em todas as oficinas; util para nao esperar o job em teste/operacao pontual.
+         */
+        post: operations["limparExpiradas"];
         delete?: never;
         options?: never;
         head?: never;
@@ -364,10 +404,30 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os produtos cadastrados na oficina corrente */
-        get: operations["listar_3"];
+        get: operations["listar_4"];
         put?: never;
         /** Cadastra um novo produto no estoque */
         post: operations["criar_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/produtos/{produtoId}/reservas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reserva uma quantidade do produto para um Orcamento/OS
+         * @description reservadoBy e' sempre o usuario autenticado (nunca vindo do corpo da requisicao)
+         */
+        post: operations["reservar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -400,7 +460,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os perfis da oficina corrente */
-        get: operations["listar_4"];
+        get: operations["listar_5"];
         put?: never;
         /** Cria um novo perfil de acesso na oficina corrente */
         post: operations["criar_4"];
@@ -421,7 +481,7 @@ export interface paths {
          * Lista as Ordens de Servico da oficina corrente
          * @description Filtros opcionais combinaveis: status, numero (contains) e tecnico responsavel (usuarioResponsavelId)
          */
-        get: operations["listar_5"];
+        get: operations["listar_6"];
         put?: never;
         /** Cria uma nova Ordem de Servico a partir do zero */
         post: operations["criar_5"];
@@ -439,7 +499,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as fotos anexadas a Ordem de Servico */
-        get: operations["listar_6"];
+        get: operations["listar_7"];
         put?: never;
         /** Anexa uma foto/evidencia a Ordem de Servico */
         post: operations["adicionar"];
@@ -457,7 +517,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os checklists registrados para a Ordem de Servico */
-        get: operations["listar_7"];
+        get: operations["listar_8"];
         put?: never;
         /** Registra um novo checklist (entrada ou saida) para a Ordem de Servico */
         post: operations["criar_6"];
@@ -560,7 +620,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os orcamentos da oficina corrente */
-        get: operations["listar_8"];
+        get: operations["listar_9"];
         put?: never;
         /** Cria um novo orcamento em rascunho */
         post: operations["criar_7"];
@@ -630,7 +690,7 @@ export interface paths {
         };
         /**
          * Baixa o logo da oficina do usuario autenticado
-         * @description Devolve os bytes da imagem com o Content-Type original. Como e' uma rota autenticada por JWT (Authorization: Bearer), uma tag <img src> direta nao funciona no browser — o front precisa buscar via fetch()/XHR com o header de autenticacao e montar um blob URL.
+         * @description Devolve os bytes da imagem com o Content-Type original. Acessivel a qualquer usuario autenticado da oficina, independente do perfil/permissoes (o logo nao e' dado sensivel). Como e' uma rota autenticada por JWT (Authorization: Bearer), uma tag <img src> direta nao funciona no browser — o front precisa buscar via fetch()/XHR com o header de autenticacao e montar um blob URL.
          */
         get: operations["buscarLogo"];
         put?: never;
@@ -663,6 +723,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/descontos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista solicitacoes de desconto da oficina corrente
+         * @description Filtra por origem (origemTipo + origemId) ou por status; sem filtros, lista todas
+         */
+        get: operations["listar_11"];
+        put?: never;
+        /**
+         * Solicita desconto num item de Orcamento/OS
+         * @description O valor so' passa a valer de verdade apos aprovacao por um usuario com DESCONTO_APROVAR
+         */
+        post: operations["criar_8"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/descontos/{id}/rejeitar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rejeita a solicitacao, sem nenhuma alteracao no item/agregado de origem */
+        post: operations["rejeitar_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/descontos/{id}/aprovar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aprova a solicitacao, aplicando o desconto no item e recalculando o valorTotal do agregado */
+        post: operations["aprovar_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contas-receber": {
         parameters: {
             query?: never;
@@ -671,10 +789,10 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a receber da oficina corrente */
-        get: operations["listar_10"];
+        get: operations["listar_12"];
         put?: never;
         /** Cadastra uma nova conta a receber */
-        post: operations["criar_8"];
+        post: operations["criar_9"];
         delete?: never;
         options?: never;
         head?: never;
@@ -723,10 +841,10 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a pagar da oficina corrente */
-        get: operations["listar_11"];
+        get: operations["listar_13"];
         put?: never;
         /** Cadastra uma nova conta a pagar */
-        post: operations["criar_9"];
+        post: operations["criar_10"];
         delete?: never;
         options?: never;
         head?: never;
@@ -778,13 +896,13 @@ export interface paths {
          * Lista os clientes da oficina corrente
          * @description Filtro opcional por nome, ou por 'busca' (nome, CPF/CNPJ ou placa de qualquer veiculo vinculado — tem prioridade sobre 'nome' quando os dois sao informados)
          */
-        get: operations["listar_12"];
+        get: operations["listar_14"];
         put?: never;
         /**
          * Cadastra um novo cliente (PF ou PJ)
          * @description Aceita uma lista opcional de veiculos para cadastrar junto, no mesmo fluxo inicial
          */
-        post: operations["criar_10"];
+        post: operations["criar_11"];
         delete?: never;
         options?: never;
         head?: never;
@@ -799,7 +917,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os lancamentos de caixa da oficina corrente */
-        get: operations["listar_13"];
+        get: operations["listar_15"];
         put?: never;
         /** Registra um lancamento manual de caixa */
         post: operations["registrar_1"];
@@ -834,10 +952,10 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_14"];
+        get: operations["listar_16"];
         put?: never;
         /** Cria um novo agendamento */
-        post: operations["criar_11"];
+        post: operations["criar_12"];
         delete?: never;
         options?: never;
         head?: never;
@@ -855,13 +973,13 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_15"];
+        get: operations["listar_17"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
          * @description Requer o header X-Admin-Token. So o usuario root de plataforma cadastra novas oficinas.
          */
-        post: operations["criar_12"];
+        post: operations["criar_13"];
         delete?: never;
         options?: never;
         head?: never;
@@ -903,6 +1021,23 @@ export interface paths {
         head?: never;
         /** Atualiza apenas o status do agendamento */
         patch: operations["atualizarStatus_1"];
+        trace?: never;
+    };
+    "/api/v1/reservas-estoque": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista o historico de reservas de estoque da oficina corrente (ativas, liberadas e expiradas) */
+        get: operations["listar_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/public/ordens-servico/{token}": {
@@ -1015,7 +1150,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista o historico de movimentacoes de estoque da oficina corrente */
-        get: operations["listar_9"];
+        get: operations["listar_10"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1033,6 +1168,23 @@ export interface paths {
         };
         /** Retorna o status da licenca/trial da oficina do usuario autenticado */
         get: operations["buscarAtual_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/descontos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Busca uma solicitacao de desconto por id */
+        get: operations["buscarPorId_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1260,6 +1412,31 @@ export interface components {
             estoqueMinimo?: number;
             abaixoDoMinimo?: boolean;
             ativo?: boolean;
+            reservasAtivas?: components["schemas"]["ReservaEstoqueResponse"][];
+        };
+        ReservaEstoqueResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            produtoId?: number;
+            produtoNome?: string;
+            quantidade?: number;
+            referenciaTipo?: string;
+            /** Format: int64 */
+            referenciaId?: number;
+            /** Format: int64 */
+            reservadoPorUsuarioId?: number;
+            reservadoPorNome?: string;
+            /** Format: date-time */
+            reservadoEm?: string;
+            /** Format: date-time */
+            expiraEm?: string;
+            /** @enum {string} */
+            status?: "ATIVA" | "LIBERADA" | "EXPIRADA";
+            /** Format: date-time */
+            liberadaEm?: string;
+            /** @enum {string} */
+            tipoLiberacao?: "MANUAL" | "EXPIRACAO";
         };
         PerfilRequest: {
             nome: string;
@@ -1400,6 +1577,8 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             tokenAprovacao?: string;
+            /** Format: int32 */
+            tempoVendidoMinutos?: number;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -1413,6 +1592,8 @@ export interface components {
             uf?: string;
             cep?: string;
             logoUrl?: string;
+            /** Format: int32 */
+            prazoExpiracaoReservaDias?: number;
         };
         OficinaResponse: {
             /** Format: int64 */
@@ -1431,6 +1612,8 @@ export interface components {
             ativo?: boolean;
             logoUrl?: string;
             logoImagemDisponivel?: boolean;
+            /** Format: int32 */
+            prazoExpiracaoReservaDias?: number;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -1593,6 +1776,12 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        ReservarEstoqueRequest: {
+            quantidade: number;
+            referenciaTipo: string;
+            /** Format: int64 */
+            referenciaId: number;
+        };
         MovimentacaoEstoqueRequest: {
             /** @enum {string} */
             tipo: "ENTRADA" | "SAIDA" | "RESERVA" | "LIBERACAO_RESERVA" | "AJUSTE";
@@ -1686,6 +1875,46 @@ export interface components {
             expirada?: boolean;
             /** Format: int64 */
             diasRestantes?: number;
+        };
+        SolicitacaoDescontoRequest: {
+            /** @enum {string} */
+            origemTipo: "ORCAMENTO" | "ORDEM_SERVICO";
+            /** Format: int64 */
+            origemId: number;
+            /** Format: int64 */
+            itemId: number;
+            percentualDesconto?: number;
+            valorUnitarioSolicitado?: number;
+        };
+        SolicitacaoDescontoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            origemTipo?: "ORCAMENTO" | "ORDEM_SERVICO";
+            /** Format: int64 */
+            origemId?: number;
+            /** Format: int64 */
+            itemId?: number;
+            itemDescricao?: string;
+            valorUnitarioOriginal?: number;
+            valorUnitarioSolicitado?: number;
+            percentualDesconto?: number;
+            /** Format: int64 */
+            solicitadoPorUsuarioId?: number;
+            solicitadoPorNome?: string;
+            /** Format: date-time */
+            solicitadoEm?: string;
+            /** @enum {string} */
+            status?: "PENDENTE" | "APROVADA" | "REJEITADA";
+            /** Format: int64 */
+            decididoPorUsuarioId?: number;
+            decididoPorNome?: string;
+            /** Format: date-time */
+            decididoEm?: string;
+            motivoRejeicao?: string;
+        };
+        RejeitarSolicitacaoDescontoRequest: {
+            motivo?: string;
         };
         CaixaMovimentoRequest: {
             /** @enum {string} */
@@ -1781,6 +2010,18 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
+        PageResponseReservaEstoqueResponse: {
+            content?: components["schemas"]["ReservaEstoqueResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
         PageResponseProdutoResponse: {
             content?: components["schemas"]["ProdutoResponse"][];
             /** Format: int32 */
@@ -1819,6 +2060,18 @@ export interface components {
         };
         PageResponseOrcamentoResponse: {
             content?: components["schemas"]["OrcamentoResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        PageResponseSolicitacaoDescontoResponse: {
+            content?: components["schemas"]["SolicitacaoDescontoResponse"][];
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
@@ -2446,7 +2699,7 @@ export interface operations {
             };
         };
     };
-    buscarPorId_7: {
+    buscarPorId_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -2494,7 +2747,7 @@ export interface operations {
             };
         };
     };
-    buscarPorId_8: {
+    buscarPorId_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -2542,7 +2795,7 @@ export interface operations {
             };
         };
     };
-    buscarPorId_9: {
+    buscarPorId_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -2610,7 +2863,7 @@ export interface operations {
             };
         };
     };
-    buscarPorId_10: {
+    buscarPorId_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -2814,6 +3067,48 @@ export interface operations {
             };
         };
     };
+    liberar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReservaEstoqueResponse"];
+                };
+            };
+        };
+    };
+    limparExpiradas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": number;
+                };
+            };
+        };
+    };
     rejeitar: {
         parameters: {
             query?: never;
@@ -2902,7 +3197,7 @@ export interface operations {
             };
         };
     };
-    listar_3: {
+    listar_4: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -2944,6 +3239,32 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProdutoResponse"];
+                };
+            };
+        };
+    };
+    reservar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                produtoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReservarEstoqueRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ReservaEstoqueResponse"];
                 };
             };
         };
@@ -2998,7 +3319,7 @@ export interface operations {
             };
         };
     };
-    listar_4: {
+    listar_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -3042,7 +3363,7 @@ export interface operations {
             };
         };
     };
-    listar_5: {
+    listar_6: {
         parameters: {
             query: {
                 status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
@@ -3091,7 +3412,7 @@ export interface operations {
             };
         };
     };
-    listar_6: {
+    listar_7: {
         parameters: {
             query?: never;
             header?: never;
@@ -3139,7 +3460,7 @@ export interface operations {
             };
         };
     };
-    listar_7: {
+    listar_8: {
         parameters: {
             query?: never;
             header?: never;
@@ -3303,7 +3624,7 @@ export interface operations {
             };
         };
     };
-    listar_8: {
+    listar_9: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3506,7 +3827,104 @@ export interface operations {
             };
         };
     };
-    listar_10: {
+    listar_11: {
+        parameters: {
+            query: {
+                origemTipo?: "ORCAMENTO" | "ORDEM_SERVICO";
+                origemId?: number;
+                status?: "PENDENTE" | "APROVADA" | "REJEITADA";
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseSolicitacaoDescontoResponse"];
+                };
+            };
+        };
+    };
+    criar_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SolicitacaoDescontoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SolicitacaoDescontoResponse"];
+                };
+            };
+        };
+    };
+    rejeitar_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejeitarSolicitacaoDescontoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SolicitacaoDescontoResponse"];
+                };
+            };
+        };
+    };
+    aprovar_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SolicitacaoDescontoResponse"];
+                };
+            };
+        };
+    };
+    listar_12: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3528,7 +3946,7 @@ export interface operations {
             };
         };
     };
-    criar_8: {
+    criar_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -3596,7 +4014,7 @@ export interface operations {
             };
         };
     };
-    listar_11: {
+    listar_13: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3618,7 +4036,7 @@ export interface operations {
             };
         };
     };
-    criar_9: {
+    criar_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3686,7 +4104,7 @@ export interface operations {
             };
         };
     };
-    listar_12: {
+    listar_14: {
         parameters: {
             query: {
                 nome?: string;
@@ -3710,7 +4128,7 @@ export interface operations {
             };
         };
     };
-    criar_10: {
+    criar_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -3734,7 +4152,7 @@ export interface operations {
             };
         };
     };
-    listar_13: {
+    listar_15: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3804,7 +4222,7 @@ export interface operations {
             };
         };
     };
-    listar_14: {
+    listar_16: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3826,7 +4244,7 @@ export interface operations {
             };
         };
     };
-    criar_11: {
+    criar_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -3850,7 +4268,7 @@ export interface operations {
             };
         };
     };
-    listar_15: {
+    listar_17: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -3872,7 +4290,7 @@ export interface operations {
             };
         };
     };
-    criar_12: {
+    criar_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -3940,6 +4358,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgendamentoResponse"];
+                };
+            };
+        };
+    };
+    listar_3: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseReservaEstoqueResponse"];
                 };
             };
         };
@@ -4072,7 +4512,7 @@ export interface operations {
             };
         };
     };
-    listar_9: {
+    listar_10: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -4110,6 +4550,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LicencaResponse"];
+                };
+            };
+        };
+    };
+    buscarPorId_7: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SolicitacaoDescontoResponse"];
                 };
             };
         };

@@ -21,6 +21,7 @@ import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { PerfisPage } from '@/features/perfis/PerfisPage';
 import { OficinaPage } from '@/features/oficina/OficinaPage';
+import { DescontosPage } from '@/features/descontos/DescontosPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -45,7 +46,8 @@ export const router = createBrowserRouter([
           { path: '/orcamentos/novo', element: <OrcamentoFormPage /> },
           { path: '/orcamentos/:id', element: <OrcamentoFormPage /> },
           { path: '/ordens-servico', element: <OrdensServicoPage /> },
-          { path: '/ordens-servico/nova', element: <OrdemServicoFormPage /> },
+          // Sem rota de criação direta — toda OS nasce de um Orçamento aprovado
+          // (ver "a-partir-de-orcamento" na conversão), nunca é criada do zero aqui.
           { path: '/ordens-servico/:id', element: <OrdemServicoFormPage /> },
           { path: '/minhas-os', element: <MinhasOrdensServicoPage /> },
           { path: '/produtos', element: <ProdutosPage /> },
@@ -53,6 +55,7 @@ export const router = createBrowserRouter([
           { path: '/financeiro', element: <FinanceiroPage /> },
           { path: '/usuarios', element: <UsuariosPage /> },
           { path: '/perfis', element: <PerfisPage /> },
+          { path: '/descontos', element: <DescontosPage /> },
           { path: '/oficina', element: <OficinaPage /> },
           { path: '/oficina/licenca', element: <OficinaPage /> },
         ],

@@ -12,6 +12,7 @@ import {
   UserCog,
   ShieldCheck,
   Building2,
+  Percent,
 } from 'lucide-react';
 import { isMecanico } from '@/lib/perfil';
 
@@ -47,6 +48,13 @@ export const navItems: NavItem[] = [
   { label: 'Produtos e Estoque', to: '/produtos', icon: Package, group: 'gestao', permissions: ['ESTOQUE_READ'] },
   { label: 'Catálogo de Serviços', to: '/servicos', icon: Wrench, group: 'gestao', permissions: ['SERVICO_READ'] },
   { label: 'Financeiro', to: '/financeiro', icon: Wallet, group: 'gestao', permissions: ['FINANCEIRO_READ'] },
+  {
+    label: 'Solicitações de Desconto',
+    to: '/descontos',
+    icon: Percent,
+    group: 'admin',
+    permissions: ['DESCONTO_APROVAR'],
+  },
   { label: 'Usuários', to: '/usuarios', icon: UserCog, group: 'admin', permissions: ['USUARIO_READ'] },
   { label: 'Perfis de Acesso', to: '/perfis', icon: ShieldCheck, group: 'admin', permissions: ['PERFIL_READ'] },
   { label: 'Minha Oficina', to: '/oficina', icon: Building2, group: 'admin', permissions: ['OFICINA_READ'] },

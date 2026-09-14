@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileDown, AlertTriangle } from 'lucide-react';
+import { FileDown, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Field';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -56,11 +55,6 @@ export function OrdensServicoPage() {
       <PageHeader
         title="Ordens de Serviço"
         subtitle="Núcleo operacional da oficina"
-        action={
-          <Button onClick={() => navigate('/ordens-servico/nova')}>
-            <Plus size={18} /> Nova OS
-          </Button>
-        }
       />
 
       <div className="mb-4 flex flex-wrap gap-3">
