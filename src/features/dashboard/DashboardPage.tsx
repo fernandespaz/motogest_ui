@@ -51,6 +51,12 @@ function StatCard({
 export function DashboardPage() {
   const { data, isLoading } = useDashboard();
   const nome = useAuthStore((s) => s.nome);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  // GET /dashboard devolve os números financeiros junto com os operacionais
+  // no mesmo payload, sem filtrar por permissão — quem não tem FINANCEIRO_READ
+  // (ex.: Consultor Técnico) não devia ver contas a pagar/receber nem saldo de
+  // caixa, então o corte é feito aqui, não no backend.
+  const podeVerFinanceiro = hasPermission('FINANCEIRO_READ');
 
   if (isLoading || !data) return <PageSpinner label="Carregando indicadores..." />;
 
@@ -73,27 +79,31 @@ export function DashboardPage() {
           label="Agendamentos hoje"
           value={String(data.agendamentosHoje ?? 0)}
         />
-        <StatCard
-          index={3}
-          icon={ArrowUpCircle}
-          label="A receber (pendente)"
-          value={`${formatCurrency(data.contasAReceberPendentes?.valorTotal)} · ${data.contasAReceberPendentes?.quantidade ?? 0}`}
-          tone="success"
-        />
-        <StatCard
-          index={4}
-          icon={ArrowDownCircle}
-          label="A pagar (pendente)"
-          value={`${formatCurrency(data.contasAPagarPendentes?.valorTotal)} · ${data.contasAPagarPendentes?.quantidade ?? 0}`}
-          tone="danger"
-        />
-        <StatCard
-          index={5}
-          icon={Wallet}
-          label="Saldo de caixa (mês)"
-          value={formatCurrency(data.saldoCaixaMesAtual)}
-          tone={data.saldoCaixaMesAtual != null && data.saldoCaixaMesAtual < 0 ? 'danger' : 'success'}
-        />
+        {podeVerFinanceiro && (
+          <>
+            <StatCard
+              index={3}
+              icon={ArrowUpCircle}
+              label="A receber (pendente)"
+              value={`${formatCurrency(data.contasAReceberPendentes?.valorTotal)} · ${data.contasAReceberPendentes?.quantidade ?? 0}`}
+              tone="success"
+            />
+            <StatCard
+              index={4}
+              icon={ArrowDownCircle}
+              label="A pagar (pendente)"
+              value={`${formatCurrency(data.contasAPagarPendentes?.valorTotal)} · ${data.contasAPagarPendentes?.quantidade ?? 0}`}
+              tone="danger"
+            />
+            <StatCard
+              index={5}
+              icon={Wallet}
+              label="Saldo de caixa (mês)"
+              value={formatCurrency(data.saldoCaixaMesAtual)}
+              tone={data.saldoCaixaMesAtual != null && data.saldoCaixaMesAtual < 0 ? 'danger' : 'success'}
+            />
+          </>
+        )}
         <StatCard
           index={6}
           icon={PackageX}

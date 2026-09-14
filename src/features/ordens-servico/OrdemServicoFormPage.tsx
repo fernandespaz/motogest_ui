@@ -16,6 +16,7 @@ import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useUsuarios } from '@/hooks/useUsuarios';
+import { isMecanico } from '@/lib/perfil';
 import {
   useCreateOrdemServico,
   useOrdemServico,
@@ -125,12 +126,24 @@ export function OrdemServicoFormPage() {
   const buscaCliente = useDebouncedValue(buscaClienteInput, 300);
   const { data: clientes, isFetching: buscandoClientes } = useClientes({ size: 20, busca: buscaCliente || undefined });
   const { data: usuarios } = useUsuarios();
-  // Perfis sem USUARIO_READ (ex.: Mecânico) não carregam a lista completa —
-  // sem isso, o próprio responsável já atribuído à OS apareceria em branco no
-  // seletor, mesmo com o valor certo salvo por trás.
-  const responsavelOptions = usuarios ?? (os?.usuarioResponsavelId && os.usuarioResponsavelNome
-    ? [{ id: os.usuarioResponsavelId, nome: os.usuarioResponsavelNome }]
-    : []);
+  // Só técnicos (perfil Mecânico) executam OS — Administrador e Consultor
+  // ficam de fora da lista pra um NOVO responsável.
+  const mecanicos = usuarios?.filter((u) => isMecanico(u.perfilNome)) ?? [];
+  // Perfis sem USUARIO_READ não carregam a lista completa; e se o
+  // responsável já atribuído não for (mais) Mecânico — perfil trocado depois,
+  // por exemplo — ele ainda entra na lista pra não sumir do seletor com o
+  // valor certo salvo por trás.
+  const responsavelAtual =
+    os?.usuarioResponsavelId != null && os.usuarioResponsavelNome
+      ? { id: os.usuarioResponsavelId, nome: os.usuarioResponsavelNome }
+      : undefined;
+  const responsavelOptions = usuarios
+    ? responsavelAtual && !mecanicos.some((u) => u.id === responsavelAtual.id)
+      ? [...mecanicos, responsavelAtual]
+      : mecanicos
+    : responsavelAtual
+      ? [responsavelAtual]
+      : [];
 
   const methods = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { itens: [] } });
   const {
@@ -146,6 +159,11 @@ export function OrdemServicoFormPage() {
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && STATUS_BLOQUEIA_EDICAO.includes(os?.status as OrdemServicoStatus);
+  // "Enviar" só funciona a partir de ABERTA (o backend rejeita com 422 fora
+  // disso) — é o único jeito de gerar o tokenAprovacao usado por "Compartilhar"
+  // depois, inclusive quando um edit reverte uma OS já Aprovada de volta pra
+  // Aguardando Aprovação (PUT já revalida esse status sozinho; só falta avisar
+  // o cliente do valor novo, e pra isso precisa do token que já existe).
   const podeEnviar = isEditing && os?.status === 'ABERTA';
   const podeIniciar = isEditing && os?.status === 'APROVADA';
   const podePausar = isEditing && os?.status === 'EM_ANDAMENTO';
@@ -488,7 +506,7 @@ export function OrdemServicoFormPage() {
                       name="usuarioResponsavelId"
                       render={({ field }) => (
                         <Select
-                          label="Responsável"
+                          label="Técnico Resp."
                           disabled={readOnly}
                           value={field.value ?? ''}
                           onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}

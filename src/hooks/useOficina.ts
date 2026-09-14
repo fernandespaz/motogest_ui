@@ -99,10 +99,19 @@ export function useAtualizarOficina() {
 }
 
 /**
- * GET /oficinas/atual/logo requires the JWT bearer header, so a plain <img
- * src> can't load it — this fetches the bytes once (via apiClient, so the
- * auth header rides along) and hands back a local blob: URL every consumer
- * (Sidebar, Topbar, Minha Oficina) can share through the query cache.
+ * GET /oficinas/atual/logo requires o header JWT (não dá pra usar num <img
+ * src> puro) — busca o blob uma vez (via apiClient, com o auth junto) e devolve
+ * uma blob: URL local que Sidebar/Topbar/Minha Oficina compartilham via cache.
+ *
+ * GET /oficinas/atual/logo exige a MESMA permissão OFICINA_READ de GET
+ * /oficinas/atual (confirmado direto no backend) — perfis operacionais
+ * (Mecânico, Consultor Técnico) não têm, então nunca conseguem buscar a logo
+ * pela rota autenticada. Como último recurso, cai pra logo fixada neste
+ * navegador (a mesma cache usada na tela de login) — só funciona se ALGUÉM
+ * com OFICINA_READ já tiver aberto o app nesse aparelho antes; sem isso, é a
+ * "MG" mesmo. Resolver de verdade exigiria o backend liberar essa rota (é só
+ * branding, não é dado sensível de configuração) pra qualquer usuário do
+ * tenant, não só quem tem OFICINA_READ.
  */
 export function useOficinaLogoSrc(): string | undefined {
   const { data: oficina } = useOficinaAtual();
@@ -121,7 +130,7 @@ export function useOficinaLogoSrc(): string | undefined {
     meta: { silentError: true },
   });
 
-  return blobUrl ?? oficina?.logoUrl ?? undefined;
+  return blobUrl ?? oficina?.logoUrl ?? getLogoFixadaParaLogin() ?? undefined;
 }
 
 export function useEnviarLogoOficina() {

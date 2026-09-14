@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Building2,
 } from 'lucide-react';
+import { isMecanico } from '@/lib/perfil';
 
 export interface NavItem {
   label: string;
@@ -64,21 +65,6 @@ function isUnlocked(item: NavItem, hasPermission: (codigo: string) => boolean): 
   return !item.permissions || item.permissions.some(hasPermission);
 }
 
-/**
- * O nome do perfil é texto livre em Perfis de Acesso — não dá pra travar nisso
- * com segurança (um admin pode renomear "Mecanico" pra qualquer coisa). Serve
- * só como atalho de UX (menu reduzido, landing page) pro cadastro padrão; não
- * substitui os códigos de permissão, que continuam sendo o que realmente
- * controla acesso a cada rota.
- */
-function isMecanico(perfil?: string): boolean {
-  const normalizado = (perfil ?? '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
-  return normalizado.includes('mecanico');
-}
-
 // Único caminho que um perfil Mecânico precisa no dia a dia — só a lista geral
 // (pra achar uma OS de outro colega) e "Minhas OS" (a própria fila de trabalho).
 // Qualquer outra permissão que o perfil tenha (ex.: DASHBOARD_READ do seed
@@ -88,7 +74,10 @@ const CAMINHOS_MECANICO = ['/ordens-servico', '/minhas-os'];
 export function filterNavByPermission(hasPermission: (codigo: string) => boolean, perfil?: string): NavItem[] {
   const desbloqueados = navItems.filter((item) => isUnlocked(item, hasPermission));
   if (isMecanico(perfil)) return desbloqueados.filter((item) => CAMINHOS_MECANICO.includes(item.to));
-  return desbloqueados;
+  // "Minhas OS" é a fila pessoal de um técnico com cronômetro — não faz
+  // sentido pra quem não é Mecânico (Admin e Consultor Técnico também têm
+  // ORDEM_SERVICO_WRITE, mas usam a lista completa em "Ordens de Serviço").
+  return desbloqueados.filter((item) => item.to !== '/minhas-os');
 }
 
 /**

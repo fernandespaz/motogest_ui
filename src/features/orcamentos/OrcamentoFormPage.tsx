@@ -27,6 +27,7 @@ const itemSchema = z.object({
   descricao: z.string().min(1, 'Informe a descrição'),
   quantidade: z.coerce.number().positive('Quantidade inválida'),
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
+  tempoVendidoMinutos: z.coerce.number().min(0).optional(),
 });
 
 const schema = z.object({
@@ -119,6 +120,7 @@ function OrcamentoFormContent() {
             descricao: i.descricao ?? '',
             quantidade: i.quantidade ?? 1,
             valorUnitario: i.valorUnitario ?? 0,
+            tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
           })) ?? [],
       });
     }
@@ -199,7 +201,11 @@ function OrcamentoFormContent() {
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <Card>
             <CardBody className="flex flex-col gap-4">
-              <fieldset disabled={readOnly} className="contents">
+              {/* Não uso <fieldset disabled> aqui — com className="contents" (necessário
+                  pra não quebrar o grid abaixo) o Chrome/Firefox não propaga o disabled
+                  pros campos descendentes, então cada controle recebe o disabled
+                  explicitamente. */}
+              <div className="contents">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Controller
                     control={control}
@@ -208,6 +214,7 @@ function OrcamentoFormContent() {
                       <Combobox
                         label="Cliente"
                         required
+                        disabled={readOnly}
                         error={errors.clienteId?.message}
                         placeholder="Buscar por nome ou CPF/CNPJ..."
                         value={field.value || undefined}
@@ -232,7 +239,7 @@ function OrcamentoFormContent() {
                       <Combobox
                         label="Veículo"
                         required
-                        disabled={!clienteId}
+                        disabled={readOnly || !clienteId}
                         error={errors.veiculoId?.message}
                         placeholder={clienteId ? 'Buscar por placa...' : 'Selecione um cliente primeiro'}
                         value={field.value || undefined}
@@ -245,7 +252,7 @@ function OrcamentoFormContent() {
                       />
                     )}
                   />
-                  <Input label="Validade (dias)" type="number" {...register('validadeDias')} />
+                  <Input label="Validade (dias)" type="number" disabled={readOnly} {...register('validadeDias')} />
                 </div>
 
                 <AnimatePresence>
@@ -283,16 +290,16 @@ function OrcamentoFormContent() {
                 </AnimatePresence>
 
                 <div className="mt-4 border-t border-border pt-4">
-                  <ItemsEditor name="itens" />
+                  <ItemsEditor name="itens" mostrarTempoVendido disabled={readOnly} />
                   {errors.itens && !Array.isArray(errors.itens) && (
                     <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
                   )}
                 </div>
 
                 <div className="mt-4">
-                  <Textarea label="Observações" {...register('observacoes')} />
+                  <Textarea label="Observações" disabled={readOnly} {...register('observacoes')} />
                 </div>
-              </fieldset>
+              </div>
 
               {!readOnly && (
                 <div className="flex justify-end gap-2 border-t border-border pt-4">

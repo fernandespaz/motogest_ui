@@ -92,3 +92,20 @@ export function formatMinutosParaHoras(minutos: number | undefined | null): stri
   const mins = abs % 60;
   return `${sinal}${String(horas).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
+
+/** "H:MM" ou "HH:MM" → minutos totais (ex.: "1:30" → 90). `undefined` se o texto não for um horário válido. */
+export function parseHorasParaMinutos(texto: string): number | undefined {
+  const partes = texto.trim().split(':');
+  if (partes.length !== 2) return undefined;
+  const horas = Number(partes[0]);
+  const mins = Number(partes[1]);
+  if (!Number.isFinite(horas) || !Number.isFinite(mins) || horas < 0 || mins < 0 || mins > 59) return undefined;
+  return horas * 60 + mins;
+}
+
+/** Mascara dígitos digitados livremente como "H:MM" (ex.: "130" → "1:30"). */
+export function maskHorasInput(bruto: string): string {
+  const digitos = bruto.replace(/\D/g, '').slice(0, 5);
+  if (digitos.length <= 2) return digitos;
+  return `${digitos.slice(0, -2)}:${digitos.slice(-2)}`;
+}

@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
+import { LogOut } from 'lucide-react';
 import { useVisibleNavItems } from './useVisibleNavItems';
 import { groupLabels } from './nav';
 import { useAuthStore } from '@/store/authStore';
@@ -9,9 +10,16 @@ import { BrandMark } from '@/components/ui/BrandMark';
 export function Sidebar() {
   const nome = useAuthStore((s) => s.nome);
   const perfil = useAuthStore((s) => s.perfil);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
   const visibleItems = useVisibleNavItems();
   const { data: oficina } = useOficinaAtual();
   const logoSrc = useOficinaLogoSrc();
+
+  function handleLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
 
   const groups = ['operacao', 'gestao', 'admin'] as const;
 
@@ -59,9 +67,19 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-line-dark px-4 py-3">
-        <p className="truncate text-sm font-medium text-white">{nome}</p>
-        <p className="truncate text-xs text-slate-400">{perfil}</p>
+      <div className="flex items-center justify-between gap-2 border-t border-line-dark px-4 py-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-white">{nome}</p>
+          <p className="truncate text-xs text-slate-400">{perfil}</p>
+        </div>
+        <button
+          onClick={handleLogout}
+          aria-label="Sair"
+          title="Sair"
+          className="shrink-0 rounded-lg p-2 text-danger hover:bg-white/10"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </aside>
   );
