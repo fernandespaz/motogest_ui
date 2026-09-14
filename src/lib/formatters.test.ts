@@ -7,9 +7,12 @@ import {
   formatDate,
   formatDateTime,
   formatDocumento,
+  formatMinutosParaHoras,
   formatPhone,
   getInitials,
+  maskHorasInput,
   onlyDigits,
+  parseHorasParaMinutos,
   toDateInputValue,
   toDateTimeLocalValue,
 } from './formatters';
@@ -142,5 +145,63 @@ describe('toDateTimeLocalValue', () => {
 
   it('formats a valid datetime as datetime-local value', () => {
     expect(toDateTimeLocalValue('2026-01-05T10:30:00')).toBe('2026-01-05T10:30');
+  });
+});
+
+describe('formatMinutosParaHoras', () => {
+  it('formats minutes as HH:MM', () => {
+    expect(formatMinutosParaHoras(90)).toBe('01:30');
+    expect(formatMinutosParaHoras(0)).toBe('00:00');
+  });
+
+  it('falls back to 00:00 for nullish input', () => {
+    expect(formatMinutosParaHoras(undefined)).toBe('00:00');
+    expect(formatMinutosParaHoras(null)).toBe('00:00');
+  });
+
+  it('prefixes negative totals (tempo estourado) with a minus sign', () => {
+    expect(formatMinutosParaHoras(-45)).toBe('-00:45');
+  });
+
+  it('rounds a fractional minute count before splitting hours/minutes', () => {
+    expect(formatMinutosParaHoras(90.6)).toBe('01:31');
+  });
+});
+
+describe('parseHorasParaMinutos', () => {
+  it('parses "H:MM" and "HH:MM" into total minutes', () => {
+    expect(parseHorasParaMinutos('1:30')).toBe(90);
+    expect(parseHorasParaMinutos('01:30')).toBe(90);
+  });
+
+  it('returns undefined for text with no colon-separated parts', () => {
+    expect(parseHorasParaMinutos('130')).toBeUndefined();
+    expect(parseHorasParaMinutos('')).toBeUndefined();
+  });
+
+  it('returns undefined for an out-of-range minutes component', () => {
+    expect(parseHorasParaMinutos('1:60')).toBeUndefined();
+    expect(parseHorasParaMinutos('1:-5')).toBeUndefined();
+  });
+
+  it('returns undefined for a non-numeric component', () => {
+    expect(parseHorasParaMinutos('a:30')).toBeUndefined();
+  });
+});
+
+describe('maskHorasInput', () => {
+  it('leaves up to two digits unmasked', () => {
+    expect(maskHorasInput('1')).toBe('1');
+    expect(maskHorasInput('13')).toBe('13');
+  });
+
+  it('inserts a colon before the last two digits once a third digit is typed', () => {
+    expect(maskHorasInput('130')).toBe('1:30');
+    expect(maskHorasInput('0130')).toBe('01:30');
+  });
+
+  it('strips non-digit characters and caps at 5 digits', () => {
+    expect(maskHorasInput('1:30')).toBe('1:30');
+    expect(maskHorasInput('123456')).toBe('123:45');
   });
 });

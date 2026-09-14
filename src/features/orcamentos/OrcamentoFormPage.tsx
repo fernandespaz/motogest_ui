@@ -15,6 +15,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -39,15 +40,6 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-
-function useDebouncedValue(value: string, delayMs: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 function CampoBloqueado({ label, value }: { label: string; value: string }) {
   return (

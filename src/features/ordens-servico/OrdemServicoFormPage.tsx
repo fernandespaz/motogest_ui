@@ -16,6 +16,7 @@ import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useUsuarios } from '@/hooks/useUsuarios';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { isMecanico } from '@/lib/perfil';
 import {
   useCreateOrdemServico,
@@ -30,7 +31,7 @@ import {
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
 import { ChecklistTab } from './ChecklistTab';
 import { FotosTab } from './FotosTab';
-import type { ClienteResponse, OrdemServicoStatus, VeiculoResponse } from '@/api/types';
+import type { ClienteResponse, OrdemServicoStatus } from '@/api/types';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toDateTimeLocalValue, formatMinutosParaHoras, formatDateTime } from '@/lib/formatters';
 import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
@@ -59,15 +60,6 @@ const schema = z.object({
 });
 
 type FormValues = z.infer<typeof schema>;
-
-function useDebouncedValue(value: string, delayMs: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 // PUT /ordens-servico/{id} bloqueia por completo a partir daqui (ver Swagger) —
 // só resta olhar (PDF, checklists, fotos), nunca editar campos.
@@ -530,7 +522,7 @@ export function OrdemServicoFormPage() {
                   </div>
 
                   <div className="mt-4 border-t border-border pt-4">
-                    <ItemsEditor name="itens" mostrarTempoVendido disabled={readOnly} />
+                    <ItemsEditor name="itens" mostrarTempoVendido disabled={readOnly} limitarQuantidadeAoEstoque />
                     {errors.itens && !Array.isArray(errors.itens) && (
                       <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
                     )}

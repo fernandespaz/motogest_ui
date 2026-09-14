@@ -83,10 +83,17 @@ export function ItemsEditor({
   name,
   mostrarTempoVendido,
   disabled,
+  limitarQuantidadeAoEstoque,
 }: {
   name: string;
   mostrarTempoVendido?: boolean;
   disabled?: boolean;
+  // Trava a quantidade de um item PRODUTO no estoque disponível — faz sentido
+  // pra Ordem de Serviço (que consome estoque de verdade), mas não pra
+  // Orçamento (uma estimativa: o consultor pode cotar mais do que há em
+  // estoque hoje, contando com reposição antes do serviço começar). Por isso
+  // é opt-in, não o padrão.
+  limitarQuantidadeAoEstoque?: boolean;
 }) {
   const { control, register, watch, setValue } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
@@ -144,7 +151,11 @@ export function ItemsEditor({
                 // undefined enquanto nenhum produto foi escolhido — só vira um
                 // teto de verdade (inclusive 0, produto sem estoque) depois da
                 // seleção, pra não travar o campo de quantidade de um Serviço.
-                const estoqueDisponivel = produtoSelecionado?.quantidadeDisponivel;
+                // Sempre calculado (pro aviso "Estoque disponível" abaixo do
+                // select), mas só vira um limite de fato quando
+                // limitarQuantidadeAoEstoque estiver ligado.
+                const estoqueDisponivelInfo = produtoSelecionado?.quantidadeDisponivel;
+                const estoqueMaximo = limitarQuantidadeAoEstoque ? estoqueDisponivelInfo : undefined;
                 return (
                   <tr key={field.id} className="border-b border-border last:border-0">
                     <td className="p-1.5 align-top">
@@ -201,7 +212,7 @@ export function ItemsEditor({
                                     // O produto pode ter menos em estoque do que já estava
                                     // digitado (ou do que o item anterior selecionado tinha).
                                     const disponivelDoNovo = p.quantidadeDisponivel;
-                                    if (disponivelDoNovo != null && quantidade > disponivelDoNovo) {
+                                    if (limitarQuantidadeAoEstoque && disponivelDoNovo != null && quantidade > disponivelDoNovo) {
                                       setValue(`${name}.${index}.quantidade`, disponivelDoNovo);
                                     }
                                   }
@@ -220,10 +231,10 @@ export function ItemsEditor({
                             <p
                               className={clsx(
                                 'mt-1 text-xs',
-                                estoqueDisponivel === 0 ? 'font-medium text-danger' : 'text-ink-muted',
+                                estoqueDisponivelInfo === 0 ? 'font-medium text-danger' : 'text-ink-muted',
                               )}
                             >
-                              Estoque disponível: {estoqueDisponivel ?? 0}
+                              Estoque disponível: {estoqueDisponivelInfo ?? 0}
                             </p>
                           )}
                         </>
@@ -238,12 +249,12 @@ export function ItemsEditor({
                         disabled={disabled}
                         type="number"
                         step="0.01"
-                        max={estoqueDisponivel}
+                        max={estoqueMaximo}
                         {...register(`${name}.${index}.quantidade`, {
                           onChange: (e) => {
-                            if (estoqueDisponivel == null) return;
+                            if (estoqueMaximo == null) return;
                             const valor = Number(e.target.value);
-                            if (valor > estoqueDisponivel) setValue(`${name}.${index}.quantidade`, estoqueDisponivel);
+                            if (valor > estoqueMaximo) setValue(`${name}.${index}.quantidade`, estoqueMaximo);
                           },
                         })}
                       />

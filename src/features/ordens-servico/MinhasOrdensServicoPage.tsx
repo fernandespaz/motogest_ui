@@ -9,18 +9,11 @@ import { Textarea } from '@/components/ui/Field';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useOrdensServico, useTimerStartOS, useTimerPauseOS, useTimerResumeOS, useAtualizarStatusOS } from '@/hooks/useOrdensServico';
 import { useAuthStore } from '@/store/authStore';
-import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
+import type { OrdemServicoResponse } from '@/api/types';
 import { formatMinutosParaHoras, formatDateTime, getInitials } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
-
-// "Aguardando início" = já aprovada pelo cliente, só falta o técnico clicar em
-// Iniciar. "Em andamento" agrupa tudo que já foi iniciado — em execução,
-// pausada ou esperando peça — já que pra quem está no box, essas três são
-// "trabalho em curso", só o motivo de estar parado muda.
-const STATUS_AGUARDANDO_INICIO: OrdemServicoStatus[] = ['APROVADA'];
-const STATUS_EM_ANDAMENTO: OrdemServicoStatus[] = ['EM_ANDAMENTO', 'PAUSADA', 'AGUARDANDO_PECA'];
 
 export function MinhasOrdensServicoPage() {
   const navigate = useNavigate();
@@ -33,20 +26,44 @@ export function MinhasOrdensServicoPage() {
   const [pausando, setPausando] = useState<OrdemServicoResponse | null>(null);
   const [motivoPausa, setMotivoPausa] = useState('');
 
-  const { data, isLoading, isFetching, refetch } = useOrdensServico({
+  // A API só aceita um único `status` por requisição (sem OR), e essa tela
+  // precisa dos contadores das duas abas ao mesmo tempo — por isso são 4
+  // queries, uma por status, em vez de uma lista geral filtrada no cliente.
+  // Isso também evita que status concluídos/antigos (fora do escopo desta
+  // tela) ocupem espaço numa página só e empurrem OS ativas recentes para
+  // fora do corte de paginação à medida que o histórico do técnico cresce.
+  const paramsComuns = {
     size: 100,
     sort: 'dataPrevisao,asc',
     usuarioResponsavelId: usuarioId ?? undefined,
-  });
+  };
+  const aprovadaQuery = useOrdensServico({ ...paramsComuns, status: 'APROVADA' });
+  const emAndamentoQuery = useOrdensServico({ ...paramsComuns, status: 'EM_ANDAMENTO' });
+  const pausadaQuery = useOrdensServico({ ...paramsComuns, status: 'PAUSADA' });
+  const aguardandoPecaQuery = useOrdensServico({ ...paramsComuns, status: 'AGUARDANDO_PECA' });
+
+  const isLoading =
+    aprovadaQuery.isLoading || emAndamentoQuery.isLoading || pausadaQuery.isLoading || aguardandoPecaQuery.isLoading;
+  const isFetching =
+    aprovadaQuery.isFetching || emAndamentoQuery.isFetching || pausadaQuery.isFetching || aguardandoPecaQuery.isFetching;
+  function refetch() {
+    aprovadaQuery.refetch();
+    emAndamentoQuery.refetch();
+    pausadaQuery.refetch();
+    aguardandoPecaQuery.refetch();
+  }
 
   const timerStart = useTimerStartOS();
   const timerPause = useTimerPauseOS();
   const timerResume = useTimerResumeOS();
   const atualizarStatus = useAtualizarStatusOS();
 
-  const todas: OrdemServicoResponse[] = data?.content ?? [];
-  const aguardandoInicio = todas.filter((os) => STATUS_AGUARDANDO_INICIO.includes(os.status as OrdemServicoStatus));
-  const emAndamento = todas.filter((os) => STATUS_EM_ANDAMENTO.includes(os.status as OrdemServicoStatus));
+  const aguardandoInicio: OrdemServicoResponse[] = aprovadaQuery.data?.content ?? [];
+  const emAndamento: OrdemServicoResponse[] = [
+    ...(emAndamentoQuery.data?.content ?? []),
+    ...(pausadaQuery.data?.content ?? []),
+    ...(aguardandoPecaQuery.data?.content ?? []),
+  ];
 
   const listaAtual = aba === 'inicio' ? aguardandoInicio : emAndamento;
   const filtradas = useMemo(() => {
