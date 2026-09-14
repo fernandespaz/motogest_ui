@@ -38,6 +38,7 @@ import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { useAuthStore } from '@/store/authStore';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -106,6 +107,7 @@ export function OrdemServicoFormPage() {
   const [motivoPausa, setMotivoPausa] = useState('');
 
   const { data: os, isLoading } = useOrdemServico(osId);
+  const usuarioLogadoId = useAuthStore((s) => s.usuarioId);
   const createMutation = useCreateOrdemServico();
   const updateMutation = useUpdateOrdemServico();
   const atualizarStatus = useAtualizarStatusOS();
@@ -158,7 +160,15 @@ export function OrdemServicoFormPage() {
   // Aguardando Aprovação (PUT já revalida esse status sozinho; só falta avisar
   // o cliente do valor novo, e pra isso precisa do token que já existe).
   const podeEnviar = isEditing && os?.status === 'ABERTA';
-  const podeIniciar = isEditing && os?.status === 'APROVADA';
+  // Só o técnico atribuído inicia o cronômetro — se ainda não tem responsável
+  // definido, libera pra quem estiver vendo (alguém precisa poder assumir).
+  // O backend hoje NÃO valida isso (testado: qualquer usuário autenticado
+  // consegue chamar /timer/start numa OS de outro técnico) — esse gate aqui é
+  // só de UI; a garantia de verdade precisa vir do backend também.
+  const podeIniciar =
+    isEditing &&
+    os?.status === 'APROVADA' &&
+    (os?.usuarioResponsavelId == null || os.usuarioResponsavelId === usuarioLogadoId);
   const podePausar = isEditing && os?.status === 'EM_ANDAMENTO';
   const podeRetomar = isEditing && os?.status === 'PAUSADA';
   const podeCompartilhar = isEditing && !!os?.tokenAprovacao && os?.status !== 'ABERTA';
@@ -323,6 +333,13 @@ export function OrdemServicoFormPage() {
                 <Badge tone={metaFor(ordemServicoStatusMeta, os?.status).tone}>
                   {metaFor(ordemServicoStatusMeta, os?.status).label}
                 </Badge>
+                {os?.status === 'APROVADA' &&
+                  os.usuarioResponsavelId != null &&
+                  os.usuarioResponsavelId !== usuarioLogadoId && (
+                    <span className="text-xs text-ink-muted">
+                      Atribuída a {os.usuarioResponsavelNome} — só ele pode iniciar
+                    </span>
+                  )}
                 {podeEnviar && (
                   <Button variant="secondary" size="sm" onClick={handleEnviar} loading={enviarOS.isPending}>
                     <Send size={16} /> Enviar para aprovação
