@@ -57,6 +57,15 @@ function Harness({
   );
 }
 
+// Clica no botão de "Adicionar X" (que também muda pra aba certa), abre a
+// busca inline, e escolhe a opção pelo texto — a busca some depois de escolher.
+async function adicionarViaBusca(botaoLabel: RegExp, opcaoLabel: string) {
+  await userEvent.click(screen.getByRole('button', { name: botaoLabel }));
+  await userEvent.click(screen.getByRole('textbox'));
+  const opcao = await screen.findByRole('button', { name: new RegExp(opcaoLabel) });
+  await userEvent.click(opcao);
+}
+
 describe('ItemsEditor', () => {
   beforeEach(() => {
     useAuthStore.setState({
@@ -67,14 +76,44 @@ describe('ItemsEditor', () => {
     vi.mocked(useDescontosPorOrigem).mockReturnValue({ data: { content: [] } } as never);
   });
 
-  it('shows the empty state and adds a default Serviço row on "Adicionar item"', async () => {
+  it('starts on the Serviços tab, and picking from the search adds a compact line', async () => {
     render(<Harness />);
-    expect(screen.getByText('Nenhum item adicionado ainda.')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum serviço adicionado ainda.')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /Adicionar item/ }));
+    await adicionarViaBusca(/Adicionar serviço/, 'Troca de Óleo');
+    expect(screen.queryByText('Nenhum serviço adicionado ainda.')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('item-row-0')).getByText('Troca de Óleo')).toBeInTheDocument();
+    // A busca fecha sozinha depois de escolher.
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
 
-    expect(screen.queryByText('Nenhum item adicionado ainda.')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('combobox')[0]).toHaveValue('SERVICO');
+  it('adding a Produto switches to the Peças tab automatically', async () => {
+    render(<Harness />);
+
+    await adicionarViaBusca(/Adicionar peça\/produto/, 'Óleo Motor 10W30');
+
+    expect(within(screen.getByTestId('item-row-0')).getByText('Óleo Motor 10W30')).toBeInTheDocument();
+    // A aba de Serviços não é mais a ativa — seu vazio não deveria estar visível.
+    expect(screen.queryByText('Nenhum serviço adicionado ainda.')).not.toBeInTheDocument();
+  });
+
+  it('switching tabs shows each type in isolation', async () => {
+    render(
+      <Harness
+        defaultItens={[
+          { tipoItem: 'SERVICO', descricao: 'Troca de Óleo', quantidade: 1, valorUnitario: 120 },
+          { tipoItem: 'PRODUTO', produtoId: 1, descricao: 'Óleo Motor 10W30', quantidade: 1, valorUnitario: 32 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Troca de Óleo')).toBeInTheDocument();
+    expect(screen.queryByText('Óleo Motor 10W30')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Peças/ }));
+
+    expect(screen.getByText('Óleo Motor 10W30')).toBeInTheDocument();
+    expect(screen.queryByText('Troca de Óleo')).not.toBeInTheDocument();
   });
 
   it('gates the catalogs behind SERVICO_READ/ESTOQUE_READ', () => {
@@ -85,24 +124,31 @@ describe('ItemsEditor', () => {
     expect(vi.mocked(useProdutos).mock.calls[0][1]).toEqual({ enabled: false });
   });
 
-  it('filling a Serviço select auto-fills descrição and valor unitário', async () => {
-    render(<Harness defaultItens={[{ tipoItem: 'SERVICO', descricao: '', quantidade: 1, valorUnitario: 0 }]} />);
+  it('picking a Serviço from the search fills descrição and valor unitário', async () => {
+    render(<Harness />);
+    await adicionarViaBusca(/Adicionar serviço/, 'Troca de Óleo');
 
-    const row = screen.getAllByRole('row')[1];
-    const servicoSelect = within(row).getAllByRole('combobox')[1];
-    await userEvent.selectOptions(servicoSelect, 'Troca de Óleo');
-
-    expect(within(row).getByDisplayValue('120')).toBeInTheDocument();
+    const row = screen.getByTestId('item-row-0');
+    expect(within(row).getByText('Troca de Óleo')).toBeInTheDocument();
+    expect(within(row).getByLabelText('Valor unitário')).toHaveValue(120);
   });
 
-  it('shows the stock hint after picking a Produto', async () => {
-    render(<Harness defaultItens={[{ tipoItem: 'PRODUTO', descricao: '', quantidade: 1, valorUnitario: 0 }]} />);
+  it('shows the stock hint after picking a Produto from the search', async () => {
+    render(<Harness />);
+    await adicionarViaBusca(/Adicionar peça\/produto/, 'Óleo Motor 10W30');
 
-    const row = screen.getAllByRole('row')[1];
-    const produtoSelect = within(row).getAllByRole('combobox')[1];
-    await userEvent.selectOptions(produtoSelect, 'Óleo Motor 10W30 (40 disp.)');
+    expect(screen.getByText('Estoque: 40')).toBeInTheDocument();
+  });
 
-    expect(screen.getByText('Estoque disponível: 40')).toBeInTheDocument();
+  it('filters catalog options as the user types in the search', async () => {
+    render(<Harness />);
+    await userEvent.click(screen.getByRole('button', { name: /Adicionar peça\/produto/ }));
+    const input = screen.getByRole('textbox');
+    await userEvent.click(input);
+    await userEvent.type(input, 'pneu');
+
+    expect(screen.getByRole('button', { name: /Pneu Traseiro Aro 15/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Óleo Motor 10W30/ })).not.toBeInTheDocument();
   });
 
   it('clamps quantity to available stock only when limitarQuantidadeAoEstoque is set', async () => {
@@ -114,8 +160,9 @@ describe('ItemsEditor', () => {
         limitarQuantidadeAoEstoque
       />,
     );
+    await userEvent.click(screen.getByRole('button', { name: /Peças/ }));
 
-    const qtdInput = screen.getByDisplayValue('1');
+    const qtdInput = screen.getByLabelText('Quantidade');
     await userEvent.clear(qtdInput);
     await userEvent.type(qtdInput, '20');
 
@@ -130,8 +177,9 @@ describe('ItemsEditor', () => {
         ]}
       />,
     );
+    await userEvent.click(screen.getByRole('button', { name: /Peças/ }));
 
-    const qtdInput = screen.getByDisplayValue('1');
+    const qtdInput = screen.getByLabelText('Quantidade');
     await userEvent.clear(qtdInput);
     await userEvent.type(qtdInput, '20');
 
@@ -140,7 +188,7 @@ describe('ItemsEditor', () => {
 
   it('truncates a fractional quantity to a whole number', async () => {
     render(<Harness defaultItens={[{ tipoItem: 'SERVICO', descricao: 'X', quantidade: 1, valorUnitario: 10 }]} />);
-    const qtdInput = screen.getByDisplayValue('1');
+    const qtdInput = screen.getByLabelText('Quantidade');
 
     await userEvent.clear(qtdInput);
     await userEvent.type(qtdInput, '1.5');
@@ -163,11 +211,12 @@ describe('ItemsEditor', () => {
 
   it('removes a row when its trash button is clicked', async () => {
     render(<Harness defaultItens={[{ tipoItem: 'SERVICO', descricao: 'Único item', quantidade: 1, valorUnitario: 10 }]} />);
-    expect(screen.getAllByRole('row')).toHaveLength(3); // thead + 1 item + tfoot
+    expect(screen.getByTestId('item-row-0')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Remover item' }));
 
-    expect(screen.getByText('Nenhum item adicionado ainda.')).toBeInTheDocument();
+    expect(screen.queryByTestId('item-row-0')).not.toBeInTheDocument();
+    expect(screen.getByText('Nenhum serviço adicionado ainda.')).toBeInTheDocument();
   });
 
   it('disables valorUnitario for a profile without DESCONTO_APROVAR, offers "Solicitar desconto", and closes the modal', async () => {
@@ -179,7 +228,7 @@ describe('ItemsEditor', () => {
       />,
     );
 
-    expect(screen.getByDisplayValue('10')).toBeDisabled();
+    expect(screen.getByLabelText('Valor unitário')).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: /Solicitar desconto/ }));
     expect(screen.getByText('SolicitarDescontoModal:X')).toBeInTheDocument();
 
@@ -213,6 +262,7 @@ describe('ItemsEditor', () => {
         origem={{ tipo: 'ORDEM_SERVICO', id: 1 }}
       />,
     );
+    await userEvent.click(screen.getByRole('button', { name: /Peças/ }));
 
     await userEvent.click(screen.getByRole('button', { name: /Reservar/ }));
     expect(screen.getByText('ReservarEstoqueModal:Óleo Motor 10W30')).toBeInTheDocument();
@@ -270,7 +320,7 @@ describe('ItemsEditor', () => {
     expect(await screen.findByText('SolicitarDescontoModal:Item novo')).toBeInTheDocument();
   });
 
-  it('renders the tempo vendido column, its presets, and total only when mostrarTempoVendido is set', async () => {
+  it('renders the tempo vendido controls, and the total, only when mostrarTempoVendido is set', async () => {
     render(
       <Harness
         defaultItens={[{ tipoItem: 'SERVICO', descricao: 'X', quantidade: 1, valorUnitario: 10, tempoVendidoMinutos: 30 }]}
@@ -279,7 +329,36 @@ describe('ItemsEditor', () => {
     );
 
     expect(screen.getByDisplayValue('00:30')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: '1:00' }));
+    // +1:00 SOMA ao que já estava lá (00:30), não substitui — 00:30 + 1:00 = 01:30.
+    await userEvent.click(screen.getByRole('button', { name: '+1:00' }));
+    expect(screen.getByDisplayValue('01:30')).toBeInTheDocument();
+  });
+
+  it('a Produto item never shows the tempo vendido controls, even with mostrarTempoVendido set', async () => {
+    render(
+      <Harness
+        defaultItens={[
+          { tipoItem: 'PRODUTO', produtoId: 1, descricao: 'Óleo Motor 10W30', quantidade: 1, valorUnitario: 32 },
+        ]}
+        mostrarTempoVendido
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: /Peças/ }));
+
+    expect(screen.queryByLabelText('Tempo vendido')).not.toBeInTheDocument();
+  });
+
+  it('sums repeated preset clicks instead of overwriting the previous value', async () => {
+    render(
+      <Harness
+        defaultItens={[{ tipoItem: 'SERVICO', descricao: 'X', quantidade: 1, valorUnitario: 10 }]}
+        mostrarTempoVendido
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '+0:30' }));
+    await userEvent.click(screen.getByRole('button', { name: '+0:30' }));
+
     expect(screen.getByDisplayValue('01:00')).toBeInTheDocument();
   });
 
@@ -291,7 +370,7 @@ describe('ItemsEditor', () => {
       />,
     );
 
-    const tempoInput = screen.getByPlaceholderText('00:00');
+    const tempoInput = screen.getByLabelText('Tempo vendido');
     await userEvent.type(tempoInput, '130');
     await userEvent.tab();
 
@@ -319,23 +398,6 @@ describe('ItemsEditor', () => {
     expect(screen.getByText('Desconto pendente')).toBeInTheDocument();
   });
 
-  it('clamps the already-typed quantidade down when switching to a lower-stock produto', async () => {
-    render(
-      <Harness
-        defaultItens={[
-          { tipoItem: 'PRODUTO', produtoId: 1, descricao: 'Óleo Motor 10W30', quantidade: 20, valorUnitario: 32 },
-        ]}
-        limitarQuantidadeAoEstoque
-      />,
-    );
-
-    const row = screen.getAllByRole('row')[1];
-    const produtoSelect = within(row).getAllByRole('combobox')[1];
-    await userEvent.selectOptions(produtoSelect, 'Pneu Traseiro Aro 15 (8 disp.)');
-
-    expect(within(row).getByDisplayValue('8')).toBeInTheDocument();
-  });
-
   it('disables every control when disabled is set', () => {
     render(
       <Harness
@@ -344,7 +406,9 @@ describe('ItemsEditor', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /Adicionar item/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Adicionar serviço/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Adicionar peça\/produto/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remover item' })).toBeDisabled();
+    expect(screen.getByLabelText('Quantidade')).toBeDisabled();
   });
 });

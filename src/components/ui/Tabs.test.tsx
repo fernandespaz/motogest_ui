@@ -22,6 +22,23 @@ describe('Tabs', () => {
     await userEvent.click(screen.getByText('Itens'));
     expect(onChange).toHaveBeenCalledWith('itens');
   });
+
+  // Tabs é usado dentro de <form> (ex.: as abas Serviços/Peças de ItemsEditor,
+  // que vive dentro do form de Orçamento/OS) — sem type="button" explícito, um
+  // <button> sem tipo é type="submit" por padrão, e clicar na aba disparava o
+  // submit do formulário inteiro (salvava e navegava pra longe da tela).
+  it('never submits an ancestor form when a tab is clicked', async () => {
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <Tabs tabs={tabs} active="dados" onChange={vi.fn()} />
+      </form>,
+    );
+
+    await userEvent.click(screen.getByText('Itens'));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 describe('TabPanel', () => {

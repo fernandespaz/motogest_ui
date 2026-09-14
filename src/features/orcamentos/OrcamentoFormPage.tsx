@@ -20,6 +20,9 @@ import { ItemsEditor } from '@/features/shared/ItemsEditor';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDocumento } from '@/lib/formatters';
+import { useAuthStore } from '@/store/authStore';
+import { isMecanico } from '@/lib/perfil';
+import { getLandingPath } from '@/layout/nav';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -86,6 +89,19 @@ function OrcamentoFormContent() {
   const orcamentoId = id ? Number(id) : undefined;
   const isEditing = !!orcamentoId;
   const navigate = useNavigate();
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const perfil = useAuthStore((s) => s.perfil);
+  // Atalho de UX, não trava de segurança (ver lib/perfil.ts): Mecânico não
+  // tem nenhum motivo de negócio pra estar aqui (orçamento é conversa com o
+  // cliente antes da OS existir, não faz parte do trabalho técnico) — nem
+  // /orcamentos/novo nem /orcamentos/:id aparecem no menu dele, mas nada
+  // impedia acessar direto pela URL. Redireciona pra onde o perfil realmente
+  // deveria estar em vez de deixar o formulário completo (itens, valores)
+  // aberto pra edição.
+  const redirecionandoForaDeOrcamento = isMecanico(perfil);
+  useEffect(() => {
+    if (redirecionandoForaDeOrcamento) navigate(getLandingPath(hasPermission, perfil), { replace: true });
+  }, [redirecionandoForaDeOrcamento, hasPermission, perfil, navigate]);
 
   const { data: orcamento, isLoading } = useOrcamento(orcamentoId);
   const createMutation = useCreateOrcamento();
@@ -215,6 +231,7 @@ function OrcamentoFormContent() {
   }
 
   if (isEditing && isLoading) return <PageSpinner />;
+  if (redirecionandoForaDeOrcamento) return <PageSpinner />;
 
   const saving = createMutation.isPending || updateMutation.isPending;
 

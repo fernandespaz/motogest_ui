@@ -12,6 +12,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
       {tabs.map((tab) => (
         <button
           key={tab.key}
+          type="button"
           onClick={() => onChange(tab.key)}
           className={clsx(
             'relative whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors',
