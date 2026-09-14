@@ -72,7 +72,15 @@ export function OrcamentosPage() {
   async function handleConverter(row: OrcamentoResponse) {
     try {
       const os = await criarOS.mutateAsync({ orcamentoId: row.id! });
-      toast.success('Ordem de Serviço criada a partir do orçamento.');
+      // useCriarOSAPartirDeOrcamento tenta promover a OS pra Aprovada sozinho,
+      // mas engole qualquer falha nesse passo pra não travar a conversão em
+      // si (ver comentário lá) — avisa aqui se não chegou em Aprovada, senão
+      // a OS fica presa esperando ação manual sem o consultor saber.
+      if (os.status === 'APROVADA') {
+        toast.success('Ordem de Serviço criada a partir do orçamento.');
+      } else {
+        toast.error('OS criada, mas não foi possível aprová-la automaticamente. Envie/aprove manualmente.');
+      }
       navigate(`/ordens-servico/${os.id}`);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível converter em OS.'));

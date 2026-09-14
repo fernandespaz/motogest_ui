@@ -108,6 +108,16 @@ export function OrdemServicoFormPage() {
 
   const { data: os, isLoading } = useOrdemServico(osId);
   const usuarioLogadoId = useAuthStore((s) => s.usuarioId);
+  const perfil = useAuthStore((s) => s.perfil);
+  // Atalho de UX, não trava de segurança (ver lib/perfil.ts): quem chega aqui
+  // digitando a URL como Mecânico é redirecionado pra tela própria dele
+  // (/minhas-os/:id, só leitura pros dados da OS) em vez de ver o formulário
+  // completo do Consultor — mesmo caminho que a lista geral e "Minhas OS" já
+  // usam pra nunca levar o Mecânico até aqui.
+  const redirecionandoParaTelaDoMecanico = isEditing && isMecanico(perfil);
+  useEffect(() => {
+    if (redirecionandoParaTelaDoMecanico) navigate(`/minhas-os/${osId}`, { replace: true });
+  }, [redirecionandoParaTelaDoMecanico, osId, navigate]);
   const createMutation = useCreateOrdemServico();
   const updateMutation = useUpdateOrdemServico();
   const atualizarStatus = useAtualizarStatusOS();
@@ -322,6 +332,7 @@ export function OrdemServicoFormPage() {
   }
 
   if (isEditing && isLoading) return <PageSpinner />;
+  if (redirecionandoParaTelaDoMecanico) return <PageSpinner />;
 
   const saving = createMutation.isPending || updateMutation.isPending;
   const temCronometro = isEditing && !!(os?.tempoVendidoMinutos || os?.tempoConsumidoMinutos || os?.pausas?.length);

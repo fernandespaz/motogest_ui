@@ -45,15 +45,35 @@ describe('useAutoConversaoOrcamentosAprovados', () => {
     expect(ordensServicoApi.criarAPartirDeOrcamento).not.toHaveBeenCalled();
   });
 
-  it('auto-converts an APROVADO orçamento into an OS and toasts success', async () => {
+  it('auto-converts an APROVADO orçamento into an already-Aprovada OS and toasts success', async () => {
     useAuthStore.setState({ permissoes: ['ORCAMENTO_READ', 'ORDEM_SERVICO_WRITE'] });
     vi.mocked(orcamentosApi.list).mockResolvedValueOnce({ content: [{ id: 1, status: 'APROVADO' }] } as never);
-    vi.mocked(ordensServicoApi.criarAPartirDeOrcamento).mockResolvedValueOnce({ id: 55 } as never);
+    vi.mocked(ordensServicoApi.criarAPartirDeOrcamento).mockResolvedValueOnce({ id: 55, status: 'APROVADA' } as never);
 
     renderHook(() => useAutoConversaoOrcamentosAprovados(), { wrapper: wrapWithQueryClient() });
 
     await waitFor(() => expect(ordensServicoApi.criarAPartirDeOrcamento).toHaveBeenCalledWith(1, undefined));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('#55')));
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  // useCriarOSAPartirDeOrcamento engole qualquer falha ao tentar promover a
+  // OS pra Aprovada (pra não travar a conversão em si) — sem esse toast de
+  // erro, a OS ficaria presa esperando ação manual sem o consultor saber, o
+  // exato jeito como esse bug já voltou a acontecer silenciosamente antes.
+  it('toasts an error (not success) when the OS is created but could not be auto-approved', async () => {
+    useAuthStore.setState({ permissoes: ['ORCAMENTO_READ', 'ORDEM_SERVICO_WRITE'] });
+    vi.mocked(orcamentosApi.list).mockResolvedValueOnce({ content: [{ id: 1, status: 'APROVADO' }] } as never);
+    vi.mocked(ordensServicoApi.criarAPartirDeOrcamento).mockResolvedValueOnce({
+      id: 55,
+      status: 'AGUARDANDO_APROVACAO',
+    } as never);
+
+    renderHook(() => useAutoConversaoOrcamentosAprovados(), { wrapper: wrapWithQueryClient() });
+
+    await waitFor(() => expect(ordensServicoApi.criarAPartirDeOrcamento).toHaveBeenCalledWith(1, undefined));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('#55')));
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('does not toast success when the conversion attempt fails, and releases the id for a retry', async () => {

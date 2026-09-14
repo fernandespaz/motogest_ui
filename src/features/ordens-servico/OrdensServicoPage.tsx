@@ -9,6 +9,8 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { useOrdensServico } from '@/hooks/useOrdensServico';
+import { useAuthStore } from '@/store/authStore';
+import { isMecanico } from '@/lib/perfil';
 import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
@@ -34,10 +36,23 @@ export function OrdensServicoPage() {
   const [status, setStatus] = useState<OrdemServicoStatus | ''>('');
   const [numero, setNumero] = useState('');
   const navigate = useNavigate();
+  const perfil = useAuthStore((s) => s.perfil);
+  // Mecânico também acessa essa lista geral (pra achar a OS de um colega,
+  // não só as próprias) — mas o formulário completo de /ordens-servico/:id
+  // deixa cliente/veículo/itens/valores editáveis pra quem tem
+  // ORDEM_SERVICO_WRITE, sem distinguir "editar a OS" de "operar a OS", que é
+  // o mesmo código de permissão do Mecânico. Não dá pra travar isso com
+  // hasPermission (ver lib/perfil.ts), então a linha leva pra tela própria do
+  // técnico (só leitura + checklist/fotos) em vez do formulário do Consultor.
+  const linkDetalheOS = isMecanico(perfil) ? '/minhas-os' : '/ordens-servico';
 
   const { data, isLoading } = useOrdensServico({
     page,
     size: 20,
+    // Mais recente primeiro — mesma convenção de OrcamentosPage, pra a
+    // última OS aberta/aprovada aparecer no topo da lista em vez de ficar
+    // perdida nas últimas páginas conforme o histórico cresce.
+    sort: 'id,desc',
     status: status || undefined,
     numero: numero || undefined,
   });
@@ -129,7 +144,7 @@ export function OrdensServicoPage() {
               ),
             },
           ]}
-          onRowClick={(row) => navigate(`/ordens-servico/${row.id}`)}
+          onRowClick={(row) => navigate(`${linkDetalheOS}/${row.id}`)}
         />
         {data && (
           <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />

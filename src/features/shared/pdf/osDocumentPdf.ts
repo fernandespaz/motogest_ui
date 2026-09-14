@@ -83,10 +83,18 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   doc.setTextColor(BRAND);
   doc.setFont('helvetica', 'bold');
   doc.text(data.oficina.nomeFantasia || data.oficina.razaoSocial, letterheadX, y + 4);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(INK_MUTED);
-  doc.text(`${data.oficina.razaoSocial} · CNPJ ${data.oficina.cnpj}`, letterheadX, y + 9);
+  // Perfis sem OFICINA_READ (ver resolverOficinaParaPdf) caem pro fallback
+  // sem razão social/CNPJ — sem essa checagem, a linha imprimia "· CNPJ "
+  // vazia embaixo do nome da oficina.
+  const linhaRazaoSocialCnpj = [data.oficina.razaoSocial, data.oficina.cnpj ? `CNPJ ${data.oficina.cnpj}` : '']
+    .filter(Boolean)
+    .join(' · ');
+  if (linhaRazaoSocialCnpj) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(INK_MUTED);
+    doc.text(linhaRazaoSocialCnpj, letterheadX, y + 9);
+  }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);

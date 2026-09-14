@@ -1,11 +1,10 @@
 import { clientesApi } from '@/api/endpoints/clientes';
 import { veiculosApi } from '@/api/endpoints/veiculos';
-import { oficinasApi } from '@/api/endpoints/oficinas';
 import type { OrcamentoResponse } from '@/api/types';
 import { formatCnpj, formatCurrency, formatDateTime, formatDocumento } from '@/lib/formatters';
 import { metaFor, orcamentoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
-import { carregarLogoParaPdf } from '@/features/shared/pdf/logo';
+import { resolverOficinaParaPdf } from '@/features/shared/pdf/logo';
 import type { OSDocumentLineItem } from '@/features/shared/pdf/types';
 
 function toLineItems(orcamento: OrcamentoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
@@ -23,9 +22,8 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
   const [cliente, veiculo, oficina] = await Promise.all([
     orcamento.clienteId ? clientesApi.get(orcamento.clienteId) : Promise.resolve(null),
     orcamento.veiculoId ? veiculosApi.get(orcamento.veiculoId) : Promise.resolve(null),
-    oficinasApi.atual(),
+    resolverOficinaParaPdf(),
   ]);
-  const logo = await carregarLogoParaPdf(oficina);
 
   const servicos = toLineItems(orcamento, 'SERVICO');
   const pecas = toLineItems(orcamento, 'PRODUTO');
@@ -38,10 +36,10 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
     status: metaFor(orcamentoStatusMeta, orcamento.status).label,
     dataEmissao: formatDateTime(orcamento.createdAt),
     oficina: {
-      nomeFantasia: oficina.nomeFantasia || oficina.razaoSocial || 'MotoGest',
-      razaoSocial: oficina.razaoSocial ?? '',
-      cnpj: formatCnpj(oficina.cnpj ?? ''),
-      logo: logo ?? undefined,
+      nomeFantasia: oficina.nomeFantasia,
+      razaoSocial: oficina.razaoSocial,
+      cnpj: formatCnpj(oficina.cnpj),
+      logo: oficina.logo ?? undefined,
     },
     cliente: cliente
       ? {

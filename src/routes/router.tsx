@@ -15,6 +15,7 @@ import { OrcamentoFormPage } from '@/features/orcamentos/OrcamentoFormPage';
 import { OrdensServicoPage } from '@/features/ordens-servico/OrdensServicoPage';
 import { OrdemServicoFormPage } from '@/features/ordens-servico/OrdemServicoFormPage';
 import { MinhasOrdensServicoPage } from '@/features/ordens-servico/MinhasOrdensServicoPage';
+import { MinhaOrdemServicoDetalhePage } from '@/features/ordens-servico/MinhaOrdemServicoDetalhePage';
 import { ProdutosPage } from '@/features/produtos/ProdutosPage';
 import { ServicosPage } from '@/features/servicos/ServicosPage';
 import { FinanceiroPage } from '@/features/financeiro/FinanceiroPage';
@@ -50,6 +51,11 @@ export const router = createBrowserRouter([
           // (ver "a-partir-de-orcamento" na conversão), nunca é criada do zero aqui.
           { path: '/ordens-servico/:id', element: <OrdemServicoFormPage /> },
           { path: '/minhas-os', element: <MinhasOrdensServicoPage /> },
+          // Tela própria do técnico pra uma OS — deliberadamente separada de
+          // /ordens-servico/:id (Consultor/Admin): só leitura pros dados
+          // comerciais da OS, nenhum campo editável (ver comentário no topo
+          // do componente).
+          { path: '/minhas-os/:id', element: <MinhaOrdemServicoDetalhePage /> },
           { path: '/produtos', element: <ProdutosPage /> },
           { path: '/servicos', element: <ServicosPage /> },
           { path: '/financeiro', element: <FinanceiroPage /> },

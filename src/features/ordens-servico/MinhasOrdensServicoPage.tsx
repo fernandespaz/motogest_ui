@@ -1,11 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Pause, CheckCircle2, AlertTriangle, ChevronRight, LogOut, RefreshCw, Inbox } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronRight,
+  LogOut,
+  RefreshCw,
+  Inbox,
+  MessageSquareText,
+  Wrench,
+  Package,
+  ClipboardList,
+} from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
-import { Textarea } from '@/components/ui/Field';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useOrdensServico, useTimerStartOS, useTimerPauseOS, useTimerResumeOS, useAtualizarStatusOS } from '@/hooks/useOrdensServico';
 import { useAuthStore } from '@/store/authStore';
@@ -14,6 +25,7 @@ import { formatMinutosParaHoras, formatDateTime, getInitials } from '@/lib/forma
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { PausarOSModal } from './PausarOSModal';
 
 export function MinhasOrdensServicoPage() {
   const navigate = useNavigate();
@@ -218,6 +230,8 @@ export function MinhasOrdensServicoPage() {
             {filtradas.map((os) => {
               const meta = metaFor(ordemServicoStatusMeta, os.status);
               const estourado = !!os.tempoEstourado;
+              const servicos = (os.itens ?? []).filter((item) => item.tipoItem === 'SERVICO');
+              const pecas = (os.itens ?? []).filter((item) => item.tipoItem === 'PRODUTO');
               return (
                 <div
                   key={os.id}
@@ -236,12 +250,36 @@ export function MinhasOrdensServicoPage() {
 
                   <p className="mt-1.5 text-base font-semibold text-ink">{os.veiculoPlaca}</p>
                   <p className="text-sm text-ink-muted">{os.clienteNome}</p>
-                  {os.itens && os.itens.length > 0 && (
-                    <p className="mt-1 text-sm text-ink">
-                      {os.itens.map((item) => item.descricao).join(' · ')}
-                    </p>
+
+                  {os.observacoes && (
+                    <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2">
+                      <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+                        <MessageSquareText size={12} /> Relato do cliente
+                      </p>
+                      <p className="text-sm text-ink">{os.observacoes}</p>
+                    </div>
                   )}
-                  {os.observacoes && <p className="mt-1 text-sm text-ink-muted">{os.observacoes}</p>}
+
+                  {(servicos.length > 0 || pecas.length > 0) && (
+                    <div className="mt-2 flex flex-col gap-1 text-sm text-ink">
+                      {servicos.map((item, i) => (
+                        <p key={`s-${i}`} className="flex items-start gap-1.5">
+                          <Wrench size={13} className="mt-0.5 shrink-0 text-ink-muted" />
+                          <span>
+                            {item.quantidade}× {item.descricao}
+                          </span>
+                        </p>
+                      ))}
+                      {pecas.map((item, i) => (
+                        <p key={`p-${i}`} className="flex items-start gap-1.5">
+                          <Package size={13} className="mt-0.5 shrink-0 text-ink-muted" />
+                          <span>
+                            {item.quantidade}× {item.descricao}
+                          </span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
 
                   {(os.tempoVendidoMinutos || os.tempoConsumidoMinutos) && (
                     <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
@@ -300,10 +338,10 @@ export function MinhasOrdensServicoPage() {
                       </>
                     )}
                     <button
-                      onClick={() => navigate(`/ordens-servico/${os.id}`)}
+                      onClick={() => navigate(`/minhas-os/${os.id}`)}
                       className="flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium text-ink-muted hover:bg-surface-alt"
                     >
-                      Detalhes <ChevronRight size={14} />
+                      <ClipboardList size={14} /> Checklist/fotos <ChevronRight size={14} />
                     </button>
                   </div>
                 </div>
@@ -313,29 +351,15 @@ export function MinhasOrdensServicoPage() {
         )}
       </div>
 
-      <Modal
+      <PausarOSModal
         open={!!pausando}
+        numero={pausando?.numero}
+        motivo={motivoPausa}
+        onMotivoChange={setMotivoPausa}
         onClose={() => setPausando(null)}
-        title={`Pausar OS ${pausando?.numero ?? ''}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setPausando(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirmarPausa} loading={timerPause.isPending} disabled={!motivoPausa.trim()}>
-              Confirmar pausa
-            </Button>
-          </>
-        }
-      >
-        <Textarea
-          label="Motivo da pausa"
-          required
-          placeholder="Ex.: aguardando peça, aguardando cliente..."
-          value={motivoPausa}
-          onChange={(e) => setMotivoPausa(e.target.value)}
-        />
-      </Modal>
+        onConfirm={handleConfirmarPausa}
+        loading={timerPause.isPending}
+      />
     </div>
   );
 }

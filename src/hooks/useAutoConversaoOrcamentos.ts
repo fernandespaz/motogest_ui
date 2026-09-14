@@ -45,7 +45,18 @@ export function useAutoConversaoOrcamentosAprovados() {
         { orcamentoId: id },
         {
           onSuccess: (os) => {
-            toast.success(`Orçamento #${id} aprovado pelo cliente — Ordem de Serviço #${os.id} criada automaticamente.`);
+            // useCriarOSAPartirDeOrcamento tenta promover a OS pra Aprovada
+            // sozinho, mas engole qualquer falha nesse passo pra não travar a
+            // conversão em si (ver comentário lá) — se não chegou em
+            // Aprovada, isso não pode ficar silencioso, senão a OS fica
+            // presa esperando ação manual sem ninguém saber.
+            if (os.status === 'APROVADA') {
+              toast.success(`Orçamento #${id} aprovado pelo cliente — Ordem de Serviço #${os.id} criada automaticamente.`);
+            } else {
+              toast.error(
+                `Orçamento #${id} aprovado — Ordem de Serviço #${os.id} foi criada, mas não foi possível aprová-la automaticamente. Abra a OS e envie/aprove manualmente.`,
+              );
+            }
           },
           onError: () => {
             // libera pra tentar de novo no próximo poll, em vez de desistir
