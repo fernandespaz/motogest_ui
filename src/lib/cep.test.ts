@@ -42,6 +42,20 @@ describe('buscarEnderecoPorCep', () => {
     });
   });
 
+  it('falls back to empty strings for fields ViaCEP omits', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
+    );
+
+    expect(await buscarEnderecoPorCep('01310100')).toEqual({
+      logradouro: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+    });
+  });
+
   it('returns null when ViaCEP reports the CEP does not exist', async () => {
     vi.stubGlobal(
       'fetch',

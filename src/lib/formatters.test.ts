@@ -96,6 +96,10 @@ describe('formatPhone', () => {
   it('masks a mobile (11 digits)', () => {
     expect(formatPhone('11912345678')).toBe('(11) 91234-5678');
   });
+
+  it('omits the trailing dash while the last group is still being typed', () => {
+    expect(formatPhone('113000')).toBe('(11) 3000');
+  });
 });
 
 describe('formatCep', () => {

@@ -30,6 +30,19 @@ describe('queryClient global error handling', () => {
     expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 
+  it('stays silent for a mutation flagged with meta.silentError', async () => {
+    await queryClient
+      .getMutationCache()
+      .build(queryClient, {
+        mutationFn: () => Promise.reject(new Error('boom')),
+        meta: { silentError: true },
+      })
+      .execute(undefined)
+      .catch(() => {});
+
+    expect(useToastStore.getState().toasts).toHaveLength(0);
+  });
+
   it('stays silent for a mutation flagged as already handling its own error UI', async () => {
     await queryClient
       .getMutationCache()

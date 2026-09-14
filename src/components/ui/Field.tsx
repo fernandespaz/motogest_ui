@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
@@ -18,6 +18,7 @@ type FieldVariant = 'light' | 'dark';
 
 interface FieldWrapperProps {
   label?: string;
+  htmlFor?: string;
   error?: string;
   hint?: string;
   required?: boolean;
@@ -26,11 +27,14 @@ interface FieldWrapperProps {
   variant?: FieldVariant;
 }
 
-export function FieldWrapper({ label, error, hint, required, children, className, variant = 'light' }: FieldWrapperProps) {
+export function FieldWrapper({ label, htmlFor, error, hint, required, children, className, variant = 'light' }: FieldWrapperProps) {
   return (
     <div className={clsx('flex flex-col gap-1', className)}>
       {label && (
-        <label className={clsx('text-sm font-medium', variant === 'dark' ? 'text-slate-200' : 'text-ink')}>
+        <label
+          htmlFor={htmlFor}
+          className={clsx('text-sm font-medium', variant === 'dark' ? 'text-slate-200' : 'text-ink')}
+        >
           {label} {required && <span className="text-danger">*</span>}
         </label>
       )}
@@ -53,34 +57,39 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, required, className, icon: Icon, variant = 'light', ...props }, ref) => (
-    <FieldWrapper label={label} error={error} hint={hint} required={required} variant={variant}>
-      <div className="relative">
-        {Icon && (
-          <Icon
-            size={16}
-            className={clsx(
-              'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2',
-              variant === 'dark' ? 'text-slate-400' : 'text-ink-muted',
-            )}
-            aria-hidden="true"
-          />
-        )}
-        <input
-          ref={ref}
-          className={clsx(
-            variant === 'dark' ? baseControlDark : baseControl,
-            'h-10',
-            Icon && 'pl-9',
-            error && (variant === 'dark' ? 'border-red-500/60 focus:ring-red-500/40' : 'border-danger focus:ring-danger'),
-            className,
+  ({ label, error, hint, required, className, icon: Icon, variant = 'light', id, ...props }, ref) => {
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
+    return (
+      <FieldWrapper label={label} htmlFor={inputId} error={error} hint={hint} required={required} variant={variant}>
+        <div className="relative">
+          {Icon && (
+            <Icon
+              size={16}
+              className={clsx(
+                'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2',
+                variant === 'dark' ? 'text-slate-400' : 'text-ink-muted',
+              )}
+              aria-hidden="true"
+            />
           )}
-          required={required}
-          {...props}
-        />
-      </div>
-    </FieldWrapper>
-  ),
+          <input
+            ref={ref}
+            id={inputId}
+            className={clsx(
+              variant === 'dark' ? baseControlDark : baseControl,
+              'h-10',
+              Icon && 'pl-9',
+              error && (variant === 'dark' ? 'border-red-500/60 focus:ring-red-500/40' : 'border-danger focus:ring-danger'),
+              className,
+            )}
+            required={required}
+            {...props}
+          />
+        </div>
+      </FieldWrapper>
+    );
+  },
 );
 Input.displayName = 'Input';
 
@@ -91,16 +100,21 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, hint, required, className, ...props }, ref) => (
-    <FieldWrapper label={label} error={error} hint={hint} required={required}>
-      <textarea
-        ref={ref}
-        className={clsx(baseControl, 'py-2 min-h-[5rem]', error && 'border-danger focus:ring-danger', className)}
-        required={required}
-        {...props}
-      />
-    </FieldWrapper>
-  ),
+  ({ label, error, hint, required, className, id, ...props }, ref) => {
+    const generatedId = useId();
+    const textareaId = id ?? generatedId;
+    return (
+      <FieldWrapper label={label} htmlFor={textareaId} error={error} hint={hint} required={required}>
+        <textarea
+          ref={ref}
+          id={textareaId}
+          className={clsx(baseControl, 'py-2 min-h-[5rem]', error && 'border-danger focus:ring-danger', className)}
+          required={required}
+          {...props}
+        />
+      </FieldWrapper>
+    );
+  },
 );
 Textarea.displayName = 'Textarea';
 
@@ -111,18 +125,23 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, hint, required, className, children, ...props }, ref) => (
-    <FieldWrapper label={label} error={error} hint={hint} required={required}>
-      <select
-        ref={ref}
-        className={clsx(baseControl, 'h-10', error && 'border-danger focus:ring-danger', className)}
-        required={required}
-        {...props}
-      >
-        {children}
-      </select>
-    </FieldWrapper>
-  ),
+  ({ label, error, hint, required, className, children, id, ...props }, ref) => {
+    const generatedId = useId();
+    const selectId = id ?? generatedId;
+    return (
+      <FieldWrapper label={label} htmlFor={selectId} error={error} hint={hint} required={required}>
+        <select
+          ref={ref}
+          id={selectId}
+          className={clsx(baseControl, 'h-10', error && 'border-danger focus:ring-danger', className)}
+          required={required}
+          {...props}
+        >
+          {children}
+        </select>
+      </FieldWrapper>
+    );
+  },
 );
 Select.displayName = 'Select';
 

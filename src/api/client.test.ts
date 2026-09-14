@@ -24,6 +24,11 @@ function responseInterceptorRejection() {
     }
   ).handlers[0].rejected;
 }
+function responseInterceptorFulfilled() {
+  return (
+    apiClient.interceptors.response as unknown as { handlers: Array<{ fulfilled: (r: unknown) => unknown }> }
+  ).handlers[0].fulfilled;
+}
 
 describe('extractErrorMessage', () => {
   it('reads the backend "message" field first', () => {
@@ -97,6 +102,11 @@ describe('session-expiry handling', () => {
     // logout() still runs (the stale token shouldn't linger), but no redirect —
     // the user is already on the login screen trying to sign back in.
     expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
+  it('passes a successful response straight through', () => {
+    const response = { data: { id: 1 }, status: 200 };
+    expect(responseInterceptorFulfilled()(response)).toBe(response);
   });
 
   it('surfaces a 403 as a plain permission error when the session is still valid', async () => {
