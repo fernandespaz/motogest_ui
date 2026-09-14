@@ -232,9 +232,13 @@ export function OrdemServicoFormPage() {
         itens: values.itens.map(({ id: _id, ...item }) => item),
       };
       if (isEditing && osId) {
-        await updateMutation.mutateAsync({ id: osId, payload });
+        const atualizada = await updateMutation.mutateAsync({ id: osId, payload });
+        // O backend só reverte pra Aguardando Aprovação quando o valor total
+        // aumenta (edições que não mudam o valor, como reatribuir o técnico,
+        // mantêm a OS Aprovada) — por isso o toast segue o status que
+        // realmente voltou na resposta, não o status anterior à edição.
         toast.success(
-          os?.status === 'APROVADA'
+          os?.status === 'APROVADA' && atualizada.status === 'AGUARDANDO_APROVACAO'
             ? 'OS atualizada — voltou para aguardando aprovação do cliente.'
             : 'Ordem de Serviço atualizada.',
         );
