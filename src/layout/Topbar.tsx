@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/store/authStore';
 import { useOficinaAtual, useOficinaLogoSrc } from '@/hooks/useOficina';
 import { BrandMark } from '@/components/ui/BrandMark';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 // "Sair" mora no Sidebar agora, ao lado do nome/perfil no canto inferior
 // esquerdo — no mobile, onde o Sidebar não aparece, a opção equivalente já
@@ -17,6 +18,7 @@ export function Topbar() {
         <span className="truncate text-sm font-semibold text-ink">{oficina?.nomeFantasia || 'MotoGest'}</span>
       </div>
       <div className="hidden text-sm text-ink-muted lg:block">Olá, {nome?.split(' ')[0]}</div>
+      <ThemeToggle />
     </header>
   );
 }

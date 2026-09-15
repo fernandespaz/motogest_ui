@@ -10,6 +10,9 @@
 /dist
 /build
 
+# vite-plugin-pwa dev-mode service worker artifacts (devOptions.enabled)
+/dev-dist
+
 # misc
 .DS_Store
 *.local

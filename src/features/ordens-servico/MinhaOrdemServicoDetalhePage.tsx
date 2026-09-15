@@ -33,6 +33,7 @@ import { formatMinutosParaHoras, formatDateTime } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 /**
  * Tela operacional do técnico pra UMA OS — deliberadamente separada de
@@ -141,6 +142,7 @@ export function MinhaOrdemServicoDetalhePage() {
           </p>
         </div>
         <Badge tone={meta.tone}>{meta.label}</Badge>
+        <ThemeToggle variant="dark" />
       </div>
 
       <div className="flex flex-col gap-4 px-4 py-4 sm:px-6">

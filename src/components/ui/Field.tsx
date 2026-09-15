@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 
 const baseControl =
-  'w-full rounded-lg border border-border bg-white px-3 text-sm text-ink placeholder:text-ink-muted ' +
+  'w-full rounded-lg border border-border bg-white dark:bg-graphite-2 px-3 text-sm text-ink placeholder:text-ink-muted ' +
   'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 disabled:bg-surface-alt disabled:text-ink-muted transition-shadow';
 
 // Variante usada em telas com fundo escuro (ex.: login) — o card ali é vidro

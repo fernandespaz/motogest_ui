@@ -26,6 +26,7 @@ import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { PausarOSModal } from './PausarOSModal';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export function MinhasOrdensServicoPage() {
   const navigate = useNavigate();
@@ -139,6 +140,7 @@ export function MinhasOrdensServicoPage() {
           <p className="text-sm text-slate-400">Olá, {nome?.split(' ')[0]}</p>
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle variant="dark" />
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold">
             {getInitials(nome ?? '?')}
           </div>

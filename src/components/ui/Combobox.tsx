@@ -109,7 +109,7 @@ export function Combobox({
             onKeyDown={handleKeyDown}
             placeholder={selected && !open ? selected.label : placeholder}
             className={clsx(
-              'h-10 w-full rounded-lg border bg-white pl-9 pr-16 text-sm text-ink placeholder:text-ink-muted transition-shadow',
+              'h-10 w-full rounded-lg border bg-white dark:bg-graphite-2 pl-9 pr-16 text-sm text-ink placeholder:text-ink-muted transition-shadow',
               'focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 disabled:bg-surface-alt disabled:text-ink-muted',
               error ? 'border-danger focus:ring-danger' : 'border-border',
             )}
@@ -134,7 +134,7 @@ export function Combobox({
         </div>
 
         {open && !disabled && (
-          <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-white py-1 shadow-lg">
+          <div className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-white dark:bg-graphite-2 py-1 shadow-lg">
             {options.length === 0 ? (
               <p className="px-3 py-2 text-sm text-ink-muted">{loading ? 'Buscando...' : emptyLabel}</p>
             ) : (

@@ -33,6 +33,23 @@
   --line-dark: #3a4150;
 }
 
+/* Modo escuro — troca só a paleta de superfície/texto (ver useThemeStore); a
+   rampa de marca (brand-*) fica igual nos dois temas, e a barra lateral já é
+   graphite fixo independente do tema, então nem entra aqui. Os tons de
+   superfície reaproveitam a mesma família graphite já usada nela, pra tudo
+   ficar coerente visualmente. */
+.dark {
+  --surface: #1c1f26;
+  --surface-alt: #262b35;
+  --border: #3a4150;
+  --ink: #f2f0eb;
+  --ink-muted: #9aa2b1;
+
+  --success: #4cbf87;
+  --warning: #e0a83c;
+  --danger: #e5555a;
+}
+
 * {
   border-color: var(--border);
 }

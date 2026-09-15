@@ -10,9 +10,9 @@ const icons = {
 };
 
 const styles = {
-  success: 'bg-white border-success/30 text-success',
-  error: 'bg-white border-danger/30 text-danger',
-  info: 'bg-white border-brand-300 text-brand-700',
+  success: 'bg-white dark:bg-graphite-2 border-success/30 text-success',
+  error: 'bg-white dark:bg-graphite-2 border-danger/30 text-danger',
+  info: 'bg-white dark:bg-graphite-2 border-brand-300 text-brand-700',
 };
 
 export function Toaster() {
