@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, UserPlus, Bike } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -9,10 +9,21 @@ import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
+import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import type { VeiculoResponse } from '@/api/types';
 import { VeiculoFormModal } from './VeiculoFormModal';
+import { ModeloVeiculoThumb } from '@/features/shared/ModeloVeiculoField';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+
+function MarcaModeloCell({ marca, modelo, imagem }: { marca?: string | null; modelo?: string | null; imagem?: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <ModeloVeiculoThumb base64={imagem} size={28} />
+      <span>{`${marca ?? ''} ${modelo ?? ''}`.trim() || '—'}</span>
+    </div>
+  );
+}
 
 export function VeiculosPage() {
   const navigate = useNavigate();
@@ -22,6 +33,17 @@ export function VeiculosPage() {
 
   const { data, isLoading } = useVeiculos({ page, size: 20 });
   const { data: clientesCheck, isLoading: loadingClientesCheck } = useClientes({ size: 1 });
+  // Busca o catálogo inteiro uma vez em vez de um request por linha — a
+  // miniatura é só um casamento por marca+modelo em memória, sem custo extra
+  // de rede por veículo listado.
+  const { data: catalogo } = useModelosVeiculo({ size: 100 });
+  const imagensPorModelo = useMemo(() => {
+    const mapa = new Map<string, string | undefined>();
+    for (const m of catalogo?.content ?? []) {
+      if (m.marca && m.modelo) mapa.set(`${m.marca.toLowerCase()} ${m.modelo.toLowerCase()}`, m.imagemBase64);
+    }
+    return mapa;
+  }, [catalogo]);
   const deleteMutation = useDeleteVeiculo();
 
   // A veículo always belongs to a cliente — sending someone to an empty selector
@@ -85,7 +107,16 @@ export function VeiculosPage() {
               header: 'Placa',
               render: (row) => <span className="font-medium text-ink">{row.placa}</span>,
             },
-            { header: 'Marca / Modelo', render: (row) => `${row.marca ?? ''} ${row.modelo ?? ''}`.trim() || '—' },
+            {
+              header: 'Marca / Modelo',
+              render: (row) => (
+                <MarcaModeloCell
+                  marca={row.marca}
+                  modelo={row.modelo}
+                  imagem={row.marca && row.modelo ? imagensPorModelo.get(`${row.marca.toLowerCase()} ${row.modelo.toLowerCase()}`) : undefined}
+                />
+              ),
+            },
             { header: 'Cliente', render: (row) => row.clienteNome ?? '—', hideBelow: 'sm' },
             { header: 'KM atual', render: (row) => (row.kmAtual != null ? row.kmAtual.toLocaleString('pt-BR') : '—'), hideBelow: 'md' },
             {

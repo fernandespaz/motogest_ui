@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, Textarea } from '@/components/ui/Field';
+import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
 import type { ClienteResponse, VeiculoResponse } from '@/api/types';
@@ -54,6 +55,8 @@ export function VeiculoFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -135,6 +138,14 @@ export function VeiculoFormModal({
           <Input label="Placa" required error={errors.placa?.message} {...register('placa')} />
           <Input label="Marca" {...register('marca')} />
           <Input label="Modelo" required error={errors.modelo?.message} {...register('modelo')} />
+          <ModeloVeiculoField
+            marca={watch('marca')}
+            modelo={watch('modelo')}
+            onSelecionar={({ marca, modelo }) => {
+              setValue('marca', marca, { shouldDirty: true });
+              setValue('modelo', modelo, { shouldDirty: true, shouldValidate: true });
+            }}
+          />
           <Input label="Cor" required error={errors.cor?.message} {...register('cor')} />
           <Input
             label="Ano de fabricação"

@@ -14,6 +14,9 @@ export const API_ROUTES = {
   veiculos: {
     base: '/api/v1/veiculos',
   },
+  modelosVeiculo: {
+    base: '/api/v1/modelos-veiculo',
+  },
   agenda: {
     base: '/api/v1/agendamentos',
     periodo: '/api/v1/agendamentos/periodo',

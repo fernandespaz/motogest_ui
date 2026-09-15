@@ -3,6 +3,7 @@ import { useFormContext, useWatch } from 'react-hook-form';
 import { Pencil, Trash2, Check } from 'lucide-react';
 import { Input } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { ModeloVeiculoField, ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 
 /**
  * A row in the client's "Veículos vinculados" list. Purely presentational —
@@ -13,9 +14,13 @@ import { Button } from '@/components/ui/Button';
  */
 export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRemover: () => void }) {
   const [editing, setEditing] = useState(false);
-  const { control, register, formState } = useFormContext();
+  const { control, register, formState, watch, setValue } = useFormContext();
   const veiculo = useWatch({ control, name: `veiculosExistentes.${index}` });
   const rowErrors = (formState.errors as any)?.veiculosExistentes?.[index];
+  // Chamado incondicionalmente (regra dos hooks) mesmo que o resultado só
+  // seja usado no card de resumo, já que este componente tem "return" cedo
+  // demais (linha abaixo, e outro no modo de edição) pra chamar hook depois.
+  const imagemResumo = useModeloVeiculoImagem(veiculo?.marca, veiculo?.modelo);
 
   if (!veiculo) return null;
 
@@ -26,6 +31,14 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
           <Input label="Placa" required error={rowErrors?.placa?.message} {...register(`veiculosExistentes.${index}.placa`)} />
           <Input label="Marca" {...register(`veiculosExistentes.${index}.marca`)} />
           <Input label="Modelo" error={rowErrors?.modelo?.message} {...register(`veiculosExistentes.${index}.modelo`)} />
+          <ModeloVeiculoField
+            marca={watch(`veiculosExistentes.${index}.marca`)}
+            modelo={watch(`veiculosExistentes.${index}.modelo`)}
+            onSelecionar={({ marca, modelo }) => {
+              setValue(`veiculosExistentes.${index}.marca`, marca, { shouldDirty: true });
+              setValue(`veiculosExistentes.${index}.modelo`, modelo, { shouldDirty: true });
+            }}
+          />
           <Input label="Cor" error={rowErrors?.cor?.message} {...register(`veiculosExistentes.${index}.cor`)} />
           <Input
             label="Ano fabricação"
@@ -49,9 +62,12 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="mb-2 flex items-start justify-between">
-        <div>
-          <p className="text-sm font-semibold text-ink">{veiculo.placa}</p>
-          <p className="text-xs text-ink-muted">{`${veiculo.marca ?? ''} ${veiculo.modelo ?? ''}`.trim() || '—'}</p>
+        <div className="flex items-center gap-2.5">
+          <ModeloVeiculoThumb base64={imagemResumo} />
+          <div>
+            <p className="text-sm font-semibold text-ink">{veiculo.placa}</p>
+            <p className="text-xs text-ink-muted">{`${veiculo.marca ?? ''} ${veiculo.modelo ?? ''}`.trim() || '—'}</p>
+          </div>
         </div>
         <div className="flex gap-1">
           <button

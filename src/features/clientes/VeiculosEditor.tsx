@@ -2,6 +2,7 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
+import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
 
 /** New vehicles to create alongside the client — matches VeiculoDoClienteRequest (no id: these are always creations, never edits of an existing vehicle). */
 export interface VeiculoNovoFormValue {
@@ -17,7 +18,7 @@ export interface VeiculoNovoFormValue {
 }
 
 export function VeiculosEditor({ name }: { name: string }) {
-  const { control, register } = useFormContext();
+  const { control, register, watch, setValue } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
 
   return (
@@ -55,6 +56,14 @@ export function VeiculosEditor({ name }: { name: string }) {
               </div>
               <Input label="Marca" {...register(`${name}.${index}.marca`)} />
               <Input label="Modelo" {...register(`${name}.${index}.modelo`)} />
+              <ModeloVeiculoField
+                marca={watch(`${name}.${index}.marca`)}
+                modelo={watch(`${name}.${index}.modelo`)}
+                onSelecionar={({ marca, modelo }) => {
+                  setValue(`${name}.${index}.marca`, marca, { shouldDirty: true });
+                  setValue(`${name}.${index}.modelo`, modelo, { shouldDirty: true });
+                }}
+              />
               <Input label="Cor" {...register(`${name}.${index}.cor`)} />
               <Input label="Ano fabricação" type="number" {...register(`${name}.${index}.anoFabricacao`)} />
               <Input label="Ano modelo" type="number" {...register(`${name}.${index}.anoModelo`)} />

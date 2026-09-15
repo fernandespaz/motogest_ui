@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
+import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import { toast } from '@/store/toastStore';
 import { VeiculoFormModal } from './VeiculoFormModal';
 
@@ -11,6 +12,10 @@ vi.mock('@/hooks/useVeiculos', () => ({
   useUpdateVeiculo: vi.fn(),
 }));
 vi.mock('@/hooks/useClientes', () => ({ useClientes: vi.fn() }));
+vi.mock('@/hooks/useModelosVeiculo', () => ({
+  useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
+  useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const clientes = { content: [{ id: 1, nome: 'Carlos Eduardo' }] };

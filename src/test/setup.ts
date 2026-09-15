@@ -15,3 +15,11 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     dispatchEvent: () => false,
   });
 }
+
+// jsdom não implementa URL.createObjectURL/revokeObjectURL — qualquer tela
+// que faça preview local de imagem antes do upload (ex.: ModeloVeiculoField)
+// quebra sem esse stub.
+if (typeof URL !== 'undefined' && !URL.createObjectURL) {
+  URL.createObjectURL = () => 'blob:mock-url';
+  URL.revokeObjectURL = () => {};
+}

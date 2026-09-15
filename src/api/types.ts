@@ -13,6 +13,15 @@ export type VeiculoRequest = Schemas['VeiculoRequest'];
 export type VeiculoResponse = Schemas['VeiculoResponse'];
 export type VeiculoDoClienteRequest = Schemas['VeiculoDoClienteRequest'];
 
+export type ModeloVeiculoResponse = Schemas['ModeloVeiculoResponse'];
+// Sem schema JSON próprio no OpenAPI — marca/modelo vão por query string e o
+// arquivo por multipart (ver POST/PUT /modelos-veiculo), não como corpo JSON.
+export interface ModeloVeiculoRequest {
+  marca: string;
+  modelo: string;
+  arquivo?: File;
+}
+
 export type AgendamentoRequest = Schemas['AgendamentoRequest'];
 export type AgendamentoResponse = Schemas['AgendamentoResponse'];
 export type AgendamentoServicoResponse = Schemas['AgendamentoServicoResponse'];

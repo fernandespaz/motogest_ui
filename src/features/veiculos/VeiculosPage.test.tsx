@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
+import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import { toast } from '@/store/toastStore';
 import { VeiculosPage } from './VeiculosPage';
 
@@ -14,6 +15,10 @@ vi.mock('@/hooks/useVeiculos', () => ({
   useUpdateVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 vi.mock('@/hooks/useClientes', () => ({ useClientes: vi.fn() }));
+vi.mock('@/hooks/useModelosVeiculo', () => ({
+  useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
+  useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const mockNavigate = vi.fn();
@@ -46,6 +51,19 @@ describe('VeiculosPage', () => {
     vi.mocked(useClientes).mockReturnValue({ data: { totalElements: 5 }, isLoading: false } as never);
     deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useDeleteVeiculo).mockReturnValue({ mutateAsync: deleteMutateAsync, isPending: false } as never);
+  });
+
+  it('shows the catalog thumbnail for a row whose marca/modelo matches an entry', () => {
+    vi.mocked(useModelosVeiculo).mockReturnValue({
+      data: { content: [{ id: 1, marca: 'Honda', modelo: 'CG 160', imagemBase64: 'aGVsbG8=' }] },
+    } as never);
+    const { container } = renderPage();
+    expect(container.querySelector('img')).toHaveAttribute('src', 'data:image/jpeg;base64,aGVsbG8=');
+  });
+
+  it('falls back to the generic icon when no catalog entry matches the row', () => {
+    renderPage();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('lists veículos with their placa, marca/modelo, and cliente', () => {
