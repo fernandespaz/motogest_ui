@@ -53,6 +53,36 @@ describe('Input', () => {
     render(<Input label="Nome" variant="dark" />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
   });
+
+  it('does not render a visibility toggle for non-password inputs', () => {
+    render(<Input label="Nome" />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('toggles a password field between hidden and visible text', async () => {
+    render(<Input label="Senha" type="password" onChange={vi.fn()} />);
+    const input = screen.getByLabelText('Senha');
+    expect(input).toHaveAttribute('type', 'password');
+
+    const toggle = screen.getByRole('button', { name: 'Mostrar senha' });
+    await userEvent.click(toggle);
+    expect(input).toHaveAttribute('type', 'text');
+    expect(screen.getByRole('button', { name: 'Ocultar senha' })).toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
+  it('never submits an ancestor form when the visibility toggle is clicked', async () => {
+    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault());
+    render(
+      <form onSubmit={onSubmit}>
+        <Input label="Senha" type="password" onChange={vi.fn()} />
+      </form>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar senha' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 describe('Textarea', () => {

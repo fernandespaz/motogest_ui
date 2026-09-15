@@ -1,7 +1,7 @@
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useState } from 'react';
 import type { InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
-import type { LucideIcon } from 'lucide-react';
+import { Eye, EyeOff, type LucideIcon } from 'lucide-react';
 
 const baseControl =
   'w-full rounded-lg border border-border bg-white dark:bg-graphite-2 px-3 text-sm text-ink placeholder:text-ink-muted ' +
@@ -57,9 +57,11 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, required, className, icon: Icon, variant = 'light', id, ...props }, ref) => {
+  ({ label, error, hint, required, className, icon: Icon, variant = 'light', id, type, ...props }, ref) => {
     const generatedId = useId();
     const inputId = id ?? generatedId;
+    const isSenha = type === 'password';
+    const [senhaVisivel, setSenhaVisivel] = useState(false);
     return (
       <FieldWrapper label={label} htmlFor={inputId} error={error} hint={hint} required={required} variant={variant}>
         <div className="relative">
@@ -76,16 +78,31 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
+            type={isSenha ? (senhaVisivel ? 'text' : 'password') : type}
             className={clsx(
               variant === 'dark' ? baseControlDark : baseControl,
               'h-10',
               Icon && 'pl-9',
+              isSenha && 'pr-9',
               error && (variant === 'dark' ? 'border-red-500/60 focus:ring-red-500/40' : 'border-danger focus:ring-danger'),
               className,
             )}
             required={required}
             {...props}
           />
+          {isSenha && (
+            <button
+              type="button"
+              onClick={() => setSenhaVisivel((v) => !v)}
+              aria-label={senhaVisivel ? 'Ocultar senha' : 'Mostrar senha'}
+              className={clsx(
+                'absolute right-3 top-1/2 -translate-y-1/2',
+                variant === 'dark' ? 'text-slate-400 hover:text-slate-200' : 'text-ink-muted hover:text-ink',
+              )}
+            >
+              {senhaVisivel ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          )}
         </div>
       </FieldWrapper>
     );

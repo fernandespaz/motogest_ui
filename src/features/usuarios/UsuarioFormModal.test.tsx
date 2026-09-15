@@ -63,7 +63,7 @@ describe('UsuarioFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
     await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
     await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-    await userEvent.type(screen.getByLabelText('Senha', { exact: false }), 'senha123');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
@@ -119,7 +119,7 @@ describe('UsuarioFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
     await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
     await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-    await userEvent.type(screen.getByLabelText('Senha', { exact: false }), 'senha123');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('e-mail já cadastrado'));
