@@ -20,6 +20,7 @@ import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
 
 // Os 5 status mais consultados no dia a dia viram chip (1 clique); os 4
 // restantes (menos frequentes) ficam atrás do seletor "Mais status" pra não
@@ -70,6 +71,7 @@ export function OrdensServicoPage() {
     numero: numero || undefined,
     usuarioResponsavelId: tecnicoId || undefined,
   });
+  const imagensPorVeiculoId = useImagensPorVeiculoId();
 
   async function baixarPdf(row: OrdemServicoResponse) {
     try {
@@ -176,7 +178,8 @@ export function OrdensServicoPage() {
             {
               header: 'Número',
               render: (row) => (
-                <span className="flex items-center gap-1.5 font-medium text-ink">
+                <span className="flex items-center gap-2 font-medium text-ink">
+                  <ModeloVeiculoThumb base64={row.veiculoId != null ? imagensPorVeiculoId.get(row.veiculoId) : undefined} size={40} />
                   {row.tempoEstourado && (
                     <AlertTriangle size={14} className="shrink-0 text-danger" aria-label="Tempo estourado" />
                   )}

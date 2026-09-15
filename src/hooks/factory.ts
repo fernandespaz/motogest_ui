@@ -19,11 +19,15 @@ export function createCrudHooks<TResponse, TRequest, TListParams = PageParams>(
     detail: (id: number) => [resourceKey, 'detail', id] as const,
   };
 
-  function useList(params?: TListParams, options?: { enabled?: boolean }) {
+  function useList(params?: TListParams, options?: { enabled?: boolean; silentError?: boolean }) {
     return useQuery({
       queryKey: keys.list(params),
       queryFn: () => api.list(params),
       enabled: options?.enabled,
+      // Opt-in pra buscas passivas/cosméticas (ex.: miniatura de catálogo) que
+      // não devem interromper a tela com um toast se falharem — mesmo padrão
+      // de useOficinaLogoSrc, só que passado por fora em vez de hardcoded.
+      meta: options?.silentError ? { silentError: true } : undefined,
     });
   }
 

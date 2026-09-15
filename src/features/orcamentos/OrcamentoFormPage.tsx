@@ -17,6 +17,7 @@ import type { ClienteResponse, OrcamentoResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ItemsEditor } from '@/features/shared/ItemsEditor';
+import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDocumento } from '@/lib/formatters';
@@ -138,6 +139,7 @@ function OrcamentoFormContent() {
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
   const selectedVeiculo = veiculos?.find((v) => v.id === veiculoId);
+  const imagemVeiculo = useModeloVeiculoImagem(selectedVeiculo?.marca, selectedVeiculo?.modelo);
 
   useEffect(() => {
     if (orcamento) {
@@ -328,9 +330,12 @@ function OrcamentoFormContent() {
                       className="overflow-hidden"
                     >
                       <div className="mt-4 rounded-lg border border-border bg-surface-alt p-4">
-                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                          Dados do veículo
-                        </p>
+                        <div className="mb-3 flex items-center gap-2">
+                          <ModeloVeiculoThumb base64={imagemVeiculo} size={32} />
+                          <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                            Dados do veículo
+                          </p>
+                        </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                           <CampoBloqueado
                             label="Modelo"

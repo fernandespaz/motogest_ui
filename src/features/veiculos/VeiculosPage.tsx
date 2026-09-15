@@ -36,7 +36,7 @@ export function VeiculosPage() {
   // Busca o catálogo inteiro uma vez em vez de um request por linha — a
   // miniatura é só um casamento por marca+modelo em memória, sem custo extra
   // de rede por veículo listado.
-  const { data: catalogo } = useModelosVeiculo({ size: 100 });
+  const { data: catalogo } = useModelosVeiculo({ size: 100 }, { silentError: true });
   const imagensPorModelo = useMemo(() => {
     const mapa = new Map<string, string | undefined>();
     for (const m of catalogo?.content ?? []) {

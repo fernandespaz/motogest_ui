@@ -19,6 +19,11 @@ vi.mock('@/hooks/useOrdensServico', () => ({
   useTimerResumeOS: vi.fn(),
   useAtualizarStatusOS: vi.fn(),
 }));
+vi.mock('@/hooks/useVeiculos', () => ({ useVeiculo: vi.fn(() => ({ data: undefined })) }));
+vi.mock('@/hooks/useModelosVeiculo', () => ({
+  useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
+  useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 
 // ChecklistTab/FotosTab têm suas próprias suítes — aqui só confirmamos que
 // esta tela renderiza os dois, sem duplicar a lógica interna deles.

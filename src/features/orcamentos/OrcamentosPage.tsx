@@ -23,6 +23,7 @@ import { buildOrcamentoPdfBlob } from './orcamentoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
 
 export function OrcamentosPage() {
   const [page, setPage] = useState(0);
@@ -30,6 +31,7 @@ export function OrcamentosPage() {
   const navigate = useNavigate();
 
   const { data, isLoading } = useOrcamentos({ page, size: 20, sort: 'id,desc' });
+  const imagensPorVeiculoId = useImagensPorVeiculoId();
   // Um orçamento convertido já existe como Ordem de Serviço — mantê-lo aqui
   // seria mostrar a mesma coisa em dois lugares. O backend não tem filtro de
   // status na listagem, então isso é feito no cliente.
@@ -121,7 +123,15 @@ export function OrcamentosPage() {
           rowKey={(row) => row.id!}
           emptyTitle="Nenhum orçamento cadastrado"
           columns={[
-            { header: '#', render: (row) => row.id, className: 'font-medium text-ink' },
+            {
+              header: '#',
+              render: (row) => (
+                <span className="flex items-center gap-2 font-medium text-ink">
+                  <ModeloVeiculoThumb base64={row.veiculoId != null ? imagensPorVeiculoId.get(row.veiculoId) : undefined} size={28} />
+                  {row.id}
+                </span>
+              ),
+            },
             { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
             { header: 'Valor', render: (row) => formatCurrency(row.valorTotal) },
             { header: 'Criado em', render: (row) => formatDate(row.createdAt), hideBelow: 'sm' },

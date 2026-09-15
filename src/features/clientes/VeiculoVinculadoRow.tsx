@@ -14,7 +14,7 @@ import { ModeloVeiculoField, ModeloVeiculoThumb, useModeloVeiculoImagem } from '
  */
 export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRemover: () => void }) {
   const [editing, setEditing] = useState(false);
-  const { control, register, formState, watch, setValue } = useFormContext();
+  const { control, register, formState, setValue } = useFormContext();
   const veiculo = useWatch({ control, name: `veiculosExistentes.${index}` });
   const rowErrors = (formState.errors as any)?.veiculosExistentes?.[index];
   // Chamado incondicionalmente (regra dos hooks) mesmo que o resultado só
@@ -32,8 +32,8 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
           <Input label="Marca" {...register(`veiculosExistentes.${index}.marca`)} />
           <Input label="Modelo" error={rowErrors?.modelo?.message} {...register(`veiculosExistentes.${index}.modelo`)} />
           <ModeloVeiculoField
-            marca={watch(`veiculosExistentes.${index}.marca`)}
-            modelo={watch(`veiculosExistentes.${index}.modelo`)}
+            marca={veiculo.marca}
+            modelo={veiculo.modelo}
             onSelecionar={({ marca, modelo }) => {
               setValue(`veiculosExistentes.${index}.marca`, marca, { shouldDirty: true });
               setValue(`veiculosExistentes.${index}.modelo`, modelo, { shouldDirty: true });

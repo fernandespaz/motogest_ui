@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Bike, ImagePlus, Plus, Search, Upload, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Field';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { useCreateModeloVeiculo, useModelosVeiculo } from '@/hooks/useModelosVeiculo';
+import { useVeiculos } from '@/hooks/useVeiculos';
 import type { ModeloVeiculoResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -22,21 +23,12 @@ function imagemSrc(base64?: string | null): string | undefined {
 
 export function ModeloVeiculoThumb({ base64, size = 36 }: { base64?: string | null; size?: number }) {
   const src = imagemSrc(base64);
+  const style = { height: size, width: size };
   if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        style={{ height: size, width: size }}
-        className="shrink-0 rounded-md object-cover"
-      />
-    );
+    return <img src={src} alt="" style={style} className="shrink-0 rounded-md object-cover" />;
   }
   return (
-    <div
-      style={{ height: size, width: size }}
-      className="flex shrink-0 items-center justify-center rounded-md bg-surface-alt text-ink-muted"
-    >
+    <div style={style} className="flex shrink-0 items-center justify-center rounded-md bg-surface-alt text-ink-muted">
       <Bike size={size * 0.55} />
     </div>
   );
@@ -65,7 +57,11 @@ function ModeloVeiculoCatalogModal({
   // busca uma página generosa uma vez e filtra marca+modelo no cliente, em
   // vez de inventar um parâmetro combinado que o back-end não tem (ele só
   // filtra por "marca").
-  const { data, isLoading } = useModelosVeiculo({ size: 100 }, { enabled: open });
+  // silentError: se faltar permissão pro catálogo, prefere deixar a lista
+  // vazia (e o botão de "Cadastrar novo modelo" segue funcionando, com seu
+  // próprio toast de erro específico) a interromper com um toast genérico
+  // só de abrir o seletor.
+  const { data, isLoading } = useModelosVeiculo({ size: 100 }, { enabled: open, silentError: true });
   const criar = useCreateModeloVeiculo();
 
   useEffect(() => {
@@ -272,7 +268,10 @@ export function useModeloVeiculoImagem(marca: string | undefined, modelo: string
   const termo = marca?.trim();
   const { data: candidatos } = useModelosVeiculo(
     { marca: termo, size: 20 },
-    { enabled: !!termo && !!modelo && resolvido === undefined },
+    // silentError: é só uma miniatura decorativa — se o perfil não tiver
+    // permissão pro catálogo (ou a busca falhar por qualquer motivo), a tela
+    // não deve interromper o usuário com um toast por causa disso.
+    { enabled: !!termo && !!modelo && resolvido === undefined, silentError: true },
   );
 
   useEffect(() => {
@@ -288,6 +287,33 @@ export function useModeloVeiculoImagem(marca: string | undefined, modelo: string
   }, [candidatos, marca, modelo, resolvido]);
 
   return resolvido;
+}
+
+/**
+ * Pra listagens de Orçamento/OS: essas telas só recebem veiculoId+veiculoPlaca
+ * (o back-end não devolve marca/modelo/imagem junto do orçamento ou da OS),
+ * então resolver a miniatura exige o salto veiculoId -> veículo (marca/modelo)
+ * -> catálogo (imagem). Busca os veículos e o catálogo inteiros uma vez cada
+ * (mesma lógica de VeiculosPage) e cruza os dois em memória, em vez de um
+ * request por linha da tabela.
+ */
+export function useImagensPorVeiculoId(): Map<number, string | undefined> {
+  const { data: veiculos } = useVeiculos({ size: 100 }, { silentError: true });
+  const { data: catalogo } = useModelosVeiculo({ size: 100 }, { silentError: true });
+
+  return useMemo(() => {
+    const porModelo = new Map<string, string | undefined>();
+    for (const m of catalogo?.content ?? []) {
+      if (m.marca && m.modelo) porModelo.set(`${m.marca.toLowerCase()} ${m.modelo.toLowerCase()}`, m.imagemBase64);
+    }
+    const porVeiculoId = new Map<number, string | undefined>();
+    for (const v of veiculos?.content ?? []) {
+      if (v.id != null && v.marca && v.modelo) {
+        porVeiculoId.set(v.id, porModelo.get(`${v.marca.toLowerCase()} ${v.modelo.toLowerCase()}`));
+      }
+    }
+    return porVeiculoId;
+  }, [veiculos, catalogo]);
 }
 
 export function ModeloVeiculoField({

@@ -9,6 +9,11 @@ import { OrdensServicoPage } from './OrdensServicoPage';
 
 vi.mock('@/hooks/useOrdensServico', () => ({ useOrdensServico: vi.fn() }));
 vi.mock('@/hooks/useUsuarios', () => ({ useUsuarios: vi.fn() }));
+vi.mock('@/hooks/useVeiculos', () => ({ useVeiculos: vi.fn(() => ({ data: { content: [] } })) }));
+vi.mock('@/hooks/useModelosVeiculo', () => ({
+  useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
+  useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {

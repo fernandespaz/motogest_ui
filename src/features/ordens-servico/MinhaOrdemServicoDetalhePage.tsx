@@ -24,6 +24,8 @@ import {
   useTimerResumeOS,
   useAtualizarStatusOS,
 } from '@/hooks/useOrdensServico';
+import { useVeiculo } from '@/hooks/useVeiculos';
+import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 import { useAuthStore } from '@/store/authStore';
 import { ChecklistTab } from './ChecklistTab';
 import { FotosTab } from './FotosTab';
@@ -59,6 +61,11 @@ export function MinhaOrdemServicoDetalhePage() {
   const timerPause = useTimerPauseOS();
   const timerResume = useTimerResumeOS();
   const atualizarStatus = useAtualizarStatusOS();
+  // A OS só devolve veiculoId+veiculoPlaca (sem marca/modelo) — busca o
+  // veículo à parte só pra casar a miniatura do catálogo, sem custo de N
+  // requests já que é um único registro nesta tela.
+  const { data: veiculo } = useVeiculo(os?.veiculoId ?? undefined);
+  const imagemVeiculo = useModeloVeiculoImagem(veiculo?.marca, veiculo?.modelo);
 
   async function handleIniciar() {
     if (!osId) return;
@@ -257,7 +264,10 @@ export function MinhaOrdemServicoDetalhePage() {
               </div>
               <div>
                 <p className="text-xs text-ink-muted">Veículo</p>
-                <p className="font-medium text-ink">{os.veiculoPlaca ?? '—'}</p>
+                <div className="flex items-center gap-1.5 font-medium text-ink">
+                  <ModeloVeiculoThumb base64={imagemVeiculo} size={20} />
+                  {os.veiculoPlaca ?? '—'}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-ink-muted">Técnico resp.</p>

@@ -24,6 +24,10 @@ vi.mock('@/hooks/useClientes', () => ({
   clientesKeys: { all: ['clientes'] },
 }));
 vi.mock('@/hooks/useVeiculos', () => ({ useDeleteVeiculo: vi.fn() }));
+vi.mock('@/hooks/useModelosVeiculo', () => ({
+  useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
+  useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+}));
 vi.mock('@/hooks/useCepLookup', () => ({ useCepLookup: vi.fn() }));
 vi.mock('@/api/endpoints/veiculos', () => ({ veiculosApi: { update: vi.fn(), create: vi.fn() } }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

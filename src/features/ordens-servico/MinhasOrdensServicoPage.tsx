@@ -27,6 +27,7 @@ import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { PausarOSModal } from './PausarOSModal';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
 
 export function MinhasOrdensServicoPage() {
   const navigate = useNavigate();
@@ -54,6 +55,7 @@ export function MinhasOrdensServicoPage() {
   const emAndamentoQuery = useOrdensServico({ ...paramsComuns, status: 'EM_ANDAMENTO' });
   const pausadaQuery = useOrdensServico({ ...paramsComuns, status: 'PAUSADA' });
   const aguardandoPecaQuery = useOrdensServico({ ...paramsComuns, status: 'AGUARDANDO_PECA' });
+  const imagensPorVeiculoId = useImagensPorVeiculoId();
 
   const isLoading =
     aprovadaQuery.isLoading || emAndamentoQuery.isLoading || pausadaQuery.isLoading || aguardandoPecaQuery.isLoading;
@@ -239,16 +241,26 @@ export function MinhasOrdensServicoPage() {
                   key={os.id}
                   className={
                     estourado
-                      ? 'rounded-xl border-l-4 border-l-danger bg-red-50/60 p-4 shadow-card'
-                      : 'rounded-xl border-l-4 border-l-brand-600 bg-surface p-4 shadow-card'
+                      ? 'relative rounded-xl border-l-4 border-l-danger bg-red-50/60 p-4 shadow-card'
+                      : 'relative rounded-xl border-l-4 border-l-brand-600 bg-surface p-4 shadow-card'
                   }
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-mono text-xs text-ink-muted">
-                      OS {os.numero} · entrada {formatDateTime(os.dataAbertura)}
-                    </p>
+                  {/* A miniatura fica fora do fluxo (absolute) de propósito —
+                      ela é bem mais alta que a linha "OS ... · entrada ...", e
+                      se entrasse no flex normal dessa linha, a linha inteira
+                      cresceria pra caber ela e empurraria todo o resto do card
+                      pra baixo, sobrando um vão vazio embaixo do cabeçalho. */}
+                  <div className="absolute right-4 top-4 flex flex-col items-end gap-1.5">
                     <Badge tone={meta.tone}>{meta.label}</Badge>
+                    <ModeloVeiculoThumb
+                      base64={os.veiculoId != null ? imagensPorVeiculoId.get(os.veiculoId) : undefined}
+                      size={96}
+                    />
                   </div>
+
+                  <p className="pr-28 font-mono text-xs text-ink-muted">
+                    OS {os.numero} · entrada {formatDateTime(os.dataAbertura)}
+                  </p>
 
                   <p className="mt-1.5 text-base font-semibold text-ink">{os.veiculoPlaca}</p>
                   <p className="text-sm text-ink-muted">{os.clienteNome}</p>
