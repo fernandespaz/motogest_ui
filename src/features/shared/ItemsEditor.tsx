@@ -76,7 +76,7 @@ function TempoVendidoInput({
           type="button"
           disabled={disabled}
           onClick={() => incrementar(preset.minutos)}
-          className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 transition-colors hover:bg-brand-100 disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 transition-colors hover:bg-brand-100 dark:bg-brand-900/40 dark:text-brand-300 dark:hover:bg-brand-900/60 disabled:pointer-events-none disabled:opacity-40"
         >
           {preset.label}
         </button>
@@ -319,7 +319,7 @@ export function ItemsEditor({
             disabled={disabled}
             onClick={() => remove(index)}
             aria-label="Remover item"
-            className="shrink-0 rounded-md p-1 text-ink-muted hover:bg-red-50 hover:text-danger disabled:pointer-events-none disabled:opacity-40"
+            className="shrink-0 rounded-md p-1 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30 disabled:pointer-events-none disabled:opacity-40"
           >
             <Trash2 size={15} />
           </button>

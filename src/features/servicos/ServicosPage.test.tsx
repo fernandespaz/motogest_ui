@@ -114,8 +114,8 @@ describe('ServicosPage', () => {
     } as never);
     render(<ServicosPage />);
 
-    expect(screen.getByText('Página 1 de 2 · 21 registros')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Próxima/ }));
+    expect(screen.getByText('21 registros')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
     expect(useServicos).toHaveBeenLastCalledWith({ page: 1, size: 20 });
   });
 });

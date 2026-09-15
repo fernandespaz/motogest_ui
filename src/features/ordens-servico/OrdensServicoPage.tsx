@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileDown, AlertTriangle } from 'lucide-react';
+import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Field';
+import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { useOrdensServico } from '@/hooks/useOrdensServico';
+import { useUsuarios } from '@/hooks/useUsuarios';
 import { useAuthStore } from '@/store/authStore';
 import { isMecanico } from '@/lib/perfil';
 import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
@@ -19,22 +21,26 @@ import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
-const statusOptions: OrdemServicoStatus[] = [
-  'ABERTA',
+// Os 5 status mais consultados no dia a dia viram chip (1 clique); os 4
+// restantes (menos frequentes) ficam atrás do seletor "Mais status" pra não
+// estourar a largura da barra de filtros.
+const statusEmDestaque: OrdemServicoStatus[] = ['ABERTA', 'APROVADA', 'EM_ANDAMENTO', 'AGUARDANDO_PECA', 'PAUSADA'];
+const statusOutros: OrdemServicoStatus[] = [
   'AGUARDANDO_APROVACAO',
-  'APROVADA',
-  'EM_ANDAMENTO',
-  'AGUARDANDO_PECA',
-  'PAUSADA',
   'CONCLUIDA',
   'CANCELADA',
   'ENTREGUE',
 ];
 
+const selectCompacto =
+  'h-8 shrink-0 rounded-lg border border-border bg-surface-alt px-2.5 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand-400';
+
 export function OrdensServicoPage() {
   const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
   const [status, setStatus] = useState<OrdemServicoStatus | ''>('');
   const [numero, setNumero] = useState('');
+  const [tecnicoId, setTecnicoId] = useState<number | ''>('');
   const navigate = useNavigate();
   const perfil = useAuthStore((s) => s.perfil);
   // Mecânico também acessa essa lista geral (pra achar a OS de um colega,
@@ -46,15 +52,23 @@ export function OrdensServicoPage() {
   // técnico (só leitura + checklist/fotos) em vez do formulário do Consultor.
   const linkDetalheOS = isMecanico(perfil) ? '/minhas-os' : '/ordens-servico';
 
+  // Reaproveita o mesmo seletor de "Técnico Resp." do formulário de OS — a
+  // API já aceita usuarioResponsavelId no filtro da listagem, só não estava
+  // exposto aqui. useUsuarios() já se desliga sozinho (enabled) pra quem não
+  // tem USUARIO_READ, então o filtro simplesmente some pra esses perfis.
+  const { data: usuarios } = useUsuarios();
+  const mecanicos = usuarios?.filter((u) => isMecanico(u.perfilNome)) ?? [];
+
   const { data, isLoading } = useOrdensServico({
     page,
-    size: 20,
+    size,
     // Mais recente primeiro — mesma convenção de OrcamentosPage, pra a
     // última OS aberta/aprovada aparecer no topo da lista em vez de ficar
     // perdida nas últimas páginas conforme o histórico cresce.
     sort: 'id,desc',
     status: status || undefined,
     numero: numero || undefined,
+    usuarioResponsavelId: tecnicoId || undefined,
   });
 
   async function baixarPdf(row: OrdemServicoResponse) {
@@ -65,6 +79,13 @@ export function OrdensServicoPage() {
     }
   }
 
+  function selecionarStatus(novoStatus: OrdemServicoStatus | '') {
+    setStatus(novoStatus);
+    setPage(0);
+  }
+
+  const statusOutroAtivo = status !== '' && statusOutros.includes(status);
+
   return (
     <div>
       <PageHeader
@@ -72,7 +93,7 @@ export function OrdensServicoPage() {
         subtitle="Núcleo operacional da oficina"
       />
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <SearchInput
           value={numero}
           onChange={(value) => {
@@ -82,21 +103,67 @@ export function OrdensServicoPage() {
           placeholder="Buscar por número da OS..."
           className="w-full max-w-xs"
         />
-        <Select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as OrdemServicoStatus | '');
-            setPage(0);
-          }}
-          className="max-w-xs"
+
+        <div className="flex min-w-0 max-w-full gap-1.5 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => selecionarStatus('')}
+            className={clsx(
+              'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+              status === ''
+                ? 'border-brand-600 bg-brand-600 text-white'
+                : 'border-border text-ink-muted hover:bg-surface-alt hover:text-ink',
+            )}
+          >
+            Todos
+          </button>
+          {statusEmDestaque.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => selecionarStatus(s)}
+              className={clsx(
+                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                status === s
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-border text-ink-muted hover:bg-surface-alt hover:text-ink',
+              )}
+            >
+              {metaFor(ordemServicoStatusMeta, s).label}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={statusOutroAtivo ? status : ''}
+          onChange={(e) => selecionarStatus(e.target.value as OrdemServicoStatus | '')}
+          className={selectCompacto}
         >
-          <option value="">Todos os status</option>
-          {statusOptions.map((s) => (
+          <option value="">Mais status…</option>
+          {statusOutros.map((s) => (
             <option key={s} value={s}>
               {metaFor(ordemServicoStatusMeta, s).label}
             </option>
           ))}
-        </Select>
+        </select>
+
+        {mecanicos.length > 0 && (
+          <select
+            value={tecnicoId}
+            onChange={(e) => {
+              setTecnicoId(e.target.value ? Number(e.target.value) : '');
+              setPage(0);
+            }}
+            className={selectCompacto}
+          >
+            <option value="">Técnico: Todos</option>
+            {mecanicos.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <Card>
@@ -131,23 +198,33 @@ export function OrdensServicoPage() {
             {
               header: '',
               render: (row) => (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     baixarPdf(row);
                   }}
-                  className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                  title="Baixar PDF"
                 >
-                  <FileDown size={16} />
-                </button>
+                  <FileDown size={14} /> PDF
+                </Button>
               ),
             },
           ]}
           onRowClick={(row) => navigate(`${linkDetalheOS}/${row.id}`)}
         />
         {data && (
-          <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
+          <Pagination
+            page={data.pageNumber}
+            totalPages={data.totalPages}
+            totalElements={data.totalElements}
+            onChange={setPage}
+            pageSize={size}
+            onPageSizeChange={(novoTamanho) => {
+              setSize(novoTamanho);
+              setPage(0);
+            }}
+          />
         )}
       </Card>
     </div>

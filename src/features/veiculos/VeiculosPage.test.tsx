@@ -158,8 +158,8 @@ describe('VeiculosPage', () => {
     } as never);
     renderPage();
 
-    expect(screen.getByText('Página 1 de 2 · 21 registros')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Próxima/ }));
+    expect(screen.getByText('21 registros')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
     expect(useVeiculos).toHaveBeenLastCalledWith({ page: 1, size: 20 });
   });
 });

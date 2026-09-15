@@ -135,17 +135,17 @@ export function OrcamentosPage() {
             {
               header: '',
               render: (row) => (
-                <div className="flex justify-end gap-1">
-                  <button
+                <div className="flex items-center justify-end gap-1.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       baixarPdf(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                    title="Baixar PDF"
                   >
-                    <FileDown size={16} />
-                  </button>
+                    <FileDown size={14} /> PDF
+                  </Button>
                   {row.status === 'RASCUNHO' && (
                     <>
                       <button
@@ -153,7 +153,7 @@ export function OrcamentosPage() {
                           e.stopPropagation();
                           handleEnviarECompartilhar(row);
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-green-50 hover:text-success dark:hover:bg-green-900/30"
                         title="Enviar para aprovação (WhatsApp)"
                       >
                         <Send size={16} />
@@ -163,7 +163,7 @@ export function OrcamentosPage() {
                           e.stopPropagation();
                           setDeleting(row);
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
                         title="Remover"
                       >
                         <Trash2 size={16} />
@@ -177,7 +177,7 @@ export function OrcamentosPage() {
                           e.stopPropagation();
                           compartilharWhatsApp(row);
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-alt hover:text-brand-700"
                         title="Reenviar link via WhatsApp"
                       >
                         <MessageCircle size={16} />
@@ -192,7 +192,7 @@ export function OrcamentosPage() {
                             toast.error(extractErrorMessage(error));
                           }
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-green-50 hover:text-success dark:hover:bg-green-900/30"
                         title="Aprovar"
                       >
                         <Check size={16} />
@@ -207,7 +207,7 @@ export function OrcamentosPage() {
                             toast.error(extractErrorMessage(error));
                           }
                         }}
-                        className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
                         title="Rejeitar"
                       >
                         <X size={16} />
@@ -220,7 +220,7 @@ export function OrcamentosPage() {
                         e.stopPropagation();
                         handleConverter(row);
                       }}
-                      className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
+                      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-alt hover:text-brand-700"
                       title="Converter em Ordem de Serviço"
                     >
                       <Wrench size={16} />

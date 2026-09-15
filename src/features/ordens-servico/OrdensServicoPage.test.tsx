@@ -3,10 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOrdensServico } from '@/hooks/useOrdensServico';
+import { useUsuarios } from '@/hooks/useUsuarios';
 import { useAuthStore } from '@/store/authStore';
 import { OrdensServicoPage } from './OrdensServicoPage';
 
 vi.mock('@/hooks/useOrdensServico', () => ({ useOrdensServico: vi.fn() }));
+vi.mock('@/hooks/useUsuarios', () => ({ useUsuarios: vi.fn() }));
 
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -33,6 +35,7 @@ describe('OrdensServicoPage row navigation', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     vi.mocked(useOrdensServico).mockReturnValue({ data, isLoading: false } as never);
+    vi.mocked(useUsuarios).mockReturnValue({ data: [] } as never);
   });
 
   // Este é o ponto central da correção: o Mecânico também acessa essa lista
@@ -56,5 +59,69 @@ describe('OrdensServicoPage row navigation', () => {
     await userEvent.click(screen.getByText('OS-000042'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/ordens-servico/42');
+  });
+});
+
+describe('OrdensServicoPage filtros', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ perfil: 'Consultor Técnico' });
+    vi.mocked(useOrdensServico).mockReturnValue({ data, isLoading: false } as never);
+    vi.mocked(useUsuarios).mockReturnValue({ data: [] } as never);
+  });
+
+  it('filters by a single click on a status chip, using the same status param as before', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Em andamento' }));
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'EM_ANDAMENTO', page: 0 }),
+    );
+  });
+
+  it('clears the status filter when "Todos" is clicked back', async () => {
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Pausada' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Todos' }));
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ status: undefined }));
+  });
+
+  it('filters by the less-common statuses through "Mais status"', async () => {
+    renderPage();
+
+    await userEvent.selectOptions(screen.getByDisplayValue('Mais status…'), 'CANCELADA');
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'CANCELADA' }));
+  });
+
+  it('does not show the técnico filter when there are no mecânicos to filter by', () => {
+    renderPage();
+    expect(screen.queryByText('Técnico: Todos')).not.toBeInTheDocument();
+  });
+
+  it('filters by técnico using the usuarioResponsavelId param the API already supports', async () => {
+    vi.mocked(useUsuarios).mockReturnValue({
+      data: [
+        { id: 7, nome: 'Marcos Mecânico', perfilNome: 'Mecânico' },
+        { id: 8, nome: 'Carla Consultora', perfilNome: 'Consultor Técnico' },
+      ],
+    } as never);
+    renderPage();
+
+    expect(screen.queryByRole('option', { name: 'Carla Consultora' })).not.toBeInTheDocument();
+
+    await userEvent.selectOptions(screen.getByDisplayValue('Técnico: Todos'), '7');
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ usuarioResponsavelId: 7 }));
+  });
+
+  it('lets the user pick how many rows load per page', async () => {
+    renderPage();
+
+    await userEvent.selectOptions(screen.getByLabelText('Itens por página'), '50');
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ size: 50, page: 0 }));
   });
 });

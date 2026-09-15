@@ -92,7 +92,7 @@ export function ChecklistTab({ ordemServicoId }: { ordemServicoId: number }) {
                     <Input label="Observação" {...register(`itens.${index}.observacao`)} />
                   </div>
                   <div className="flex justify-end sm:col-span-1">
-                    <button type="button" onClick={() => remove(index)} className="rounded-md p-2 text-ink-muted hover:bg-red-50 hover:text-danger">
+                    <button type="button" onClick={() => remove(index)} className="rounded-md p-2 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30">
                       <Trash2 size={16} />
                     </button>
                   </div>

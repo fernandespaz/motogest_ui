@@ -43,12 +43,12 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-hidden rounded-t-2xl">
       <table className="w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-border text-xs uppercase tracking-wide text-ink-muted">
+          <tr className="border-b border-border bg-surface-alt text-xs uppercase tracking-wide text-ink">
             {columns.map((col, i) => (
-              <th key={i} className={`px-4 py-2.5 font-medium sm:px-5 ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>
+              <th key={i} className={`px-4 py-3 font-semibold sm:px-5 ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>
                 {col.header}
               </th>
             ))}
