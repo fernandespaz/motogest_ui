@@ -13,14 +13,14 @@ export function TrialBanner() {
   return (
     <div
       className={`flex items-center justify-center gap-2 px-4 py-2 text-center text-xs font-medium sm:text-sm ${
-        urgente ? 'bg-red-50 text-danger' : 'bg-amber-50 text-warning'
+        urgente ? 'bg-red-50 text-danger' : 'bg-brand-600 text-white'
       }`}
     >
       <AlertTriangle size={15} />
       {dias > 0
         ? `Seu período de teste termina em ${dias} dia${dias === 1 ? '' : 's'}.`
         : 'Seu período de teste terminou.'}
-      <Link to="/oficina/licenca" className="underline underline-offset-2">
+      <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">
         Ver planos
       </Link>
     </div>

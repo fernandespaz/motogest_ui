@@ -4,6 +4,7 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { TrialBanner } from './TrialBanner';
+import { TrialExpiredDialog } from './TrialExpiredDialog';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { useAutoConversaoOrcamentosAprovados } from '@/hooks/useAutoConversaoOrcamentos';
 
@@ -20,6 +21,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <TrialBanner />
+        <TrialExpiredDialog />
         <main className="flex-1 overflow-y-auto px-4 pb-24 pt-5 sm:px-6 lg:pb-6">
           <AnimatePresence mode="wait">
             <PageTransition key={location.pathname}>

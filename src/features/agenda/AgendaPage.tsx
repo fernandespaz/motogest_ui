@@ -61,7 +61,7 @@ export function AgendaPage() {
         <div className="text-center">
           <p className="text-sm font-semibold capitalize text-ink">{format(dia, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
           <button onClick={() => setDia(new Date())} className="text-xs text-brand-700 underline underline-offset-2">
-            Ir para hoje
+            Hoje
           </button>
         </div>
         <Button size="sm" variant="ghost" onClick={() => setDia((d) => addDays(d, 1))} aria-label="Próximo dia">

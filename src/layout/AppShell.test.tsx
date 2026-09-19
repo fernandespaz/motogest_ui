@@ -8,6 +8,7 @@ vi.mock('./Sidebar', () => ({ Sidebar: () => <div>Sidebar mock</div> }));
 vi.mock('./Topbar', () => ({ Topbar: () => <div>Topbar mock</div> }));
 vi.mock('./MobileNav', () => ({ MobileNav: () => <div>MobileNav mock</div> }));
 vi.mock('./TrialBanner', () => ({ TrialBanner: () => <div>TrialBanner mock</div> }));
+vi.mock('./TrialExpiredDialog', () => ({ TrialExpiredDialog: () => <div>TrialExpiredDialog mock</div> }));
 vi.mock('@/hooks/useAutoConversaoOrcamentos', () => ({
   useAutoConversaoOrcamentosAprovados: vi.fn(),
 }));
@@ -27,6 +28,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Sidebar mock')).toBeInTheDocument();
     expect(screen.getByText('Topbar mock')).toBeInTheDocument();
     expect(screen.getByText('TrialBanner mock')).toBeInTheDocument();
+    expect(screen.getByText('TrialExpiredDialog mock')).toBeInTheDocument();
     expect(screen.getByText('MobileNav mock')).toBeInTheDocument();
     expect(screen.getByText('Lista de clientes')).toBeInTheDocument();
   });
