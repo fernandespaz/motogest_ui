@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { openPdfInNewTab } from './downloadBlob';
 
 describe('openPdfInNewTab', () => {
-  let createObjectURL: ReturnType<typeof vi.fn>;
-  let revokeObjectURL: ReturnType<typeof vi.fn>;
+  let createObjectURL: Mock<(obj: Blob | MediaSource) => string>;
+  let revokeObjectURL: Mock<(url: string) => void>;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    createObjectURL = vi.fn(() => 'blob:mock-url');
-    revokeObjectURL = vi.fn();
+    createObjectURL = vi.fn<(obj: Blob | MediaSource) => string>(() => 'blob:mock-url');
+    revokeObjectURL = vi.fn<(url: string) => void>();
     URL.createObjectURL = createObjectURL;
     URL.revokeObjectURL = revokeObjectURL;
   });

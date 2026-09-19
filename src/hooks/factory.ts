@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PageParams } from '@/api/types';
+import type { PageParams, PageResponse } from '@/api/types';
 
 interface CrudLike<TResponse, TRequest, TListParams> {
-  list: (params?: TListParams) => Promise<any>;
+  list: (params?: TListParams) => Promise<PageResponse<TResponse>>;
   get: (id: number) => Promise<TResponse>;
   create: (payload: TRequest) => Promise<TResponse>;
   update: (id: number, payload: TRequest) => Promise<TResponse>;

@@ -19,14 +19,16 @@ describe('checklistsApi', () => {
     expect(result).toEqual([{ id: 1 }]);
   });
 
-  it('criar() POSTs a new checklist item for an OS', async () => {
-    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 2, descricao: 'Verificar freios' } });
+  it('criar() POSTs a new checklist for an OS', async () => {
+    const checklist = {
+      tipo: 'ENTRADA' as const,
+      itens: [{ descricao: 'Verificar freios', situacao: 'OK' as const }],
+    };
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 2, ...checklist } });
 
-    const result = await checklistsApi.criar(10, { descricao: 'Verificar freios' } as never);
+    const result = await checklistsApi.criar(10, checklist);
 
-    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/ordens-servico/10/checklists', {
-      descricao: 'Verificar freios',
-    });
-    expect(result.descricao).toBe('Verificar freios');
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/ordens-servico/10/checklists', checklist);
+    expect(result.itens?.[0].descricao).toBe('Verificar freios');
   });
 });
