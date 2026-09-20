@@ -1,11 +1,12 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestQueryClient, wrapWithQueryClient } from '@/test/queryClientWrapper';
 import { pagamentosApi } from '@/api/endpoints/pagamentos';
-import { useIniciarAssinatura, useIniciarPedido } from './usePagamentos';
+import { useAuthStore } from '@/store/authStore';
+import { useChavePublicaPagBank, useIniciarAssinatura, useIniciarPedido } from './usePagamentos';
 
 vi.mock('@/api/endpoints/pagamentos', () => ({
-  pagamentosApi: { iniciarPedido: vi.fn(), iniciarAssinatura: vi.fn() },
+  pagamentosApi: { iniciarPedido: vi.fn(), iniciarAssinatura: vi.fn(), iniciarPix: vi.fn(), chavePublica: vi.fn() },
 }));
 
 describe('usePagamentos hooks', () => {
@@ -31,5 +32,39 @@ describe('usePagamentos hooks', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['licenca', 'atual'] });
+  });
+
+  describe('useChavePublicaPagBank', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ permissoes: ['OFICINA_WRITE'] });
+    });
+
+    it('fetches the chave pública for a profile with OFICINA_WRITE', async () => {
+      vi.mocked(pagamentosApi.chavePublica).mockResolvedValueOnce({ chavePublica: 'chave-fake' } as never);
+      const { result } = renderHook(() => useChavePublicaPagBank(), { wrapper: wrapWithQueryClient() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual({ chavePublica: 'chave-fake' });
+    });
+
+    it('stays disabled for a profile without OFICINA_WRITE, instead of 403ing on page load', () => {
+      useAuthStore.setState({ permissoes: [] });
+      const { result } = renderHook(() => useChavePublicaPagBank(), { wrapper: wrapWithQueryClient() });
+
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(pagamentosApi.chavePublica).not.toHaveBeenCalled();
+    });
+
+    // Regressão: quando o backend falha ao obter a chave do PagBank (ex.:
+    // 422 "Nao foi possivel obter a chave publica do PagBank no momento"),
+    // PagamentoCartaoModal precisa de isError para mostrar um aviso próprio
+    // em vez de deixar o botão "Pagar" habilitado rumo a uma falha silenciosa
+    // na hora de criptografar o cartão.
+    it('surfaces isError when the backend fails to obtain the chave pública, without a global toast', async () => {
+      vi.mocked(pagamentosApi.chavePublica).mockRejectedValueOnce(new Error('Nao foi possivel obter a chave publica'));
+      const { result } = renderHook(() => useChavePublicaPagBank(), { wrapper: wrapWithQueryClient() });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+    });
   });
 });

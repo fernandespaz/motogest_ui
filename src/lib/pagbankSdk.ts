@@ -1,9 +1,12 @@
 // Carrega o SDK oficial do PagBank no navegador e criptografa os dados do
-// cartão *no cliente*, usando a chave pública (VITE_PAGBANK_PUBLIC_KEY — não é
-// segredo, é seguro embutir no bundle). O número do cartão, validade e CVV
-// nunca saem do navegador em texto puro: só o resultado criptografado
-// (`cardToken`) é enviado ao nosso backend, que repassa ao PagBank junto com o
-// token secreto (esse sim, exclusivo do backend). Ver api/endpoints/pagamentos.ts.
+// cartão *no cliente*, usando a chave pública (obtida em runtime via
+// GET /api/v1/pagamentos/chave-publica — ver hooks/usePagamentos.ts#useChavePublicaPagBank
+// — não é segredo, é segura embutir no bundle, mas evitamos fixá-la em env var
+// para não depender de rebuild se ela girar do lado do PagBank). O número do
+// cartão, validade e CVV nunca saem do navegador em texto puro: só o resultado
+// criptografado (`cardToken`) é enviado ao nosso backend, que repassa ao
+// PagBank junto com o token secreto (esse sim, exclusivo do backend). Ver
+// api/endpoints/pagamentos.ts.
 //
 // ATENÇÃO: o nome global (`window.PagSeguro`) e o método `encryptCard` foram
 // confirmados contra a documentação pública do PagBank no momento da
@@ -89,18 +92,21 @@ export interface DadosCartao {
  * o token opaco a ser enviado como `cardToken`. Lança erro com mensagem em
  * português pronta para exibir ao usuário — nunca repassa código de erro cru
  * do gateway (ver prohibited-actions/coding-standards deste projeto).
+ *
+ * `chavePublica` vem de useChavePublicaPagBank() — o call site decide como
+ * lidar com o caso dela ainda não ter carregado (não é responsabilidade desta
+ * função buscar nem cachear a chave).
  */
-export function criptografarCartao(dados: DadosCartao): string {
-  const publicKey = import.meta.env.VITE_PAGBANK_PUBLIC_KEY;
-  if (!publicKey) {
-    throw new Error('Pagamento por cartão ainda não configurado (chave pública do PagBank ausente).');
+export function criptografarCartao(chavePublica: string, dados: DadosCartao): string {
+  if (!chavePublica) {
+    throw new Error('Pagamento por cartão temporariamente indisponível. Tente novamente em instantes.');
   }
   if (!window.PagSeguro) {
     throw new Error('SDK de pagamento ainda não carregado. Tente novamente em instantes.');
   }
 
   const resultado = window.PagSeguro.encryptCard({
-    publicKey,
+    publicKey: chavePublica,
     holder: dados.nomeTitular,
     number: dados.numero,
     expMonth: dados.validadeMes,

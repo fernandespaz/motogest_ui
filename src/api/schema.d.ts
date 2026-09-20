@@ -1222,6 +1222,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pagamentos/chave-publica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chave publica do PagBank, para o frontend tokenizar cartao no navegador antes de chamar /pedido ou /assinatura */
+        get: operations["obterChavePublica"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ordens-servico/{id}/pdf": {
         parameters: {
             query?: never;
@@ -2032,6 +2049,10 @@ export interface components {
             expirada?: boolean;
             /** Format: int64 */
             diasRestantes?: number;
+            /** Format: int32 */
+            limiteUsuarios?: number;
+            /** Format: int64 */
+            usuariosAtivos?: number;
         };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
@@ -2202,6 +2223,9 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        ChavePublicaResponse: {
+            chavePublica?: string;
         };
         PageResponseOrdemServicoResponse: {
             content?: components["schemas"]["OrdemServicoResponse"][];
@@ -4856,6 +4880,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PermissaoResponse"][];
+                };
+            };
+        };
+    };
+    obterChavePublica: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ChavePublicaResponse"];
                 };
             };
         };

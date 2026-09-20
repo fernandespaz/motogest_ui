@@ -115,6 +115,8 @@ export const API_ROUTES = {
   pagamentos: {
     pedido: '/api/v1/pagamentos/pedido',
     assinatura: '/api/v1/pagamentos/assinatura',
+    pix: '/api/v1/pagamentos/pix',
+    chavePublica: '/api/v1/pagamentos/chave-publica',
   },
   dashboard: {
     base: '/api/v1/dashboard',

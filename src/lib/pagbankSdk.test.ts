@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { criptografarCartao } from './pagbankSdk';
 
 const dadosCartao = {
@@ -10,31 +10,25 @@ const dadosCartao = {
 };
 
 describe('criptografarCartao', () => {
-  beforeEach(() => {
-    vi.stubEnv('VITE_PAGBANK_PUBLIC_KEY', 'chave-publica-fake');
-  });
-
   afterEach(() => {
-    vi.unstubAllEnvs();
     delete (window as { PagSeguro?: unknown }).PagSeguro;
   });
 
-  it('throws a clear error when the public key is not configured', () => {
-    vi.stubEnv('VITE_PAGBANK_PUBLIC_KEY', '');
+  it('throws a clear error when the public key is empty/not yet loaded', () => {
     window.PagSeguro = { encryptCard: vi.fn() };
 
-    expect(() => criptografarCartao(dadosCartao)).toThrow(/chave pública do PagBank ausente/);
+    expect(() => criptografarCartao('', dadosCartao)).toThrow(/temporariamente indisponível/);
   });
 
   it('throws a clear error when the SDK has not loaded yet', () => {
-    expect(() => criptografarCartao(dadosCartao)).toThrow(/SDK de pagamento ainda não carregado/);
+    expect(() => criptografarCartao('chave-publica-fake', dadosCartao)).toThrow(/SDK de pagamento ainda não carregado/);
   });
 
   it('returns the encrypted card token on success, without ever exposing the raw card data', () => {
     const encryptCard = vi.fn().mockReturnValue({ hasErrors: false, encryptedCard: 'enc_abc123' });
     window.PagSeguro = { encryptCard };
 
-    const token = criptografarCartao(dadosCartao);
+    const token = criptografarCartao('chave-publica-fake', dadosCartao);
 
     expect(token).toBe('enc_abc123');
     expect(encryptCard).toHaveBeenCalledWith({
@@ -52,12 +46,12 @@ describe('criptografarCartao', () => {
       encryptCard: vi.fn().mockReturnValue({ hasErrors: true, errors: [{ code: 'INVALID_SECURITY_CODE', message: 'x' }] }),
     };
 
-    expect(() => criptografarCartao(dadosCartao)).toThrow('Código de segurança (CVV) inválido.');
+    expect(() => criptografarCartao('chave-publica-fake', dadosCartao)).toThrow('Código de segurança (CVV) inválido.');
   });
 
   it('falls back to a generic message for an unknown/absent error code', () => {
     window.PagSeguro = { encryptCard: vi.fn().mockReturnValue({ hasErrors: true, errors: [] }) };
 
-    expect(() => criptografarCartao(dadosCartao)).toThrow(/Não foi possível validar os dados do cartão/);
+    expect(() => criptografarCartao('chave-publica-fake', dadosCartao)).toThrow(/Não foi possível validar os dados do cartão/);
   });
 });

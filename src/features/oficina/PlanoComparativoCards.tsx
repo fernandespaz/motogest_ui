@@ -11,7 +11,7 @@ export function PlanoComparativoCards({
   onSelecionar,
 }: {
   selecionado: PlanoCodigo;
-  tipoCobranca: 'ASSINATURA' | 'PEDIDO';
+  tipoCobranca: 'ASSINATURA' | 'PEDIDO' | 'PIX';
   onSelecionar: (plano: PlanoCodigo) => void;
 }) {
   return (

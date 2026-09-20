@@ -103,7 +103,9 @@ export type LicencaStatus = NonNullable<LicencaResponse['status']>;
 
 export type IniciarPedidoRequest = Schemas['IniciarPedidoRequest'];
 export type IniciarAssinaturaRequest = Schemas['IniciarAssinaturaRequest'];
+export type IniciarPixRequest = Schemas['IniciarPixRequest'];
 export type PagamentoResponse = Schemas['PagamentoResponse'];
+export type ChavePublicaResponse = Schemas['ChavePublicaResponse'];
 export type PagamentoStatus = NonNullable<PagamentoResponse['status']>;
 export type PagamentoTipo = NonNullable<PagamentoResponse['tipo']>;
 

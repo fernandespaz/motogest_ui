@@ -66,12 +66,54 @@ apiClient.interceptors.response.use(
   },
 );
 
+// Uma mensagem de negócio de verdade, escrita pelo nosso backend para um
+// lojista ler, é curta e em português, sem estrutura de dado nem jargão
+// técnico em inglês. Isso existe porque já aconteceu de um erro de
+// integração (o backend falhando ao autenticar com o PagBank) vazar como
+// "Falha ao comunicar com o PagBank: 401 Unauthorized: {"error_messages":
+// [...]}" direto num campo pensado para o usuário final ler — nenhuma
+// mensagem vinda do backend, seja de um erro capturado (extractErrorMessage)
+// seja de um campo de DTO renderizado direto (ex.: PagamentoResponse.
+// mensagemErro), pode chegar à tela sem passar por aqui primeiro. Regra de
+// projeto, não só deste endpoint — ver CLAUDE.md/skill.
+const PADRAO_MENSAGEM_TECNICA =
+  /[{}[\]]|error_messages|status_code|unauthorized|forbidden|invalid credential|stack ?trace|internal server error|\bhttp\/?\d|\b\d{3}\b.*(bad request|unauthorized|forbidden|not found|internal server error)/i;
+
+export function mensagemSeguraParaUsuario(mensagem: string | undefined | null, fallback: string): string {
+  if (!mensagem) return fallback;
+  const pareceTecnica = PADRAO_MENSAGEM_TECNICA.test(mensagem) || mensagem.length > 140;
+  if (pareceTecnica) {
+    // eslint-disable-next-line no-console -- sinal de debug intencional: a mensagem real não pode sumir sem deixar rastro.
+    console.error('[api] Mensagem de erro técnica bloqueada de exibição ao usuário:', mensagem);
+    return fallback;
+  }
+  return mensagem;
+}
+
 export function extractErrorMessage(error: unknown, fallback = 'Ocorreu um erro inesperado.'): string {
   if (error instanceof ApiForbiddenError) return error.message;
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as { message?: string; erro?: string; error?: string } | undefined;
-    return data?.message ?? data?.erro ?? data?.error ?? fallback;
+    return mensagemSeguraParaUsuario(data?.message ?? data?.erro ?? data?.error, fallback);
   }
-  if (error instanceof Error) return error.message;
+  if (error instanceof Error) return mensagemSeguraParaUsuario(error.message, fallback);
   return fallback;
+}
+
+/**
+ * Alguns erros de regra de negócio (ex.: LIMITE_USUARIOS_EXCEDIDO) vêm num
+ * corpo estruturado { codigo, mensagem } em vez do envelope padrão de
+ * validação do Spring ({ message, error, ... }) — extractErrorMessage não
+ * cobre esse formato. Use isto quando o call site precisa tratar um código
+ * específico de forma diferenciada (ex.: CTA de upgrade em vez de um toast
+ * genérico), não como substituto geral de extractErrorMessage. A `mensagem`
+ * devolvida ainda não passou por mensagemSeguraParaUsuario — o call site
+ * decide o fallback apropriado ao seu contexto e deve chamá-la antes de
+ * exibir.
+ */
+export function getBusinessErrorCode(error: unknown): { codigo: string; mensagem?: string } | null {
+  if (!axios.isAxiosError(error)) return null;
+  const data = error.response?.data as { codigo?: string; mensagem?: string } | undefined;
+  if (!data?.codigo) return null;
+  return { codigo: data.codigo, mensagem: data.mensagem };
 }

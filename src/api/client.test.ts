@@ -1,7 +1,7 @@
 import { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
-import { ApiForbiddenError, apiClient, extractErrorMessage } from './client';
+import { ApiForbiddenError, apiClient, extractErrorMessage, getBusinessErrorCode, mensagemSeguraParaUsuario } from './client';
 
 function makeAxiosError(data: unknown, status = 400, url = '/api/v1/clientes'): AxiosError {
   const error = new AxiosError('Request failed');
@@ -55,6 +55,63 @@ describe('extractErrorMessage', () => {
   it('returns the default fallback for a completely unknown error shape', () => {
     expect(extractErrorMessage('string-thrown')).toBe('Ocorreu um erro inesperado.');
     expect(extractErrorMessage(null)).toBe('Ocorreu um erro inesperado.');
+  });
+
+  // Regressão: um 401 do PagBank por credencial inválida do nosso próprio
+  // backend vazou como texto bruto no campo "message" e apareceu direto pro
+  // usuário final numa tela de pagamento recusado.
+  it('never surfaces a raw upstream HTTP/JSON error dump, even when it arrives in "message"', () => {
+    const mensagemReal =
+      'Falha ao comunicar com o PagBank: 401 Unauthorized: "{"error_messages":[{"code":"UNAUTHORIZED","description":"Invalid credential. Review AUTHORIZATION header"}]}"';
+    expect(extractErrorMessage(makeAxiosError({ message: mensagemReal }), 'Erro genérico')).toBe('Erro genérico');
+  });
+});
+
+describe('mensagemSeguraParaUsuario', () => {
+  const fallback = 'Não foi possível concluir a operação.';
+
+  it('returns the fallback for null/undefined/empty', () => {
+    expect(mensagemSeguraParaUsuario(undefined, fallback)).toBe(fallback);
+    expect(mensagemSeguraParaUsuario(null, fallback)).toBe(fallback);
+    expect(mensagemSeguraParaUsuario('', fallback)).toBe(fallback);
+  });
+
+  it('passes through a short, human-written business message', () => {
+    expect(mensagemSeguraParaUsuario('Saldo insuficiente.', fallback)).toBe('Saldo insuficiente.');
+    expect(
+      mensagemSeguraParaUsuario('Seu plano Básico permite até 2 usuários ativos. Faça upgrade.', fallback),
+    ).toBe('Seu plano Básico permite até 2 usuários ativos. Faça upgrade.');
+  });
+
+  it('blocks a raw JSON/HTTP error dump and logs it to the console instead', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mensagemTecnica =
+      'Falha ao comunicar com o PagBank: 401 Unauthorized: "{"error_messages":[{"code":"UNAUTHORIZED","description":"Invalid credential. Review AUTHORIZATION header"}]}"';
+
+    expect(mensagemSeguraParaUsuario(mensagemTecnica, fallback)).toBe(fallback);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('bloqueada'), mensagemTecnica);
+    consoleSpy.mockRestore();
+  });
+
+  it('blocks an overly long message even without obvious technical markers', () => {
+    const mensagemLonga = 'a'.repeat(200);
+    expect(mensagemSeguraParaUsuario(mensagemLonga, fallback)).toBe(fallback);
+  });
+});
+
+describe('getBusinessErrorCode', () => {
+  it('extracts codigo + mensagem from a structured business error body', () => {
+    const error = makeAxiosError({ codigo: 'LIMITE_USUARIOS_EXCEDIDO', mensagem: 'Limite atingido.' }, 409);
+    expect(getBusinessErrorCode(error)).toEqual({ codigo: 'LIMITE_USUARIOS_EXCEDIDO', mensagem: 'Limite atingido.' });
+  });
+
+  it('returns null for the default Spring validation envelope (no codigo field)', () => {
+    expect(getBusinessErrorCode(makeAxiosError({ message: 'Erro de validacao' }, 400))).toBeNull();
+  });
+
+  it('returns null for a non-axios error', () => {
+    expect(getBusinessErrorCode(new Error('falha'))).toBeNull();
+    expect(getBusinessErrorCode('string-thrown')).toBeNull();
   });
 });
 
