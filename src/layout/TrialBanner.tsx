@@ -1,12 +1,7 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useLicencaAtual } from '@/hooks/useOficina';
-
-// Planos pagos em cartão avulso (sem assinatura recorrente — sem
-// `proximaCobranca`) não renovam sozinhos: sem este aviso, o acesso cai sem
-// nenhum sinal prévio quando o período pago acaba. Reaproveita o mesmo banner
-// do trial em vez de um componente novo, já que a mensagem/ação é idêntica.
-const PRAZO_AVISO_RENOVACAO_DIAS = 5;
+import { precisaRenovarLicencaManualmente } from '@/lib/licenca';
 
 export function TrialBanner() {
   const { data: licenca } = useLicencaAtual();
@@ -15,26 +10,28 @@ export function TrialBanner() {
 
   const dias = licenca.diasRestantes ?? 0;
   const isTrial = licenca.status === 'TRIAL';
-  const precisaRenovarManualmente =
-    licenca.status === 'ATIVA' && !licenca.proximaCobranca && dias <= PRAZO_AVISO_RENOVACAO_DIAS;
+  const precisaRenovarManualmente = precisaRenovarLicencaManualmente(licenca);
 
   if (!isTrial && !precisaRenovarManualmente) return null;
 
-  const urgente = dias <= 2;
+  // Um plano pago em ATIVA nunca "venceu" enquanto o status continuar ATIVA
+  // — dizer isso contradiz o próprio badge "Ativa" mostrado na tela de
+  // Licença e plano, e aconteceu de aparecer literalmente no dia em que o
+  // plano tinha acabado de ser ativado (diasRestantes chegando a 0 no
+  // último dia do período, sem que o plano tenha de fato expirado).
   const mensagem = isTrial
     ? dias > 0
       ? `Seu período de teste termina em ${dias} dia${dias === 1 ? '' : 's'}.`
       : 'Seu período de teste terminou.'
     : dias > 0
       ? `Seu plano vence em ${dias} dia${dias === 1 ? '' : 's'} e não renova automaticamente.`
-      : 'Seu plano venceu e não renova automaticamente.';
+      : 'Seu plano vence hoje e não renova automaticamente.';
 
   return (
-    <div
-      className={`flex items-center justify-center gap-2 px-4 py-2 text-center text-xs font-medium sm:text-sm ${
-        urgente ? 'bg-red-50 text-danger' : 'bg-brand-600 text-white'
-      }`}
-    >
+    // Laranja sólido igual ao dos botões do projeto (Button.tsx: bg-brand-600) —
+    // cor saturada única, sem precisar de variante dark: separada, fica igual
+    // nos dois temas.
+    <div className="flex items-center justify-center gap-2 bg-brand-600 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
       <AlertTriangle size={15} />
       {mensagem}
       <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">

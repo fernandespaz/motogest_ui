@@ -74,7 +74,7 @@ export function UsuariosPage() {
       />
 
       {limiteAtingido && (
-        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-medium text-warning">
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white">
           <AlertTriangle size={16} />
           Limite de {limiteUsuarios} usuários ativos do plano {planoLabel(licenca?.plano) ?? 'atual'} atingido.
           <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">

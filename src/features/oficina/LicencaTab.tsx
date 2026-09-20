@@ -8,6 +8,7 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { useLicencaAtual } from '@/hooks/useOficina';
 import { licencaStatusMeta, metaFor } from '@/lib/statusMeta';
 import { formatDate } from '@/lib/formatters';
+import { precisaRenovarLicencaManualmente } from '@/lib/licenca';
 import { PagamentoCartaoModal } from './PagamentoCartaoModal';
 
 export function LicencaTab() {
@@ -17,6 +18,14 @@ export function LicencaTab() {
   if (isLoading || !licenca) return <PageSpinner />;
 
   const meta = metaFor(licencaStatusMeta, licenca.status);
+  const diasRestantes = licenca.diasRestantes ?? 0;
+  // Uma licença ATIVA recém-paga (pedido avulso, sem assinatura) não precisa
+  // de nenhum aviso até chegar perto do fim do período — mostrar "Renove seu
+  // plano" logo depois de um pagamento bem-sucedido é a mensagem errada no
+  // momento errado. Só TRIAL/EXPIRADA/CANCELADA precisam de ação sempre;
+  // ATIVA só quando estiver mesmo perto de vencer (mesmo critério do
+  // TrialBanner, para as duas telas nunca discordarem).
+  const precisaAgirAgora = licenca.status !== 'ATIVA' || precisaRenovarLicencaManualmente(licenca);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,9 +55,7 @@ export function LicencaTab() {
             </div>
             <div>
               <p className="text-xs text-ink-muted">Dias restantes</p>
-              <p className={`text-sm font-medium ${(licenca.diasRestantes ?? 0) <= 2 ? 'text-danger' : 'text-ink'}`}>
-                {licenca.diasRestantes ?? 0}
-              </p>
+              <p className={`text-sm font-medium ${diasRestantes <= 2 ? 'text-danger' : 'text-ink'}`}>{diasRestantes}</p>
             </div>
           </div>
 
@@ -61,12 +68,11 @@ export function LicencaTab() {
         </CardBody>
       </Card>
 
-      {/* Mostra a ação de pagamento sempre que não há assinatura com renovação
-          automática em andamento — não só quando a licença está inativa. Uma
-          licença ATIVA paga via pedido avulso (sem proximaCobranca) também
-          precisa desta ação disponível para renovar antes de vencer; é para
-          esse caso que o TrialBanner manda o usuário para cá. */}
-      {!licenca.proximaCobranca && (
+      {/* Mostra a ação de pagamento quando a licença realmente precisa dela
+          agora: sempre para TRIAL/EXPIRADA/CANCELADA, e para ATIVA só perto
+          do fim do período pago avulso (ver precisaAgirAgora acima) — nunca
+          logo depois de um pagamento bem-sucedido, com dias de sobra. */}
+      {precisaAgirAgora && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardBody className="flex flex-col gap-4">
