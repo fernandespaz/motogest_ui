@@ -109,3 +109,16 @@ export function maskHorasInput(bruto: string): string {
   if (digitos.length <= 2) return digitos;
   return `${digitos.slice(0, -2)}:${digitos.slice(-2)}`;
 }
+
+/** Agrupa os dígitos do número do cartão em blocos de 4 (ex.: "4111111111111111" → "4111 1111 1111 1111"). */
+export function formatCardNumber(value: string): string {
+  const digits = onlyDigits(value).slice(0, 19);
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+}
+
+/** Mascara a validade do cartão como "MM/AA" (ex.: "1228" → "12/28"). */
+export function formatCardExpiry(value: string): string {
+  const digits = onlyDigits(value).slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatCardExpiry,
+  formatCardNumber,
   formatCep,
   formatCnpj,
   formatCpf,
@@ -207,5 +209,34 @@ describe('maskHorasInput', () => {
   it('strips non-digit characters and caps at 5 digits', () => {
     expect(maskHorasInput('1:30')).toBe('1:30');
     expect(maskHorasInput('123456')).toBe('123:45');
+  });
+});
+
+describe('formatCardNumber', () => {
+  it('groups digits in blocks of 4', () => {
+    expect(formatCardNumber('4111111111111111')).toBe('4111 1111 1111 1111');
+  });
+
+  it('strips non-digit characters and caps at 19 digits', () => {
+    expect(formatCardNumber('4111-1111-1111-1111999')).toBe('4111 1111 1111 1111 999');
+  });
+
+  it('does not add a trailing space right after a complete block', () => {
+    expect(formatCardNumber('41111111')).toBe('4111 1111');
+  });
+});
+
+describe('formatCardExpiry', () => {
+  it('leaves up to two digits unmasked', () => {
+    expect(formatCardExpiry('1')).toBe('1');
+    expect(formatCardExpiry('12')).toBe('12');
+  });
+
+  it('inserts a slash after the month once a third digit is typed', () => {
+    expect(formatCardExpiry('1228')).toBe('12/28');
+  });
+
+  it('strips non-digit characters and caps at 4 digits', () => {
+    expect(formatCardExpiry('12/2028')).toBe('12/20');
   });
 });

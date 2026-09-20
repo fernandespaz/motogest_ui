@@ -1,47 +1,18 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Sparkles } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
-import { useLicencaAtual, useUpgradeLicenca } from '@/hooks/useOficina';
+import { useLicencaAtual } from '@/hooks/useOficina';
 import { licencaStatusMeta, metaFor } from '@/lib/statusMeta';
 import { formatDate } from '@/lib/formatters';
-import { toast } from '@/store/toastStore';
-import { extractErrorMessage } from '@/api/client';
-
-const schema = z.object({
-  plano: z.string().min(1, 'Selecione um plano'),
-  provedorPagamento: z.string().min(1, 'Selecione a forma de pagamento'),
-});
-
-type FormValues = z.infer<typeof schema>;
+import { PagamentoCartaoModal } from './PagamentoCartaoModal';
 
 export function LicencaTab() {
   const { data: licenca, isLoading } = useLicencaAtual();
-  const upgrade = useUpgradeLicenca();
-  const [showForm, setShowForm] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { plano: 'PRO', provedorPagamento: 'CARTAO' } });
-
-  async function onSubmit(values: FormValues) {
-    try {
-      await upgrade.mutateAsync(values);
-      toast.success('Licença atualizada com sucesso.');
-      setShowForm(false);
-    } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível concluir o upgrade.'));
-    }
-  }
+  const [showPagamento, setShowPagamento] = useState(false);
 
   if (isLoading || !licenca) return <PageSpinner />;
 
@@ -52,7 +23,7 @@ export function LicencaTab() {
       <Card>
         <CardBody className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
               <ShieldCheck size={22} />
             </div>
             <div>
@@ -70,7 +41,7 @@ export function LicencaTab() {
               <p className="text-sm font-medium text-ink">{formatDate(licenca.dataAtivacao)}</p>
             </div>
             <div>
-              <p className="text-xs text-ink-muted">Expiração</p>
+              <p className="text-xs text-ink-muted">{licenca.proximaCobranca ? 'Válida até' : 'Expiração'}</p>
               <p className="text-sm font-medium text-ink">{formatDate(licenca.dataExpiracao)}</p>
             </div>
             <div>
@@ -80,48 +51,43 @@ export function LicencaTab() {
               </p>
             </div>
           </div>
+
+          {licenca.proximaCobranca && (
+            <p className="text-xs text-ink-muted">
+              Assinatura com renovação automática — próxima cobrança em{' '}
+              <span className="font-medium text-ink">{formatDate(licenca.proximaCobranca)}</span>.
+            </p>
+          )}
         </CardBody>
       </Card>
 
-      {licenca.status !== 'ATIVA' && (
+      {/* Mostra a ação de pagamento sempre que não há assinatura com renovação
+          automática em andamento — não só quando a licença está inativa. Uma
+          licença ATIVA paga via pedido avulso (sem proximaCobranca) também
+          precisa desta ação disponível para renovar antes de vencer; é para
+          esse caso que o TrialBanner manda o usuário para cá. */}
+      {!licenca.proximaCobranca && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
             <CardBody className="flex flex-col gap-4">
               <div className="flex items-center gap-2">
                 <Sparkles size={18} className="text-brand-600" />
-                <p className="font-semibold text-ink">Faça upgrade para continuar usando sem limites</p>
+                <p className="font-semibold text-ink">
+                  {licenca.status === 'ATIVA'
+                    ? 'Renove seu plano para não perder o acesso'
+                    : 'Faça upgrade para continuar usando sem limites'}
+                </p>
               </div>
 
-              {!showForm ? (
-                <Button className="self-start" onClick={() => setShowForm(true)}>
-                  Fazer upgrade
-                </Button>
-              ) : (
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-                  <Select label="Plano" required error={errors.plano?.message} {...register('plano')}>
-                    <option value="BASICO">Básico</option>
-                    <option value="PRO">Pro</option>
-                    <option value="PREMIUM">Premium</option>
-                  </Select>
-                  <Select label="Forma de pagamento" required error={errors.provedorPagamento?.message} {...register('provedorPagamento')}>
-                    <option value="CARTAO">Cartão de crédito</option>
-                    <option value="PIX">Pix</option>
-                    <option value="BOLETO">Boleto</option>
-                  </Select>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" loading={upgrade.isPending}>
-                      Confirmar upgrade
-                    </Button>
-                  </div>
-                </form>
-              )}
+              <Button className="self-start" onClick={() => setShowPagamento(true)}>
+                {licenca.status === 'ATIVA' ? 'Renovar plano' : 'Fazer upgrade'}
+              </Button>
             </CardBody>
           </Card>
         </motion.div>
       )}
+
+      <PagamentoCartaoModal open={showPagamento} onClose={() => setShowPagamento(false)} />
     </div>
   );
 }

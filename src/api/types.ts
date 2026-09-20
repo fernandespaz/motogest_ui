@@ -101,6 +101,12 @@ export type LicencaResponse = Schemas['LicencaResponse'];
 export type UpgradeLicencaRequest = Schemas['UpgradeLicencaRequest'];
 export type LicencaStatus = NonNullable<LicencaResponse['status']>;
 
+export type IniciarPedidoRequest = Schemas['IniciarPedidoRequest'];
+export type IniciarAssinaturaRequest = Schemas['IniciarAssinaturaRequest'];
+export type PagamentoResponse = Schemas['PagamentoResponse'];
+export type PagamentoStatus = NonNullable<PagamentoResponse['status']>;
+export type PagamentoTipo = NonNullable<PagamentoResponse['tipo']>;
+
 export type DashboardResponse = Schemas['DashboardResponse'];
 export type ResumoContasResponse = Schemas['ResumoContasResponse'];
 

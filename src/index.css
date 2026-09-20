@@ -4,17 +4,37 @@
 
 :root {
   /* Brand ramp — swappable per-tenant in the future without touching components.
-     Base is the "signal orange" (#FF5A1F) from the MotoGest visual identity. */
+     Base is the "signal orange" (#FF5A1F) from the MotoGest visual identity.
+     Each shade also has a "-channel" twin (space-separated R G B) purely for
+     Tailwind's opacity modifiers (bg-brand-900/40, ring-brand-500/40, ...) —
+     tailwind.config.js resolves those through
+     rgb(var(--brand-XXX-channel) / <alpha-value>). A plain var(--brand-900)
+     hex string can't be split into R/G/B at build time, so Tailwind used to
+     silently drop any /NN-modified brand-* utility from the CSS entirely
+     (confirmed: dark:bg-brand-900/40 never rendered — the base bg-brand-50
+     just stayed visible under dark mode). The hex variables below still
+     drive every non-Tailwind consumer (e.g. inline SVG fill/stroke in
+     WorkshopIllustration.tsx) and are unchanged. */
   --brand-50: #fff3ee;
+  --brand-50-channel: 255 243 238;
   --brand-100: #ffe9df;
+  --brand-100-channel: 255 233 223;
   --brand-200: #ffd1bd;
+  --brand-200-channel: 255 209 189;
   --brand-300: #ffaf8c;
+  --brand-300-channel: 255 175 140;
   --brand-400: #ff8b5b;
+  --brand-400-channel: 255 139 91;
   --brand-500: #ff6e38;
+  --brand-500-channel: 255 110 56;
   --brand-600: #ff5a1f;
+  --brand-600-channel: 255 90 31;
   --brand-700: #d9450f;
+  --brand-700-channel: 217 69 15;
   --brand-800: #b33a0e;
+  --brand-800-channel: 179 58 14;
   --brand-900: #8c2e0c;
+  --brand-900-channel: 140 46 12;
 
   --surface: #fffdf8;
   --surface-alt: #f6f3ec;

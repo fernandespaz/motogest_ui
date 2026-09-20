@@ -64,6 +64,13 @@ export const licencaStatusMeta: Record<string, { label: string; tone: Tone }> = 
   CANCELADA: meta('Cancelada', 'neutro'),
 };
 
+export const pagamentoStatusMeta: Record<string, { label: string; tone: Tone }> = {
+  PENDENTE: meta('Processando', 'aguardando'),
+  PAGO: meta('Pago', 'concluido'),
+  RECUSADO: meta('Recusado', 'cancelado'),
+  CANCELADO: meta('Cancelado', 'neutro'),
+};
+
 export const checklistSituacaoMeta: Record<string, { label: string; tone: Tone }> = {
   OK: meta('OK', 'concluido'),
   ATENCAO: meta('Atenção', 'andamento'),

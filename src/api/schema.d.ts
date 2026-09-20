@@ -350,6 +350,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/webhooks/pagbank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recebe notificacao de mudanca de status de cobranca/assinatura do PagBank */
+        post: operations["receber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/ordens-servico/{token}/rejeitar": {
         parameters: {
             query?: never;
@@ -486,6 +503,57 @@ export interface paths {
         put?: never;
         /** Cria um novo perfil de acesso na oficina corrente */
         post: operations["criar_4"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/pix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma cobranca unica via Pix (QR Code) atraves da API de Pedidos do PagBank */
+        post: operations["iniciarPix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/pedido": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma cobranca unica (cartao de credito) via API de Pedidos do PagBank */
+        post: operations["iniciarPedido"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/assinatura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma assinatura recorrente via API de Assinaturas do PagBank */
+        post: operations["iniciarAssinatura"];
         delete?: never;
         options?: never;
         head?: never;
@@ -855,7 +923,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca a conta como recebida e gera o lancamento de caixa correspondente */
-        post: operations["receber"];
+        post: operations["receber_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1860,6 +1928,40 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        IniciarPixRequest: {
+            plano: string;
+            valor: number;
+        };
+        PagamentoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            tipo?: "UNICO" | "RECORRENTE";
+            /** @enum {string} */
+            status?: "PENDENTE" | "PAGO" | "RECUSADO" | "CANCELADO";
+            plano?: string;
+            valor?: number;
+            qrCodeText?: string;
+            qrCodeImageUrl?: string;
+            mensagemErro?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        IniciarPedidoRequest: {
+            plano: string;
+            valor: number;
+            cardToken: string;
+            titularNome: string;
+            titularCpfCnpj: string;
+        };
+        IniciarAssinaturaRequest: {
+            plano: string;
+            valorMensal: number;
+            cardToken: string;
+            cvv: string;
+            titularNome: string;
+            titularCpfCnpj: string;
+        };
         FotoRequest: {
             url: string;
             descricao?: string;
@@ -1924,6 +2026,8 @@ export interface components {
             dataAtivacao?: string;
             /** Format: date-time */
             dataExpiracao?: string;
+            /** Format: date-time */
+            proximaCobranca?: string;
             plano?: string;
             expirada?: boolean;
             /** Format: int64 */
@@ -3248,6 +3352,30 @@ export interface operations {
             };
         };
     };
+    receber: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-authenticity-token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     rejeitar: {
         parameters: {
             query?: never;
@@ -3498,6 +3626,78 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PerfilResponse"];
+                };
+            };
+        };
+    };
+    iniciarPix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarPixRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
+                };
+            };
+        };
+    };
+    iniciarPedido: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarPedidoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
+                };
+            };
+        };
+    };
+    iniciarAssinatura: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarAssinaturaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
                 };
             };
         };
@@ -4162,7 +4362,7 @@ export interface operations {
             };
         };
     };
-    receber: {
+    receber_1: {
         parameters: {
             query?: never;
             header?: never;

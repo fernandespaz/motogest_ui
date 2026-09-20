@@ -146,7 +146,9 @@ export function Combobox({
                   onClick={() => selectOption(option)}
                   className={clsx(
                     'flex w-full flex-col items-start px-3 py-2 text-left text-sm',
-                    index === highlight ? 'bg-brand-50 text-brand-700' : 'text-ink hover:bg-surface-alt',
+                    index === highlight
+                      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300'
+                      : 'text-ink hover:bg-surface-alt',
                   )}
                 >
                   <span className="font-medium">{option.label}</span>

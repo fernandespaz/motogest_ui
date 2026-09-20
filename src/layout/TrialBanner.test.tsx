@@ -23,10 +23,31 @@ describe('TrialBanner', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders nothing for a non-TRIAL licença', () => {
-    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'ATIVA' } } as never);
+  it('renders nothing for an ATIVA licença with plenty of days left and no renewal reminder due', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'ATIVA', diasRestantes: 20 } } as never);
     const { container } = renderBanner();
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('renders nothing for an ATIVA licença with auto-renewing subscription (proximaCobranca set), even close to dataExpiracao', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({
+      data: { status: 'ATIVA', diasRestantes: 2, proximaCobranca: '2026-10-01T00:00:00Z' },
+    } as never);
+    const { container } = renderBanner();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('warns an ATIVA one-off (no proximaCobranca) licença nearing expiration to renew manually', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'ATIVA', diasRestantes: 3 } } as never);
+    renderBanner();
+    expect(screen.getByText(/vence em 3 dias e não renova automaticamente/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Renovar agora' })).toHaveAttribute('href', '/oficina/licenca');
+  });
+
+  it('shows the expired-manual-renewal message once an ATIVA one-off licença hits 0 dias restantes', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'ATIVA', diasRestantes: 0 } } as never);
+    renderBanner();
+    expect(screen.getByText('Seu plano venceu e não renova automaticamente.')).toBeInTheDocument();
   });
 
   it('shows the days remaining, pluralized, for a TRIAL licença', () => {

@@ -266,8 +266,8 @@ export function MinhasOrdensServicoPage() {
                   <p className="text-sm text-ink-muted">{os.clienteNome}</p>
 
                   {os.observacoes && (
-                    <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2">
-                      <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+                    <div className="mt-2 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 dark:border-brand-800 dark:bg-brand-900/20">
+                      <p className="mb-0.5 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
                         <MessageSquareText size={12} /> Relato do cliente
                       </p>
                       <p className="text-sm text-ink">{os.observacoes}</p>

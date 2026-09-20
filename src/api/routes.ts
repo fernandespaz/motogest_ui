@@ -112,6 +112,10 @@ export const API_ROUTES = {
     atual: '/api/v1/licenca/atual',
     upgrade: '/api/v1/licenca/upgrade',
   },
+  pagamentos: {
+    pedido: '/api/v1/pagamentos/pedido',
+    assinatura: '/api/v1/pagamentos/assinatura',
+  },
   dashboard: {
     base: '/api/v1/dashboard',
   },

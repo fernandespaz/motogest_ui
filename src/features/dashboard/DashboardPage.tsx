@@ -21,7 +21,7 @@ function StatCard({
   index: number;
 }) {
   const toneClasses = {
-    brand: 'bg-brand-50 text-brand-600',
+    brand: 'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300',
     success: 'bg-green-50 text-success',
     warning: 'bg-amber-50 text-warning',
     danger: 'bg-red-50 text-danger',
