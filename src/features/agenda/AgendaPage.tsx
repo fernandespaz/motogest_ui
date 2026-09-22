@@ -84,7 +84,7 @@ export function AgendaPage() {
                 <Card>
                   <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <button className="flex flex-1 items-start gap-3 text-left" onClick={() => setModalAgendamento(ag)}>
-                      <div className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+                      <div className="flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                         <span className="text-sm font-semibold">
                           {ag.dataHora ? format(new Date(ag.dataHora), 'HH:mm') : '--:--'}
                         </span>

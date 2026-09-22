@@ -154,8 +154,8 @@ export function MinhaOrdemServicoDetalhePage() {
 
       <div className="flex flex-col gap-4 px-4 py-4 sm:px-6">
         {os.observacoes && (
-          <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
-            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-700">
+          <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-900/20">
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
               <MessageSquareText size={14} /> Relato do cliente
             </p>
             <p className="text-sm text-ink">{os.observacoes}</p>

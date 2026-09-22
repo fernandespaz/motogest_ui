@@ -26,7 +26,7 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
 
   if (editing) {
     return (
-      <div className="rounded-lg border border-brand-300 bg-brand-50/40 p-3">
+      <div className="rounded-lg border border-brand-300 bg-brand-50/40 p-3 dark:border-brand-700 dark:bg-brand-900/20">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <Input label="Placa" required error={rowErrors?.placa?.message} {...register(`veiculosExistentes.${index}.placa`)} />
           <Input label="Marca" {...register(`veiculosExistentes.${index}.marca`)} />

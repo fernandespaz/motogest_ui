@@ -54,8 +54,10 @@ export function ProdutosPage() {
       {!!abaixoDoMinimo?.length && (
         <button
           onClick={() => setSomenteAbaixoDoMinimo((v) => !v)}
-          className={`mb-4 flex w-full items-center gap-2 rounded-xl border px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-            somenteAbaixoDoMinimo ? 'border-amber-300 bg-amber-50 text-warning' : 'border-border bg-surface text-ink-muted hover:bg-surface-alt'
+          className={`mb-4 flex w-full items-center gap-2 rounded-xl px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+            somenteAbaixoDoMinimo
+              ? 'bg-brand-600 text-white'
+              : 'border border-border bg-surface text-ink-muted hover:bg-surface-alt'
           }`}
         >
           <AlertTriangle size={16} />

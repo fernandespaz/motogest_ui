@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Trash2, Percent, PackagePlus, Wrench, Package, X } from 'lucide-react';
+import { Trash2, Percent, PackagePlus, Wrench, Package, X, Gauge } from 'lucide-react';
+import clsx from 'clsx';
+import { useHoraTecnica } from '@/hooks/useHoraTecnica';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Field';
@@ -94,6 +96,67 @@ export interface ItemFormValue {
   quantidade: number;
   valorUnitario: number;
   tempoVendidoMinutos?: number;
+  /**
+   * Só do form, nunca vai pro backend como campo. `true` = serviço cobrado
+   * pela hora técnica (PHT × tempo vendido): o preço acompanha o tempo e vai
+   * no payload SEM valorUnitario, pro backend calcular (ver itemParaPayload).
+   * `false` = preço fixo (manual, desconto aprovado, ou gravado com um PHT
+   * antigo). `undefined` = item carregado ainda não classificado — o editor
+   * decide assim que o PHT chega.
+   */
+  precificadoPorHT?: boolean;
+}
+
+/** Soma do tempo vendido de todos os itens — usado no rodapé do editor e na referência de hora técnica. */
+export function somarTempoVendidoMinutos(items: Pick<ItemFormValue, 'tempoVendidoMinutos'>[]): number {
+  return items.reduce((sum, item) => sum + (Number(item.tempoVendidoMinutos) || 0), 0);
+}
+
+/**
+ * PHT × horas, arredondado em 2 casas — espelha HoraTecnicaService.resolverValorUnitario
+ * (BigDecimal, HALF_UP). Conta em centavos inteiros: em ponto flutuante,
+ * ~3% das combinações PHT × minutos caem em x,xx5 e arredondam diferente do
+ * backend — o que exibiria 1 centavo errado e, pior, faria o item recarregado
+ * deixar de ser reconhecido como "pela hora técnica" (comparação exata).
+ */
+export function valorPorHoraTecnica(pht: number, minutos: number): number {
+  const centavosPorHora = Math.round(pht * 100);
+  const numerador = centavosPorHora * Math.round(minutos);
+  // HALF_UP de numerador/60 só com inteiros: floor((2n + 60) / 120).
+  return Math.floor((2 * numerador + 60) / 120) / 100;
+}
+
+/** Serviços cobrados pela hora técnica que ainda estão sem tempo vendido — o backend recusaria o item. */
+export function temServicoPorHTSemTempo(items: Pick<ItemFormValue, 'precificadoPorHT' | 'tempoVendidoMinutos'>[]) {
+  return items.some((item) => item.precificadoPorHT && !(Number(item.tempoVendidoMinutos) > 0));
+}
+
+export const MENSAGEM_SERVICO_SEM_TEMPO = 'Informe o tempo vendido dos serviços cobrados pela hora técnica';
+
+/**
+ * Mensagem de erro da lista de itens como um todo (min(1), refine). Com algum
+ * item já registrado no form, o resolver do zod põe esse erro em
+ * `errors.itens.root` em vez de `errors.itens.message` — sem olhar os dois,
+ * o save fica bloqueado sem explicação nenhuma.
+ */
+export function erroListaItens(erro: unknown): string | undefined {
+  const e = erro as { message?: unknown; root?: { message?: unknown } } | undefined;
+  const mensagem = e?.root?.message ?? e?.message;
+  return typeof mensagem === 'string' ? mensagem : undefined;
+}
+
+/**
+ * Item do form → ItemRequest. `id` e `precificadoPorHT` são só do form. Um
+ * serviço cobrado pela hora técnica vai sem valorUnitario: o backend calcula
+ * PHT × horas (ItemRequest.valorUnitario é opcional nesse caso). Qualquer
+ * outro item leva o valor que está na tela — é assim que um desconto
+ * aprovado ou um preço gravado com um PHT antigo sobrevive a um novo save.
+ */
+export function itemParaPayload<T extends ItemFormValue>({ id: _id, precificadoPorHT, ...item }: T) {
+  if (precificadoPorHT && item.tipoItem === 'SERVICO' && Number(item.tempoVendidoMinutos) > 0) {
+    return { ...item, valorUnitario: undefined };
+  }
+  return item;
 }
 
 const inputInline =
@@ -166,7 +229,36 @@ export function ItemsEditor({
 
   const items: ItemFormValue[] = watch(name) ?? [];
   const total = items.reduce((sum, item) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnitario) || 0), 0);
-  const tempoTotalMinutos = items.reduce((sum, item) => sum + (Number(item.tempoVendidoMinutos) || 0), 0);
+  const tempoTotalMinutos = somarTempoVendidoMinutos(items);
+
+  // Preço da hora técnica: com ele configurado, serviço é cobrado por tempo
+  // (PHT × horas) e não pelo preço de catálogo. Só vale onde o tempo vendido
+  // aparece pra ser editado. Falha na consulta = segue com preço de catálogo,
+  // sem toast (referência opcional, ver prohibited-actions #10).
+  const { data: horaTecnica } = useHoraTecnica({ silentError: true });
+  const pht = mostrarTempoVendido && horaTecnica?.configurado ? horaTecnica.precoHoraTecnica : undefined;
+
+  // Itens carregados de um registro salvo chegam sem classificação. Um
+  // serviço cujo valor gravado bate com PHT × tempo continua atrelado à hora
+  // técnica (o preço acompanha se o tempo mudar); qualquer outro valor —
+  // desconto aprovado, preço manual, PHT que mudou depois — é preservado.
+  useEffect(() => {
+    if (pht == null) return;
+    items.forEach((item, index) => {
+      if (item.precificadoPorHT !== undefined) return;
+      const minutos = Number(item.tempoVendidoMinutos) || 0;
+      const porHT =
+        item.tipoItem === 'SERVICO' && minutos > 0 && Number(item.valorUnitario) === valorPorHoraTecnica(pht, minutos);
+      setValue(`${name}.${index}.precificadoPorHT`, porHT, { shouldDirty: false });
+    });
+  }, [items, pht, name, setValue]);
+
+  function alterarTempoVendido(index: number, minutos: number | undefined) {
+    setValue(`${name}.${index}.tempoVendidoMinutos`, minutos);
+    if (pht != null && getValues(`${name}.${index}.precificadoPorHT`)) {
+      setValue(`${name}.${index}.valorUnitario`, valorPorHoraTecnica(pht, minutos ?? 0));
+    }
+  }
 
   function iniciarAdicao(tipo: 'SERVICO' | 'PRODUTO') {
     setAba(tipo);
@@ -177,13 +269,29 @@ export function ItemsEditor({
   function confirmarAdicao(id: number) {
     if (adicionando === 'SERVICO') {
       const s = servicos?.content?.find((x: ServicoResponse) => x.id === id);
-      append({
-        tipoItem: 'SERVICO',
-        servicoId: id,
-        descricao: s?.nome ?? '',
-        quantidade: 1,
-        valorUnitario: s?.preco ?? 0,
-      } as ItemFormValue);
+      if (pht != null) {
+        // Com hora técnica, o catálogo só sugere o tempo (duração padrão); o
+        // preço sai de PHT × tempo, nunca do preço de catálogo.
+        const minutos = s?.duracaoMinutos || undefined;
+        append({
+          tipoItem: 'SERVICO',
+          servicoId: id,
+          descricao: s?.nome ?? '',
+          quantidade: 1,
+          tempoVendidoMinutos: minutos,
+          valorUnitario: valorPorHoraTecnica(pht, minutos ?? 0),
+          precificadoPorHT: true,
+        } as ItemFormValue);
+      } else {
+        append({
+          tipoItem: 'SERVICO',
+          servicoId: id,
+          descricao: s?.nome ?? '',
+          quantidade: 1,
+          valorUnitario: s?.preco ?? 0,
+          precificadoPorHT: false,
+        } as ItemFormValue);
+      }
     } else if (adicionando === 'PRODUTO') {
       const p = produtos?.content?.find((x: ProdutoResponse) => x.id === id);
       const qtd = limitarQuantidadeAoEstoque && (p?.quantidadeDisponivel ?? 0) < 1 ? p?.quantidadeDisponivel ?? 0 : 1;
@@ -245,6 +353,8 @@ export function ItemsEditor({
     const descricao = watch(`${name}.${index}.descricao`);
     const quantidade = Number(watch(`${name}.${index}.quantidade`)) || 0;
     const valorUnitario = Number(watch(`${name}.${index}.valorUnitario`)) || 0;
+    const porHT = tipoItem === 'SERVICO' && !!watch(`${name}.${index}.precificadoPorHT`);
+    const tempoItem = Number(watch(`${name}.${index}.tempoVendidoMinutos`)) || 0;
     const produtoIdSelecionado = watch(`${name}.${index}.produtoId`);
     const produtoSelecionado =
       tipoItem === 'PRODUTO' ? produtos?.content?.find((p: ProdutoResponse) => p.id === produtoIdSelecionado) : undefined;
@@ -307,7 +417,10 @@ export function ItemsEditor({
               type="number"
               step="0.01"
               className={inputInline}
-              {...register(`${name}.${index}.valorUnitario`)}
+              {...register(`${name}.${index}.valorUnitario`, {
+                // Admin digitou um preço → vira preço fixo, desatrelado da hora técnica.
+                onChange: () => setValue(`${name}.${index}.precificadoPorHT`, false),
+              })}
             />
           </div>
 
@@ -330,9 +443,21 @@ export function ItemsEditor({
             {mostrarTempoVendido && tipoItem === 'SERVICO' && (
               <TempoVendidoInput
                 value={watch(`${name}.${index}.tempoVendidoMinutos`)}
-                onChange={(minutos) => setValue(`${name}.${index}.tempoVendidoMinutos`, minutos)}
+                onChange={(minutos) => alterarTempoVendido(index, minutos)}
                 disabled={disabled}
               />
+            )}
+
+            {porHT && pht != null && (
+              <span
+                className={clsx(
+                  'inline-flex items-center gap-1 font-medium',
+                  tempoItem > 0 ? 'text-brand-600 dark:text-brand-300' : 'text-danger',
+                )}
+              >
+                <Gauge size={12} />
+                {tempoItem > 0 ? `Hora técnica ${formatCurrency(pht)}/h` : 'Informe o tempo vendido'}
+              </span>
             )}
 
             {!podeEditarValor &&

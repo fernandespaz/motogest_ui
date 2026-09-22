@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatCardExpiry,
+  formatCardNumber,
   formatCep,
   formatCnpj,
   formatCpf,
@@ -15,7 +17,43 @@ import {
   parseHorasParaMinutos,
   toDateInputValue,
   toDateTimeLocalValue,
+  formatPercent,
+  formatHorasDecimais,
+  formatDuracao,
+  mesReferenciaAtual,
+  deslocarMesReferencia,
+  formatMesReferencia,
 } from './formatters';
+
+describe('indicadores de produtividade', () => {
+  it('formatPercent shows one decimal in pt-BR and "—" when there is no base', () => {
+    expect(formatPercent(42.5)).toBe('42,5%');
+    expect(formatPercent(100)).toBe('100%');
+    expect(formatPercent(0)).toBe('0%');
+    expect(formatPercent(null)).toBe('—');
+  });
+
+  it('formatHorasDecimais', () => {
+    expect(formatHorasDecimais(12.5)).toBe('12,5 h');
+    expect(formatHorasDecimais(undefined)).toBe('—');
+  });
+
+  it('formatDuracao reads naturally at every scale', () => {
+    expect(formatDuracao(45)).toBe('45min');
+    expect(formatDuracao(120)).toBe('2h');
+    expect(formatDuracao(135)).toBe('2h 15min');
+    expect(formatDuracao(1440)).toBe('1d');
+    expect(formatDuracao(1580)).toBe('1d 2h');
+    expect(formatDuracao(null)).toBe('—');
+  });
+
+  it('month reference helpers roll over years', () => {
+    expect(mesReferenciaAtual(new Date(2026, 8, 22))).toBe('2026-09');
+    expect(deslocarMesReferencia('2026-01', -1)).toBe('2025-12');
+    expect(deslocarMesReferencia('2025-12', 1)).toBe('2026-01');
+    expect(formatMesReferencia('2026-09')).toBe('Setembro de 2026');
+  });
+});
 
 describe('formatCurrency', () => {
   it('formats a positive value as BRL', () => {
@@ -207,5 +245,34 @@ describe('maskHorasInput', () => {
   it('strips non-digit characters and caps at 5 digits', () => {
     expect(maskHorasInput('1:30')).toBe('1:30');
     expect(maskHorasInput('123456')).toBe('123:45');
+  });
+});
+
+describe('formatCardNumber', () => {
+  it('groups digits in blocks of 4', () => {
+    expect(formatCardNumber('4111111111111111')).toBe('4111 1111 1111 1111');
+  });
+
+  it('strips non-digit characters and caps at 19 digits', () => {
+    expect(formatCardNumber('4111-1111-1111-1111999')).toBe('4111 1111 1111 1111 999');
+  });
+
+  it('does not add a trailing space right after a complete block', () => {
+    expect(formatCardNumber('41111111')).toBe('4111 1111');
+  });
+});
+
+describe('formatCardExpiry', () => {
+  it('leaves up to two digits unmasked', () => {
+    expect(formatCardExpiry('1')).toBe('1');
+    expect(formatCardExpiry('12')).toBe('12');
+  });
+
+  it('inserts a slash after the month once a third digit is typed', () => {
+    expect(formatCardExpiry('1228')).toBe('12/28');
+  });
+
+  it('strips non-digit characters and caps at 4 digits', () => {
+    expect(formatCardExpiry('12/2028')).toBe('12/20');
   });
 });

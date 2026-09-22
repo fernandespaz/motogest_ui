@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,19 +8,36 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useUsuarios, useDeleteUsuario } from '@/hooks/useUsuarios';
+import { useLicencaAtual } from '@/hooks/useOficina';
 import type { UsuarioResponse } from '@/api/types';
 import { UsuarioFormModal } from './UsuarioFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
+import { PLANOS, type PlanoCodigo } from '@/features/oficina/pagamentoPlanos';
+
+function planoLabel(plano: string | undefined): string | undefined {
+  return plano && plano in PLANOS ? PLANOS[plano as PlanoCodigo].label : plano ?? undefined;
+}
 
 export function UsuariosPage() {
   const [modalUsuario, setModalUsuario] = useState<UsuarioResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<UsuarioResponse | null>(null);
   const usuarioIdAtual = useAuthStore((s) => s.usuarioId);
+  // USUARIO_READ abre a tela; criar/editar/remover é USUARIO_WRITE (mesma
+  // divisão do backend). Sem ela a lista fica só de consulta — nenhuma ação
+  // que o backend recusaria com 403 aparece.
+  const podeEditar = useAuthStore((s) => s.hasPermission)('USUARIO_WRITE');
 
   const { data, isLoading } = useUsuarios();
+  const { data: licenca } = useLicencaAtual();
   const deleteMutation = useDeleteUsuario();
+
+  // limiteUsuarios null/undefined = plano sem limite (Premium e trial, hoje
+  // — ver pagamentoPlanos.ts e a spec de "Limite de usuários por plano").
+  const limiteUsuarios = licenca?.limiteUsuarios;
+  const usuariosAtivos = licenca?.usuariosAtivos;
+  const limiteAtingido = limiteUsuarios != null && (usuariosAtivos ?? 0) >= limiteUsuarios;
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -36,13 +54,40 @@ export function UsuariosPage() {
     <div>
       <PageHeader
         title="Usuários"
-        subtitle="Pessoas com acesso ao sistema na sua oficina"
+        subtitle={
+          <>
+            Pessoas com acesso ao sistema na sua oficina
+            {limiteUsuarios != null && (
+              <>
+                {' '}
+                · {usuariosAtivos ?? 0} de {limiteUsuarios} usuários
+                {planoLabel(licenca?.plano) ? ` (${planoLabel(licenca?.plano)})` : ''}
+              </>
+            )}
+          </>
+        }
         action={
-          <Button onClick={() => setModalUsuario(null)}>
-            <Plus size={18} /> Novo usuário
-          </Button>
+          podeEditar && (
+            <Button
+              onClick={() => setModalUsuario(null)}
+              disabled={limiteAtingido}
+              title={limiteAtingido ? 'Limite de usuários do seu plano atingido' : undefined}
+            >
+              <Plus size={18} /> Novo usuário
+            </Button>
+          )
         }
       />
+
+      {podeEditar && limiteAtingido && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white">
+          <AlertTriangle size={16} />
+          Limite de {limiteUsuarios} usuários ativos do plano {planoLabel(licenca?.plano) ?? 'atual'} atingido.
+          <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">
+            Fazer upgrade
+          </Link>
+        </div>
+      )}
 
       <Card>
         <DataTable<UsuarioResponse>
@@ -61,21 +106,22 @@ export function UsuariosPage() {
             },
             {
               header: '',
-              render: (row) => (
-                <div className="flex justify-end gap-1">
-                  <button onClick={() => setModalUsuario(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700">
-                    <Pencil size={16} />
-                  </button>
-                  {row.id !== usuarioIdAtual && (
-                    <button onClick={() => setDeleting(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger">
-                      <Trash2 size={16} />
+              render: (row) =>
+                podeEditar && (
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => setModalUsuario(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700">
+                      <Pencil size={16} />
                     </button>
-                  )}
-                </div>
-              ),
+                    {row.id !== usuarioIdAtual && (
+                      <button onClick={() => setDeleting(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ),
             },
           ]}
-          onRowClick={(row) => setModalUsuario(row)}
+          onRowClick={podeEditar ? (row) => setModalUsuario(row) : undefined}
         />
       </Card>
 

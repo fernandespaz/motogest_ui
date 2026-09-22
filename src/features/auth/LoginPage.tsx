@@ -121,7 +121,7 @@ export function LoginPage() {
             <p className="mb-7 mt-1.5 text-sm text-slate-400">Entre com sua conta da oficina para continuar.</p>
 
             {sessaoExpirada && (
-              <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm font-medium text-amber-300">
+              <div className="mb-4 flex items-start gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white">
                 <AlertTriangle size={16} className="mt-0.5 shrink-0" />
                 <span>Sua sessão expirou. Faça login novamente para continuar.</span>
               </div>

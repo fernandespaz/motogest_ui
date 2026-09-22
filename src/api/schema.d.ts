@@ -182,6 +182,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/hora-tecnica/parametros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Define numero de mecanicos, horas/dia, dias uteis, eficiencia, impostos e margem (auditado) */
+        put: operations["atualizarParametros"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/hora-tecnica/custos-fixos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Atualiza um custo fixo mensal (auditado) */
+        put: operations["atualizarCustoFixo"];
+        post?: never;
+        /** Remove um custo fixo mensal (auditado) */
+        delete: operations["excluirCustoFixo"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contas-receber/{id}": {
         parameters: {
             query?: never;
@@ -350,6 +385,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/webhooks/pagbank": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recebe notificacao de mudanca de status de cobranca/assinatura do PagBank */
+        post: operations["receber"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/ordens-servico/{token}/rejeitar": {
         parameters: {
             query?: never;
@@ -486,6 +538,57 @@ export interface paths {
         put?: never;
         /** Cria um novo perfil de acesso na oficina corrente */
         post: operations["criar_4"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/pix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma cobranca unica via Pix (QR Code) atraves da API de Pedidos do PagBank */
+        post: operations["iniciarPix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/pedido": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma cobranca unica (cartao de credito) via API de Pedidos do PagBank */
+        post: operations["iniciarPedido"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/assinatura": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma assinatura recorrente via API de Assinaturas do PagBank */
+        post: operations["iniciarAssinatura"];
         delete?: never;
         options?: never;
         head?: never;
@@ -769,6 +872,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/hora-tecnica/custos-fixos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista os custos fixos mensais da oficina */
+        get: operations["listarCustosFixos"];
+        put?: never;
+        /** Cadastra um custo fixo mensal (auditado) */
+        post: operations["criarCustoFixo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -855,7 +976,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Marca a conta como recebida e gera o lancamento de caixa correspondente */
-        post: operations["receber"];
+        post: operations["receber_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1137,6 +1258,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/produtividade/mecanicos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Relatorio mensal de produtividade de todos os mecanicos da oficina
+         * @description Horas trabalhadas x disponiveis (ocupacao), horas vendidas x consumidas (eficiencia), vendidas x disponiveis (produtividade), OS concluidas, mao de obra e pausas. Sem o parametro mes, usa o mes corrente.
+         */
+        get: operations["relatorioMensal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/produtividade/mecanicos/{usuarioId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhe mensal de um mecanico: indicadores, OS concluidas e horas por dia */
+        get: operations["detalheMecanico"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/produtividade/consultores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Relatorio mensal de produtividade de todos os consultores da oficina
+         * @description Taxa de conversao, ticket medio, tempo medio de resposta, produtividade em horas tecnicas e indice de fidelizacao. Sem o parametro mes, usa o mes corrente.
+         */
+        get: operations["relatorioMensal_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/produtividade/consultores/{usuarioId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhe mensal de um consultor: indicadores, orcamentos emitidos e servicos fechados */
+        get: operations["detalheConsultor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfis/permissoes-disponiveis": {
         parameters: {
             query?: never;
@@ -1146,6 +1341,23 @@ export interface paths {
         };
         /** Lista o catalogo global de permissoes disponiveis para compor perfis */
         get: operations["listarPermissoesDisponiveis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/pagamentos/chave-publica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chave publica do PagBank, para o frontend tokenizar cartao no navegador antes de chamar /pedido ou /assinatura */
+        get: operations["obterChavePublica"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1214,6 +1426,40 @@ export interface paths {
         };
         /** Retorna o status da licenca/trial da oficina do usuario autenticado */
         get: operations["buscarAtual_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/hora-tecnica": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preco da hora tecnica (PHT); a composicao (CF, HP, CH, impostos, margem) so' para quem gerencia */
+        get: operations["consultar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/hora-tecnica/auditoria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historico de alteracoes dos parametros financeiros (mais recentes primeiro) */
+        get: operations["auditoria"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1511,7 +1757,7 @@ export interface components {
             produtoId?: number;
             descricao: string;
             quantidade: number;
-            valorUnitario: number;
+            valorUnitario?: number;
             /** Format: int32 */
             tempoVendidoMinutos?: number;
         };
@@ -1589,6 +1835,9 @@ export interface components {
             tempoConsumidoMinutos?: number;
             tempoEstourado?: boolean;
             pausas?: components["schemas"]["OrdemServicoPausaResponse"][];
+            /** Format: int64 */
+            consultorId?: number;
+            consultorNome?: string;
         };
         OrcamentoRequest: {
             /** Format: int64 */
@@ -1601,6 +1850,8 @@ export interface components {
             validadeDias?: number;
             observacoes?: string;
             itens: components["schemas"]["ItemRequest"][];
+            /** Format: date-time */
+            dataEntradaVeiculo?: string;
         };
         OrcamentoResponse: {
             /** Format: int64 */
@@ -1625,6 +1876,15 @@ export interface components {
             tokenAprovacao?: string;
             /** Format: int32 */
             tempoVendidoMinutos?: number;
+            /** Format: int64 */
+            consultorId?: number;
+            consultorNome?: string;
+            /** Format: date-time */
+            dataEntradaVeiculo?: string;
+            /** Format: date-time */
+            dataEmissao?: string;
+            /** Format: date-time */
+            dataAprovacao?: string;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -1640,6 +1900,10 @@ export interface components {
             logoUrl?: string;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
+            /** Format: int32 */
+            jornadaDiariaMinutos?: number;
+            /** Format: int32 */
+            jornadaSabadoMinutos?: number;
         };
         OficinaResponse: {
             /** Format: int64 */
@@ -1660,6 +1924,10 @@ export interface components {
             logoImagemDisponivel?: boolean;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
+            /** Format: int32 */
+            jornadaDiariaMinutos?: number;
+            /** Format: int32 */
+            jornadaSabadoMinutos?: number;
         };
         ModeloVeiculoResponse: {
             /** Format: int64 */
@@ -1667,6 +1935,49 @@ export interface components {
             marca?: string;
             modelo?: string;
             imagemBase64?: string;
+        };
+        ParametrosHoraTecnicaRequest: {
+            /** Format: int32 */
+            numeroMecanicos: number;
+            horasPorDia: number;
+            /** Format: int32 */
+            diasUteisMes: number;
+            eficienciaPercentual: number;
+            impostosPercentual: number;
+            margemLucroPercentual: number;
+        };
+        ComposicaoHoraTecnicaResponse: {
+            custosFixos?: number;
+            itensCustoFixo?: components["schemas"]["CustoFixoResponse"][];
+            /** Format: int32 */
+            numeroMecanicos?: number;
+            horasPorDia?: number;
+            /** Format: int32 */
+            diasUteisMes?: number;
+            eficienciaPercentual?: number;
+            horasProdutivas?: number;
+            custoPorHora?: number;
+            impostosPercentual?: number;
+            margemLucroPercentual?: number;
+        };
+        CustoFixoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            categoria?: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
+            descricao?: string;
+            valorMensal?: number;
+        };
+        HoraTecnicaResponse: {
+            configurado?: boolean;
+            precoHoraTecnica?: number;
+            composicao?: components["schemas"]["ComposicaoHoraTecnicaResponse"];
+        };
+        CustoFixoRequest: {
+            /** @enum {string} */
+            categoria: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
+            descricao: string;
+            valorMensal: number;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -1860,6 +2171,40 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        IniciarPixRequest: {
+            plano: string;
+            valor: number;
+        };
+        PagamentoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            tipo?: "UNICO" | "RECORRENTE";
+            /** @enum {string} */
+            status?: "PENDENTE" | "PAGO" | "RECUSADO" | "CANCELADO";
+            plano?: string;
+            valor?: number;
+            qrCodeText?: string;
+            qrCodeImageUrl?: string;
+            mensagemErro?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        IniciarPedidoRequest: {
+            plano: string;
+            valor: number;
+            cardToken: string;
+            titularNome: string;
+            titularCpfCnpj: string;
+        };
+        IniciarAssinaturaRequest: {
+            plano: string;
+            valorMensal: number;
+            cardToken: string;
+            cvv: string;
+            titularNome: string;
+            titularCpfCnpj: string;
+        };
         FotoRequest: {
             url: string;
             descricao?: string;
@@ -1924,10 +2269,16 @@ export interface components {
             dataAtivacao?: string;
             /** Format: date-time */
             dataExpiracao?: string;
+            /** Format: date-time */
+            proximaCobranca?: string;
             plano?: string;
             expirada?: boolean;
             /** Format: int64 */
             diasRestantes?: number;
+            /** Format: int32 */
+            limiteUsuarios?: number;
+            /** Format: int64 */
+            usuariosAtivos?: number;
         };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
@@ -2099,6 +2450,147 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
+        IndicadoresProdutividadeResponse: {
+            /** Format: int32 */
+            minutosTrabalhados?: number;
+            /** Format: int32 */
+            minutosDisponiveis?: number;
+            ocupacaoPercentual?: number;
+            /** Format: int32 */
+            osConcluidas?: number;
+            /** Format: int32 */
+            minutosVendidos?: number;
+            /** Format: int32 */
+            minutosConsumidos?: number;
+            eficienciaPercentual?: number;
+            produtividadePercentual?: number;
+            /** Format: int32 */
+            osComTempoEstourado?: number;
+            valorMaoDeObra?: number;
+            /** Format: int32 */
+            quantidadePausas?: number;
+            /** Format: int32 */
+            minutosPausados?: number;
+        };
+        ProdutividadeMecanicoResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            indicadores?: components["schemas"]["IndicadoresProdutividadeResponse"];
+        };
+        ProdutividadeOficinaResponse: {
+            mes?: string;
+            /** Format: int32 */
+            diasUteisConsiderados?: number;
+            /** Format: int32 */
+            jornadaDiariaMinutos?: number;
+            /** Format: int32 */
+            jornadaSabadoMinutos?: number;
+            /** Format: int32 */
+            minutosDisponiveisPorMecanico?: number;
+            totalOficina?: components["schemas"]["IndicadoresProdutividadeResponse"];
+            mecanicos?: components["schemas"]["ProdutividadeMecanicoResponse"][];
+        };
+        OrdemServicoProdutividadeResponse: {
+            /** Format: int64 */
+            id?: number;
+            numero?: string;
+            /** Format: date-time */
+            dataConclusao?: string;
+            /** Format: int32 */
+            minutosVendidos?: number;
+            /** Format: int32 */
+            minutosConsumidos?: number;
+            eficienciaPercentual?: number;
+            tempoEstourado?: boolean;
+            valorMaoDeObra?: number;
+        };
+        ProdutividadeDiariaResponse: {
+            /** Format: date */
+            data?: string;
+            /** Format: int32 */
+            minutosTrabalhados?: number;
+        };
+        ProdutividadeMecanicoDetalheResponse: {
+            mes?: string;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            indicadores?: components["schemas"]["IndicadoresProdutividadeResponse"];
+            ordensConcluidas?: components["schemas"]["OrdemServicoProdutividadeResponse"][];
+            horasPorDia?: components["schemas"]["ProdutividadeDiariaResponse"][];
+        };
+        IndicadoresConsultorResponse: {
+            /** Format: int32 */
+            orcamentosEmitidos?: number;
+            /** Format: int32 */
+            orcamentosAprovados?: number;
+            taxaConversaoPercentual?: number;
+            valorFaturado?: number;
+            /** Format: int32 */
+            servicosFechados?: number;
+            ticketMedio?: number;
+            /** Format: int64 */
+            tempoMedioRespostaMinutos?: number;
+            horasTecnicasVendidas?: number;
+            horasTecnicasDisponiveis?: number;
+            produtividadeHorasPercentual?: number;
+            /** Format: int32 */
+            clientesAtendidos?: number;
+            /** Format: int32 */
+            clientesRecorrentes?: number;
+            indiceFidelizacaoPercentual?: number;
+        };
+        ProdutividadeConsultorResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            indicadores?: components["schemas"]["IndicadoresConsultorResponse"];
+        };
+        ProdutividadeConsultoresResponse: {
+            mes?: string;
+            horasTecnicasDisponiveis?: number;
+            totalOficina?: components["schemas"]["IndicadoresConsultorResponse"];
+            consultores?: components["schemas"]["ProdutividadeConsultorResponse"][];
+        };
+        OrcamentoEmitido: {
+            /** Format: int64 */
+            id?: number;
+            clienteNome?: string;
+            /** @enum {string} */
+            status?: "RASCUNHO" | "ENVIADO" | "APROVADO" | "REJEITADO" | "EXPIRADO" | "CONVERTIDO";
+            valorTotal?: number;
+            /** Format: date-time */
+            dataEntradaVeiculo?: string;
+            /** Format: date-time */
+            dataEmissao?: string;
+            /** Format: int64 */
+            tempoRespostaMinutos?: number;
+            aprovado?: boolean;
+        };
+        ProdutividadeConsultorDetalheResponse: {
+            mes?: string;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            indicadores?: components["schemas"]["IndicadoresConsultorResponse"];
+            orcamentosEmitidos?: components["schemas"]["OrcamentoEmitido"][];
+            servicosFechados?: components["schemas"]["ServicoFechado"][];
+        };
+        ServicoFechado: {
+            /** Format: int64 */
+            id?: number;
+            numero?: string;
+            clienteNome?: string;
+            /** Format: date-time */
+            dataConclusao?: string;
+            valorTotal?: number;
+            horasVendidas?: number;
+            clienteRecorrente?: boolean;
+        };
+        ChavePublicaResponse: {
+            chavePublica?: string;
+        };
         PageResponseOrdemServicoResponse: {
             content?: components["schemas"]["OrdemServicoResponse"][];
             /** Format: int32 */
@@ -2125,6 +2617,33 @@ export interface components {
         };
         PageResponseModeloVeiculoResponse: {
             content?: components["schemas"]["ModeloVeiculoResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        AuditoriaParametroFinanceiroResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            entidade?: string;
+            /** Format: int64 */
+            entidadeId?: number;
+            /** @enum {string} */
+            acao?: "CRIACAO" | "ATUALIZACAO" | "EXCLUSAO";
+            detalhes?: string;
+            /** Format: date-time */
+            dataHora?: string;
+        };
+        PageResponseAuditoriaParametroFinanceiroResponse: {
+            content?: components["schemas"]["AuditoriaParametroFinanceiroResponse"][];
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
@@ -2838,6 +3357,76 @@ export interface operations {
             };
         };
     };
+    atualizarParametros: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParametrosHoraTecnicaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HoraTecnicaResponse"];
+                };
+            };
+        };
+    };
+    atualizarCustoFixo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustoFixoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CustoFixoResponse"];
+                };
+            };
+        };
+    };
+    excluirCustoFixo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     buscarPorId_9: {
         parameters: {
             query?: never;
@@ -3248,6 +3837,30 @@ export interface operations {
             };
         };
     };
+    receber: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-authenticity-token"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     rejeitar: {
         parameters: {
             query?: never;
@@ -3498,6 +4111,78 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PerfilResponse"];
+                };
+            };
+        };
+    };
+    iniciarPix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarPixRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
+                };
+            };
+        };
+    };
+    iniciarPedido: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarPedidoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
+                };
+            };
+        };
+    };
+    iniciarAssinatura: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IniciarAssinaturaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoResponse"];
                 };
             };
         };
@@ -4019,6 +4704,50 @@ export interface operations {
             };
         };
     };
+    listarCustosFixos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CustoFixoResponse"][];
+                };
+            };
+        };
+    };
+    criarCustoFixo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CustoFixoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CustoFixoResponse"];
+                };
+            };
+        };
+    };
     listar_12: {
         parameters: {
             query: {
@@ -4162,7 +4891,7 @@ export interface operations {
             };
         };
     };
-    receber: {
+    receber_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -4640,6 +5369,114 @@ export interface operations {
             };
         };
     };
+    relatorioMensal: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeOficinaResponse"];
+                };
+            };
+        };
+    };
+    detalheMecanico: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path: {
+                usuarioId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeMecanicoDetalheResponse"];
+                };
+            };
+        };
+    };
+    relatorioMensal_1: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeConsultoresResponse"];
+                };
+            };
+        };
+    };
+    detalheConsultor: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path: {
+                usuarioId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeConsultorDetalheResponse"];
+                };
+            };
+        };
+    };
     listarPermissoesDisponiveis: {
         parameters: {
             query?: never;
@@ -4656,6 +5493,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PermissaoResponse"][];
+                };
+            };
+        };
+    };
+    obterChavePublica: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ChavePublicaResponse"];
                 };
             };
         };
@@ -4742,6 +5599,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LicencaResponse"];
+                };
+            };
+        };
+    };
+    consultar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HoraTecnicaResponse"];
+                };
+            };
+        };
+    };
+    auditoria: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseAuditoriaParametroFinanceiroResponse"];
                 };
             };
         };

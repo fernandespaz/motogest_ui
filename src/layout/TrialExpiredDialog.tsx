@@ -27,7 +27,7 @@ export function TrialExpiredDialog() {
   return (
     <Modal open={expirou && !dismissed} onClose={() => setDismissed(true)} size="sm">
       <div className="flex flex-col items-center gap-3 py-2 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
           <AlertTriangle size={24} />
         </div>
         <h2 className="text-base font-semibold text-ink">Seu período de teste terminou</h2>

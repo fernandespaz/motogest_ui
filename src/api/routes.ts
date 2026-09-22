@@ -112,7 +112,24 @@ export const API_ROUTES = {
     atual: '/api/v1/licenca/atual',
     upgrade: '/api/v1/licenca/upgrade',
   },
+  pagamentos: {
+    pedido: '/api/v1/pagamentos/pedido',
+    assinatura: '/api/v1/pagamentos/assinatura',
+    pix: '/api/v1/pagamentos/pix',
+    chavePublica: '/api/v1/pagamentos/chave-publica',
+  },
   dashboard: {
     base: '/api/v1/dashboard',
+  },
+  horaTecnica: {
+    base: '/api/v1/financeiro/hora-tecnica',
+    parametros: '/api/v1/financeiro/hora-tecnica/parametros',
+    custosFixos: '/api/v1/financeiro/hora-tecnica/custos-fixos',
+    custoFixo: (id: number) => `/api/v1/financeiro/hora-tecnica/custos-fixos/${id}`,
+    auditoria: '/api/v1/financeiro/hora-tecnica/auditoria',
+  },
+  produtividade: {
+    consultores: '/api/v1/produtividade/consultores',
+    consultor: (usuarioId: number) => `/api/v1/produtividade/consultores/${usuarioId}`,
   },
 } as const;

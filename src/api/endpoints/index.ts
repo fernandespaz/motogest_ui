@@ -17,3 +17,5 @@ export * from './usuarios';
 export * from './oficinas';
 export * from './licenca';
 export * from './dashboard';
+export * from './horaTecnica';
+export * from './produtividade';
