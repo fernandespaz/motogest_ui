@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { oficinasApi } from '@/api/endpoints/oficinas';
 import { licencaApi } from '@/api/endpoints/licenca';
 import { useAuthStore } from '@/store/authStore';
-import type { OficinaUpdateRequest, UpgradeLicencaRequest } from '@/api/types';
+import type { OficinaUpdateRequest } from '@/api/types';
 
 const oficinaLogoBlobKey = ['oficina', 'logo-blob'] as const;
 // Tracks the one blob: URL currently in use across every consumer of
@@ -167,13 +167,4 @@ export function useRemoverLogoOficina() {
 
 export function useLicencaAtual() {
   return useQuery({ queryKey: ['licenca', 'atual'], queryFn: () => licencaApi.atual() });
-}
-
-export function useUpgradeLicenca() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: UpgradeLicencaRequest) => licencaApi.upgrade(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['licenca', 'atual'] }),
-    meta: { hasLocalErrorHandling: true },
-  });
 }

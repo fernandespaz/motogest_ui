@@ -11,7 +11,6 @@ import {
   useEnviarLogoOficina,
   useRemoverLogoOficina,
   useLicencaAtual,
-  useUpgradeLicenca,
   getLogoFixadaParaLogin,
   getNomeFixadoParaLogin,
 } from './useOficina';
@@ -20,7 +19,7 @@ vi.mock('@/api/endpoints/oficinas', () => ({
   oficinasApi: { atual: vi.fn(), atualizar: vi.fn(), enviarLogo: vi.fn(), removerLogo: vi.fn(), buscarLogoBlob: vi.fn() },
 }));
 vi.mock('@/api/endpoints/licenca', () => ({
-  licencaApi: { atual: vi.fn(), upgrade: vi.fn() },
+  licencaApi: { atual: vi.fn() },
 }));
 
 describe('useOficina hooks', () => {
@@ -154,18 +153,6 @@ describe('useOficina hooks', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual({ plano: 'BASICO' });
-    });
-
-    it('useUpgradeLicenca() invalidates the licença query on success', async () => {
-      vi.mocked(licencaApi.upgrade).mockResolvedValueOnce({ plano: 'PRO' } as never);
-      const client = createTestQueryClient();
-      const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
-      const { result } = renderHook(() => useUpgradeLicenca(), { wrapper: wrapWithQueryClient(client) });
-
-      result.current.mutate({ plano: 'PRO' } as never);
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['licenca', 'atual'] });
     });
   });
 

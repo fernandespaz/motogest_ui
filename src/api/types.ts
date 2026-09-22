@@ -99,7 +99,6 @@ export type OficinaUpdateRequest = Schemas['OficinaUpdateRequest'];
 export type AdminOficinaResponse = Schemas['AdminOficinaResponse'];
 
 export type LicencaResponse = Schemas['LicencaResponse'];
-export type UpgradeLicencaRequest = Schemas['UpgradeLicencaRequest'];
 export type LicencaStatus = NonNullable<LicencaResponse['status']>;
 
 export type IniciarPedidoRequest = Schemas['IniciarPedidoRequest'];
