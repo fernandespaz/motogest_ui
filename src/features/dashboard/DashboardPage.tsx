@@ -1,54 +1,14 @@
-import { motion } from 'framer-motion';
 import { CalendarClock, ClipboardList, PackageX, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Card, CardBody } from '@/components/ui/Card';
+import { StatCard } from '@/components/ui/StatCard';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useDashboard } from '@/hooks/useDashboard';
 import { formatCurrency } from '@/lib/formatters';
 import { useAuthStore } from '@/store/authStore';
+import { isConsultor } from '@/lib/perfil';
+import { DashboardConsultor } from './DashboardConsultor';
 
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  tone = 'brand',
-  index,
-}: {
-  icon: typeof CalendarClock;
-  label: string;
-  value: string;
-  tone?: 'brand' | 'success' | 'warning' | 'danger';
-  index: number;
-}) {
-  const toneClasses = {
-    brand: 'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300',
-    success: 'bg-green-50 text-success',
-    warning: 'bg-amber-50 text-warning',
-    danger: 'bg-red-50 text-danger',
-  }[tone];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-    >
-      <Card>
-        <CardBody className="flex items-center gap-4">
-          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${toneClasses}`}>
-            <Icon size={20} />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-xs text-ink-muted">{label}</p>
-            <p className="text-lg font-semibold text-ink">{value}</p>
-          </div>
-        </CardBody>
-      </Card>
-    </motion.div>
-  );
-}
-
-export function DashboardPage() {
+function DashboardGeral() {
   const { data, isLoading } = useDashboard();
   const nome = useAuthStore((s) => s.nome);
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -114,4 +74,15 @@ export function DashboardPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Consultor ganha um painel próprio (a própria carteira, pendências de
+ * orçamento e números do mês) em vez do panorama geral da oficina. É corte de
+ * UX pelo nome do perfil (ver lib/perfil.ts); cada seção do painel continua
+ * gated pela permissão do endpoint que lê.
+ */
+export function DashboardPage() {
+  const perfil = useAuthStore((s) => s.perfil);
+  return isConsultor(perfil) ? <DashboardConsultor /> : <DashboardGeral />;
 }

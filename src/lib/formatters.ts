@@ -165,3 +165,8 @@ export function formatMesReferencia(mes: string): string {
   const texto = new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
+
+/** Minutos (como os relatórios de mecânico devolvem) → horas decimais ("150" → "2,5 h"). */
+export function formatMinutosEmHorasDecimais(minutos: number | undefined | null): string {
+  return formatHorasDecimais(minutos == null ? null : minutos / 60);
+}

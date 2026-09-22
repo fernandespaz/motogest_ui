@@ -25,12 +25,18 @@ export interface OSDocumentData {
   numero: string;
   status: string;
   dataEmissao: string;
+  /** Só Orçamento: data-limite da proposta ("dd/mm/aaaa"). */
+  validade?: string;
 
   oficina: {
     nomeFantasia: string;
     razaoSocial: string;
     cnpj: string;
     telefone?: string;
+    /** Endereço completo numa linha — omitido quando o perfil só recebe a oficina resumida. */
+    endereco?: string;
+    /** Telefone · e-mail numa linha — idem. */
+    contato?: string;
     /** Logo já carregada como PNG base64 — o renderer só desenha, nunca busca. */
     logo?: OSDocumentLogo;
   };
@@ -47,7 +53,7 @@ export interface OSDocumentData {
   };
 
   veiculo: {
-    descricao: string; // "Honda CG 160"
+    descricao: string; // "Volkswagen Gol 1.6"
     placa: string;
     chassi?: string;
     anoFabricacaoModelo?: string; // "2022/2023"

@@ -73,14 +73,14 @@ function CustoFixoFormModal({
     try {
       if (custo?.id != null) {
         await atualizar.mutateAsync({ id: custo.id, payload: values });
-        toast.success('Custo fixo atualizado.');
+        toast.success('Despesa fixa atualizada.');
       } else {
         await criar.mutateAsync(values);
-        toast.success('Custo fixo cadastrado.');
+        toast.success('Despesa fixa cadastrada.');
       }
       onClose();
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível salvar o custo fixo.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível salvar a despesa fixa.'));
     }
   }
 
@@ -90,7 +90,7 @@ function CustoFixoFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={custo ? 'Editar custo fixo' : 'Novo custo fixo'}
+      title={custo ? 'Editar despesa fixa' : 'Nova despesa fixa'}
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
@@ -124,7 +124,13 @@ function CustoFixoFormModal({
   );
 }
 
-export function CustosFixosCard() {
+/**
+ * Despesas fixas mensais (aluguel, energia, salários...). Vivem no Financeiro,
+ * junto das contas a pagar, mas continuam sendo a base do custo por hora —
+ * o backend as guarda como "custos fixos" da hora técnica, por isso o
+ * endpoint e a permissão (HORA_TECNICA_GERENCIAR) são os de lá.
+ */
+export function DespesasFixasTab() {
   const { data: custos = [], isLoading } = useCustosFixos();
   const excluir = useExcluirCustoFixo();
   // undefined = modal fechado; null = criando; objeto = editando.
@@ -136,21 +142,21 @@ export function CustosFixosCard() {
     if (removendo?.id == null) return;
     try {
       await excluir.mutateAsync(removendo.id);
-      toast.success('Custo fixo removido.');
+      toast.success('Despesa fixa removida.');
       setRemovendo(null);
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível remover o custo fixo.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível remover a despesa fixa.'));
     }
   }
 
   return (
     <Card>
       <CardHeader
-        title="Custos fixos mensais"
-        subtitle={custos.length ? `Total: ${formatCurrency(total)} por mês` : 'Base do custo por hora da oficina'}
+        title="Despesas fixas mensais"
+        subtitle={custos.length ? `Total: ${formatCurrency(total)} por mês` : 'Entram no cálculo do custo da hora técnica'}
         action={
           <Button size="sm" onClick={() => setEditando(null)}>
-            <Plus size={16} /> Novo custo
+            <Plus size={16} /> Nova despesa fixa
           </Button>
         }
       />
@@ -159,7 +165,7 @@ export function CustosFixosCard() {
         rows={custos}
         rowKey={(c) => c.id!}
         emptyIcon={Coins}
-        emptyTitle="Nenhum custo fixo cadastrado"
+        emptyTitle="Nenhuma despesa fixa cadastrada"
         emptyDescription="Aluguel, energia, salários... tudo que a oficina paga todo mês, independente do volume de serviço."
         columns={[
           {
@@ -201,7 +207,7 @@ export function CustosFixosCard() {
       <CustoFixoFormModal open={editando !== undefined} onClose={() => setEditando(undefined)} custo={editando ?? null} />
       <ConfirmDialog
         open={!!removendo}
-        title="Remover custo fixo?"
+        title="Remover despesa fixa?"
         description={`"${removendo?.descricao ?? ''}" deixa de entrar no cálculo da hora técnica. A remoção fica registrada no histórico.`}
         confirmLabel="Remover"
         variant="danger"

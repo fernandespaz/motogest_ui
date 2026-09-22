@@ -2,7 +2,7 @@ import {
   LayoutDashboard,
   CalendarClock,
   Users,
-  Bike,
+  Car,
   FileText,
   Wrench,
   Package,
@@ -15,6 +15,7 @@ import {
   Percent,
   TrendingUp,
   Calculator,
+  Gauge,
 } from 'lucide-react';
 import { isMecanico } from '@/lib/perfil';
 
@@ -31,7 +32,7 @@ export const navItems: NavItem[] = [
   { label: 'Dashboard', to: '/', icon: LayoutDashboard, group: 'operacao', permissions: ['DASHBOARD_READ'] },
   { label: 'Agenda', to: '/agenda', icon: CalendarClock, group: 'operacao', permissions: ['AGENDA_READ'] },
   { label: 'Clientes', to: '/clientes', icon: Users, group: 'operacao', permissions: ['CLIENTE_READ'] },
-  { label: 'Veículos', to: '/veiculos', icon: Bike, group: 'operacao', permissions: ['VEICULO_READ'] },
+  { label: 'Veículos', to: '/veiculos', icon: Car, group: 'operacao', permissions: ['VEICULO_READ'] },
   { label: 'Orçamentos', to: '/orcamentos', icon: FileText, group: 'operacao', permissions: ['ORCAMENTO_READ'] },
   {
     label: 'Ordens de Serviço',
@@ -46,6 +47,16 @@ export const navItems: NavItem[] = [
     icon: ClipboardCheck,
     group: 'operacao',
     permissions: ['ORDEM_SERVICO_WRITE'],
+  },
+  // Visão do próprio mecânico (horas técnicas do mês). Ainda depende de
+  // PRODUTIVIDADE_READ porque o backend não tem um "/mecanicos/me" — ver
+  // MinhaProdutividadePage.
+  {
+    label: 'Minha produtividade',
+    to: '/minha-produtividade',
+    icon: Gauge,
+    group: 'operacao',
+    permissions: ['PRODUTIVIDADE_READ'],
   },
   { label: 'Produtos e Estoque', to: '/produtos', icon: Package, group: 'gestao', permissions: ['ESTOQUE_READ'] },
   { label: 'Catálogo de Serviços', to: '/servicos', icon: Wrench, group: 'gestao', permissions: ['SERVICO_READ'] },
@@ -77,11 +88,16 @@ function isUnlocked(item: NavItem, hasPermission: (codigo: string) => boolean): 
   return !item.permissions || item.permissions.some(hasPermission);
 }
 
-// Único caminho que um perfil Mecânico precisa no dia a dia — só a lista geral
-// (pra achar uma OS de outro colega) e "Minhas OS" (a própria fila de trabalho).
+// Únicos caminhos que um perfil Mecânico precisa no dia a dia — a lista geral
+// (pra achar uma OS de outro colega), "Minhas OS" (a própria fila de trabalho)
+// e "Minha produtividade" (as próprias horas técnicas do mês).
 // Qualquer outra permissão que o perfil tenha (ex.: DASHBOARD_READ do seed
 // padrão) fica sem item de menu correspondente enquanto o perfil for esse.
-const CAMINHOS_MECANICO = ['/ordens-servico', '/minhas-os'];
+const CAMINHOS_MECANICO = ['/ordens-servico', '/minhas-os', '/minha-produtividade'];
+
+// Telas pessoais do mecânico — pra qualquer outro perfil a mesma informação
+// está nas telas gerais (Ordens de Serviço, Produtividade).
+const CAMINHOS_SO_MECANICO = ['/minhas-os', '/minha-produtividade'];
 
 export function filterNavByPermission(hasPermission: (codigo: string) => boolean, perfil?: string): NavItem[] {
   const desbloqueados = navItems.filter((item) => isUnlocked(item, hasPermission));
@@ -89,7 +105,7 @@ export function filterNavByPermission(hasPermission: (codigo: string) => boolean
   // "Minhas OS" é a fila pessoal de um técnico com cronômetro — não faz
   // sentido pra quem não é Mecânico (Admin e Consultor Técnico também têm
   // ORDEM_SERVICO_WRITE, mas usam a lista completa em "Ordens de Serviço").
-  return desbloqueados.filter((item) => item.to !== '/minhas-os');
+  return desbloqueados.filter((item) => !CAMINHOS_SO_MECANICO.includes(item.to));
 }
 
 /**

@@ -16,7 +16,7 @@ function baseData(overrides: Partial<OSDocumentData> = {}): OSDocumentData {
       endereco: 'Rua das Flores, 100',
       bairroCidadeUf: 'Centro / São Paulo / SP',
     },
-    veiculo: { descricao: 'Honda CG 160', placa: 'MTG0001' },
+    veiculo: { descricao: 'Volkswagen Gol 1.6', placa: 'MTG0001' },
     servicos: [],
     pecas: [],
     totalServicos: 0,
@@ -122,7 +122,7 @@ describe('renderOSDocumentPdf', () => {
           email: 'fernanda@example.com',
         },
         veiculo: {
-          descricao: 'Yamaha Fazer 250',
+          descricao: 'Chevrolet Onix 1.0',
           placa: 'MTG0002',
           chassi: '9BWZZZ377VT004251',
           anoFabricacaoModelo: '2022/2023',
@@ -131,6 +131,34 @@ describe('renderOSDocumentPdf', () => {
         },
         consultor: 'Diego',
         previsaoEntrega: '15/09/2026',
+      }),
+    );
+    expect(blob.size).toBeGreaterThan(0);
+  });
+});
+
+describe('renderOSDocumentPdf — letterhead', () => {
+  it('renders the full workshop letterhead, validity and a multi-page footer', async () => {
+    const muitos = Array.from({ length: 60 }, (_, i) => ({
+      descricao: `Serviço ${i + 1}`,
+      quantidade: 1,
+      valorUnitario: 10,
+      valorTotal: 10,
+    }));
+    const blob = await renderOSDocumentPdf(
+      baseData({
+        tipoDocumento: 'Orçamento',
+        validade: '17/09/2026',
+        oficina: {
+          nomeFantasia: 'Ram Tec Motos e Peças com um nome bem comprido para testar o corte',
+          razaoSocial: 'Ram Tec LTDA',
+          cnpj: '11.222.333/0001-99',
+          endereco: 'Rua das Flores, 100 · Centro · São Paulo/SP · CEP 01000-000',
+          contato: '(11) 99999-0000 · contato@ramtec.com.br',
+        },
+        servicos: muitos,
+        totalServicos: 600,
+        totalGeral: 600,
       }),
     );
     expect(blob.size).toBeGreaterThan(0);

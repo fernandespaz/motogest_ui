@@ -1,23 +1,39 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { produtividadeApi } from '@/api/endpoints/produtividade';
+import { mesReferenciaAtual } from '@/lib/formatters';
 
 export const produtividadeKeys = {
   all: ['produtividade'] as const,
   consultores: (mes: string) => ['produtividade', 'consultores', mes] as const,
   consultor: (usuarioId: number, mes: string) => ['produtividade', 'consultores', mes, usuarioId] as const,
+  mecanicos: (mes: string) => ['produtividade', 'mecanicos', mes] as const,
+  mecanico: (usuarioId: number, mes: string) => ['produtividade', 'mecanicos', mes, usuarioId] as const,
 };
 
-// Sem gate de permissão aqui: as duas telas que usam isso ficam atrás de
-// <RequirePermission codigo="PRODUTIVIDADE_READ"> na rota, então nem montam
-// pra quem não pode ver.
+/**
+ * "Tempo real" dos relatórios de mecânico: o backend não tem push, então o
+ * mês corrente é reconsultado a cada 30s enquanto a aba está visível (o
+ * React Query pausa o intervalo com a aba em segundo plano). Mês passado é
+ * fechado — não há o que atualizar, então nada de polling.
+ */
+export const INTERVALO_TEMPO_REAL_MS = 30_000;
+
+function intervaloSeMesCorrente(mes: string): number | false {
+  return mes === mesReferenciaAtual() ? INTERVALO_TEMPO_REAL_MS : false;
+}
+
+// Sem gate de permissão aqui: as telas que usam isso ficam atrás de
+// <RequirePermission codigo="PRODUTIVIDADE_READ"> na rota (ou recebem
+// `enabled` de fora), então nem montam/disparam pra quem não pode ver.
 
 // keepPreviousData: ao trocar de mês a tela continua mostrando os números
 // anteriores (esmaecidos) em vez de piscar um spinner de página inteira.
-export function useProdutividadeConsultores(mes: string) {
+export function useProdutividadeConsultores(mes: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: produtividadeKeys.consultores(mes),
     queryFn: () => produtividadeApi.consultores(mes),
     placeholderData: keepPreviousData,
+    enabled: options?.enabled,
   });
 }
 
@@ -30,5 +46,26 @@ export function useProdutividadeConsultor(usuarioId: number | undefined, mes: st
     // números de outra pessoa enquanto o detalhe novo carrega.
     placeholderData: (anterior, queryAnterior) =>
       queryAnterior?.queryKey[3] === usuarioId ? anterior : undefined,
+  });
+}
+
+export function useProdutividadeMecanicos(mes: string) {
+  return useQuery({
+    queryKey: produtividadeKeys.mecanicos(mes),
+    queryFn: () => produtividadeApi.mecanicos(mes),
+    placeholderData: keepPreviousData,
+    refetchInterval: intervaloSeMesCorrente(mes),
+  });
+}
+
+export function useProdutividadeMecanico(usuarioId: number | undefined, mes: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: produtividadeKeys.mecanico(usuarioId!, mes),
+    queryFn: () => produtividadeApi.mecanico(usuarioId!, mes),
+    enabled: !!usuarioId && (options?.enabled ?? true),
+    // Mesmo cuidado do detalhe de consultor: nunca mostra outro mecânico.
+    placeholderData: (anterior, queryAnterior) =>
+      queryAnterior?.queryKey[3] === usuarioId ? anterior : undefined,
+    refetchInterval: intervaloSeMesCorrente(mes),
   });
 }

@@ -13,8 +13,8 @@ vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn()
 
 const catalogo = {
   content: [
-    { id: 1, marca: 'Honda', modelo: 'CG 160', imagemBase64: 'aGVsbG8=' },
-    { id: 2, marca: 'Yamaha', modelo: 'Fazer 250', imagemBase64: undefined },
+    { id: 1, marca: 'Volkswagen', modelo: 'Gol 1.6', imagemBase64: 'aGVsbG8=' },
+    { id: 2, marca: 'Chevrolet', modelo: 'Onix 1.0', imagemBase64: undefined },
   ],
 };
 
@@ -46,7 +46,7 @@ describe('ModeloVeiculoField', () => {
   });
 
   it('offers to swap the model once marca/modelo are already filled', () => {
-    render(<ModeloVeiculoField marca="Honda" modelo="CG 160" onSelecionar={vi.fn()} />);
+    render(<ModeloVeiculoField marca="Volkswagen" modelo="Gol 1.6" onSelecionar={vi.fn()} />);
     expect(screen.getByRole('button', { name: /Trocar modelo do catálogo/ })).toBeInTheDocument();
   });
 
@@ -55,26 +55,26 @@ describe('ModeloVeiculoField', () => {
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));
 
     expect(screen.getByText('Modelo do veículo')).toBeInTheDocument();
-    expect(screen.getByText('Honda')).toBeInTheDocument();
-    expect(screen.getByText('Yamaha')).toBeInTheDocument();
+    expect(screen.getByText('Volkswagen')).toBeInTheDocument();
+    expect(screen.getByText('Chevrolet')).toBeInTheDocument();
   });
 
   it('filters the list by marca or modelo as the user searches', async () => {
     render(<ModeloVeiculoField marca={undefined} modelo={undefined} onSelecionar={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));
-    await userEvent.type(screen.getByPlaceholderText('Buscar marca ou modelo...'), 'faze');
+    await userEvent.type(screen.getByPlaceholderText('Buscar marca ou modelo...'), 'oni');
 
-    expect(screen.getByText('Yamaha')).toBeInTheDocument();
-    expect(screen.queryByText('Honda')).not.toBeInTheDocument();
+    expect(screen.getByText('Chevrolet')).toBeInTheDocument();
+    expect(screen.queryByText('Volkswagen')).not.toBeInTheDocument();
   });
 
   it('selects an existing catalog entry, closing the picker', async () => {
     const onSelecionar = vi.fn();
     render(<ModeloVeiculoField marca={undefined} modelo={undefined} onSelecionar={onSelecionar} />);
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));
-    await userEvent.click(screen.getByText('Honda'));
+    await userEvent.click(screen.getByText('Volkswagen'));
 
-    expect(onSelecionar).toHaveBeenCalledWith({ marca: 'Honda', modelo: 'CG 160' });
+    expect(onSelecionar).toHaveBeenCalledWith({ marca: 'Volkswagen', modelo: 'Gol 1.6' });
     // A troca pra "Trocar modelo do catálogo" viria do pai atualizando marca/
     // modelo em resposta a onSelecionar — este componente não controla esses
     // valores, só avisa. Confirmar o fechamento observando onSelecionar
@@ -85,13 +85,13 @@ describe('ModeloVeiculoField', () => {
   it('offers to register a new model when the search finds nothing', async () => {
     render(<ModeloVeiculoField marca={undefined} modelo={undefined} onSelecionar={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));
-    await userEvent.type(screen.getByPlaceholderText('Buscar marca ou modelo...'), 'Titan 160');
+    await userEvent.type(screen.getByPlaceholderText('Buscar marca ou modelo...'), 'Polo 1.0');
 
     expect(screen.getByText('Nenhum modelo encontrado')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cadastrar novo modelo' }));
 
     expect(screen.getByText('Cadastrar novo modelo')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Modelo/)).toHaveValue('Titan 160');
+    expect(screen.getByLabelText(/^Modelo/)).toHaveValue('Polo 1.0');
     expect(screen.getByLabelText(/^Marca/)).toHaveValue('');
   });
 
@@ -164,7 +164,7 @@ describe('ModeloVeiculoField', () => {
     );
 
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));
-    await userEvent.click(screen.getByText('Honda'));
+    await userEvent.click(screen.getByText('Volkswagen'));
     expect(onSubmit).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole('button', { name: /Escolher modelo do catálogo/ }));

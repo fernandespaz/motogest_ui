@@ -8,7 +8,7 @@ vi.mock('@/hooks/useDashboard', () => ({ useDashboard: vi.fn() }));
 
 describe('DashboardPage', () => {
   beforeEach(() => {
-    useAuthStore.setState({ nome: 'Diego Fernandes', permissoes: [] });
+    useAuthStore.setState({ nome: 'Diego Fernandes', permissoes: [], perfil: 'Administrador' });
   });
 
   it('shows a spinner while loading', () => {

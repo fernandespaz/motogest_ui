@@ -43,7 +43,7 @@ describe('VeiculoFormModal', () => {
       <VeiculoFormModal
         open
         onClose={vi.fn()}
-        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'CG 160', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
+        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'Gol 1.6', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
       />,
     );
     expect(screen.getByText('Editar veículo')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('VeiculoFormModal', () => {
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: /Cliente/ }), 'Carlos Eduardo');
     await userEvent.type(screen.getByLabelText('Placa', { exact: false }), 'MTG0002');
-    await userEvent.type(screen.getByLabelText(/^Modelo/), 'Fazer 250');
+    await userEvent.type(screen.getByLabelText(/^Modelo/), 'Onix 1.0');
     await userEvent.type(screen.getByLabelText('Cor', { exact: false }), 'Vermelha');
     await userEvent.type(screen.getByLabelText('Ano de fabricação', { exact: false }), '2022');
     await userEvent.type(screen.getByLabelText('Chassi', { exact: false }), '9BWZZZ377VT004251');
@@ -81,7 +81,7 @@ describe('VeiculoFormModal', () => {
 
     await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
     expect(createMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ clienteId: 1, placa: 'MTG0002', modelo: 'Fazer 250' }),
+      expect.objectContaining({ clienteId: 1, placa: 'MTG0002', modelo: 'Onix 1.0' }),
     );
     expect(toast.success).toHaveBeenCalledWith('Veículo cadastrado com sucesso.');
     expect(onClose).toHaveBeenCalled();
@@ -93,7 +93,7 @@ describe('VeiculoFormModal', () => {
       <VeiculoFormModal
         open
         onClose={onClose}
-        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'CG 160', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
+        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'Gol 1.6', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
       />,
     );
 
@@ -114,7 +114,7 @@ describe('VeiculoFormModal', () => {
       <VeiculoFormModal
         open
         onClose={onClose}
-        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'CG 160', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
+        veiculo={{ id: 1, clienteId: 1, placa: 'MTG0001', modelo: 'Gol 1.6', cor: 'Preta', anoFabricacao: 2022, chassi: '123' } as never}
       />,
     );
 

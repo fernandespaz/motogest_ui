@@ -38,7 +38,7 @@ const clienteComVeiculo = {
   nome: 'Carlos Eduardo',
   documento: '12345678901',
   ativo: true,
-  veiculos: [{ id: 10, placa: 'MTG0001', marca: 'Honda', modelo: 'CG 160' }],
+  veiculos: [{ id: 10, placa: 'MTG0001', marca: 'Volkswagen', modelo: 'Gol 1.6' }],
 };
 
 describe('ClienteFormModal', () => {

@@ -20,3 +20,19 @@ describe('produtividadeApi', () => {
     expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtividade/consultores/7', { params: { mes: '2026-08' } });
   });
 });
+
+describe('produtividadeApi — mecânicos', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('mecanicos() GETs the workshop-wide mechanic report for the given month', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { mes: '2026-09' } });
+    await produtividadeApi.mecanicos('2026-09');
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtividade/mecanicos', { params: { mes: '2026-09' } });
+  });
+
+  it('mecanico() GETs one mechanic detail for the given month', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { usuarioId: 3 } });
+    await produtividadeApi.mecanico(3, '2026-08');
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtividade/mecanicos/3', { params: { mes: '2026-08' } });
+  });
+});

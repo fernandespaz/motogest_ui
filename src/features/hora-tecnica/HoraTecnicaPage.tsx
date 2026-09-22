@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, Lock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, Lock, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
@@ -8,10 +9,33 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { useHoraTecnica } from '@/hooks/useHoraTecnica';
 import { ComposicaoHoraTecnica, HoraTecnicaNaoConfigurada } from './ComposicaoHoraTecnica';
 import { ParametrosHoraTecnicaForm } from './ParametrosHoraTecnicaForm';
-import { CustosFixosCard } from './CustosFixosCard';
 import { AuditoriaHoraTecnicaCard } from './AuditoriaHoraTecnicaCard';
 
-type Aba = 'parametros' | 'custos' | 'historico';
+type Aba = 'parametros' | 'historico';
+
+/**
+ * As despesas fixas (base do custo por hora) foram centralizadas no
+ * Financeiro, junto das contas a pagar — aqui fica só o atalho pra lá.
+ */
+function DespesasFixasNoFinanceiro() {
+  // Sem gate aqui: esta página já exige HORA_TECNICA_GERENCIAR, que é a mesma
+  // permissão da aba de despesas fixas — o Financeiro mostra essa aba mesmo
+  // pra quem não tem FINANCEIRO_READ (ver FinanceiroPage).
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-ink-muted">
+      <Wallet size={18} className="shrink-0 text-brand-600" />
+      <span className="flex-1">
+        As despesas fixas que compõem o custo da hora agora são cadastradas no Financeiro, junto às contas a pagar.
+      </span>
+      <Link
+        to="/financeiro?aba=despesas-fixas"
+        className="font-semibold text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
+      >
+        Gerenciar despesas fixas
+      </Link>
+    </div>
+  );
+}
 
 /**
  * Fallback da rota pra quem não tem HORA_TECNICA_GERENCIAR (ex.: Consultor
@@ -56,11 +80,12 @@ export function HoraTecnicaPage() {
 
       {data.configurado ? <ComposicaoHoraTecnica horaTecnica={data} /> : <HoraTecnicaNaoConfigurada />}
 
+      <DespesasFixasNoFinanceiro />
+
       <div>
         <Tabs
           tabs={[
             { key: 'parametros', label: 'Parâmetros' },
-            { key: 'custos', label: 'Custos fixos' },
             { key: 'historico', label: 'Histórico' },
           ]}
           active={aba}
@@ -68,9 +93,6 @@ export function HoraTecnicaPage() {
         />
         <TabPanel hidden={aba !== 'parametros'}>
           <ParametrosHoraTecnicaForm horaTecnica={data} />
-        </TabPanel>
-        <TabPanel hidden={aba !== 'custos'}>
-          <CustosFixosCard />
         </TabPanel>
         <TabPanel hidden={aba !== 'historico'}>
           <AuditoriaHoraTecnicaCard />

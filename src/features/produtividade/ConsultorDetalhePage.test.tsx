@@ -31,7 +31,12 @@ function renderPage(url = '/produtividade/consultores/1?mes=2026-09') {
 
 describe('ConsultorDetalhePage', () => {
   beforeEach(() => {
-    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ', 'ORCAMENTO_READ', 'ORDEM_SERVICO_READ'] });
+    vi.clearAllMocks();
+    useAuthStore.setState({
+      permissoes: ['PRODUTIVIDADE_READ', 'ORCAMENTO_READ', 'ORDEM_SERVICO_READ'],
+      perfil: 'Administrador',
+      usuarioId: 99,
+    });
     vi.mocked(useProdutividadeConsultor).mockReturnValue({ data: detalhe, isLoading: false } as never);
   });
 
@@ -60,5 +65,14 @@ describe('ConsultorDetalhePage', () => {
     vi.mocked(useProdutividadeConsultor).mockReturnValue({ data: undefined, isLoading: false } as never);
     renderPage('/produtividade/consultores/abc');
     expect(screen.getByText('Consultor não encontrado')).toBeInTheDocument();
+  });
+
+  it('keeps a Consultor on their own numbers: never queries a colleague and hides the back-to-ranking button', () => {
+    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ'], perfil: 'Consultor Técnico', usuarioId: 1 });
+    renderPage('/produtividade/consultores/2?mes=2026-09');
+    expect(useProdutividadeConsultor).not.toHaveBeenCalledWith(2, expect.anything());
+    expect(useProdutividadeConsultor).toHaveBeenLastCalledWith(1, '2026-09');
+    expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Voltar/ })).not.toBeInTheDocument();
   });
 });

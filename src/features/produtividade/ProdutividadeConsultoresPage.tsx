@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AlertTriangle, ChevronRight, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -14,6 +14,7 @@ import type { ProdutividadeConsultorResponse } from '@/api/types';
 import { formatCurrency, formatDuracao, formatMesReferencia, formatPercent, getInitials } from '@/lib/formatters';
 import { BarraPercentual, IndicadoresGrid, MesSelector } from './IndicadoresConsultor';
 import { useMesReferencia } from './useMesReferencia';
+import { ProdutividadeAbas, useConsultorRestritoAoProprio } from './ProdutividadeAbas';
 
 type Ordenacao = 'faturado' | 'conversao' | 'ticket' | 'resposta' | 'produtividade' | 'fidelizacao';
 
@@ -81,7 +82,9 @@ export function ProdutividadeConsultoresPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const [mes, setMes] = useMesReferencia();
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('faturado');
-  const { data, isLoading, isPlaceholderData } = useProdutividadeConsultores(mes);
+  const proprioId = useConsultorRestritoAoProprio();
+  // Consultor nem dispara o relatório geral — vai direto pro próprio detalhe.
+  const { data, isLoading, isPlaceholderData } = useProdutividadeConsultores(mes, { enabled: !proprioId });
 
   const consultores = useMemo(() => ordenar(data?.consultores ?? [], ordenacao), [data, ordenacao]);
 
@@ -116,6 +119,8 @@ export function ProdutividadeConsultoresPage() {
     },
   ];
 
+  if (proprioId) return <Navigate to={`/produtividade/consultores/${proprioId}?mes=${mes}`} replace />;
+
   const semHoraTecnica = data && data.horasTecnicasDisponiveis == null;
 
   return (
@@ -125,6 +130,7 @@ export function ProdutividadeConsultoresPage() {
         subtitle="Indicadores calculados automaticamente a partir dos orçamentos e ordens de serviço"
         action={<MesSelector mes={mes} onChange={setMes} />}
       />
+      <ProdutividadeAbas ativa="consultores" mes={mes} />
 
       {isLoading || !data ? (
         <PageSpinner label="Calculando indicadores..." />

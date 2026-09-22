@@ -51,7 +51,7 @@ export function BarraPercentual({ valor, className }: { valor: number | undefine
   );
 }
 
-interface Indicador {
+export interface Indicador {
   chave: string;
   icon: LucideIcon;
   titulo: string;
@@ -109,22 +109,21 @@ function montarIndicadores(ind: IndicadoresConsultorResponse): Indicador[] {
   ];
 }
 
-export function IndicadoresGrid({
-  indicadores,
+/** Grade de cartões de indicador — compartilhada pelos relatórios de consultor e de mecânico. */
+export function GradeIndicadores({
+  itens,
   atualizando,
+  className = 'lg:grid-cols-5',
 }: {
-  indicadores: IndicadoresConsultorResponse;
+  itens: Indicador[];
   /** Mês novo carregando com os números anteriores ainda na tela — esmaece em vez de piscar. */
   atualizando?: boolean;
+  /** Colunas no desktop — cada relatório tem uma quantidade diferente de indicadores. */
+  className?: string;
 }) {
   return (
-    <div
-      className={clsx(
-        'grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2 lg:grid-cols-5',
-        atualizando && 'opacity-60',
-      )}
-    >
-      {montarIndicadores(indicadores).map((ind, index) => (
+    <div className={clsx('grid grid-cols-1 gap-3 transition-opacity sm:grid-cols-2', className, atualizando && 'opacity-60')}>
+      {itens.map((ind, index) => (
         <motion.div
           key={ind.chave}
           initial={{ opacity: 0, y: 10 }}
@@ -151,4 +150,14 @@ export function IndicadoresGrid({
       ))}
     </div>
   );
+}
+
+export function IndicadoresGrid({
+  indicadores,
+  atualizando,
+}: {
+  indicadores: IndicadoresConsultorResponse;
+  atualizando?: boolean;
+}) {
+  return <GradeIndicadores itens={montarIndicadores(indicadores)} atualizando={atualizando} />;
 }

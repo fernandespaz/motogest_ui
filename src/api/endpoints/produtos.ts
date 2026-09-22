@@ -1,11 +1,15 @@
 import { createCrudApi } from '../crud';
 import { apiClient } from '../client';
 import { API_ROUTES } from '../routes';
-import type { ProdutoRequest, ProdutoResponse } from '../types';
+import type { PageParams, ProdutoCategoria, ProdutoRequest, ProdutoResponse } from '../types';
 
-const base = createCrudApi<ProdutoResponse, ProdutoRequest>(API_ROUTES.produtos.base);
+export type ProdutosListParams = PageParams & { categoria?: ProdutoCategoria; busca?: string };
+export type ProdutosAbaixoDoMinimoParams = { categoria?: ProdutoCategoria };
+
+const base = createCrudApi<ProdutoResponse, ProdutoRequest, ProdutosListParams>(API_ROUTES.produtos.base);
 
 export const produtosApi = {
   ...base,
-  abaixoDoMinimo: () => apiClient.get<ProdutoResponse[]>(API_ROUTES.produtos.abaixoDoMinimo).then((r) => r.data),
+  abaixoDoMinimo: (params?: ProdutosAbaixoDoMinimoParams) =>
+    apiClient.get<ProdutoResponse[]>(API_ROUTES.produtos.abaixoDoMinimo, { params }).then((r) => r.data),
 };

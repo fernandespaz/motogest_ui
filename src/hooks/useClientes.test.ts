@@ -2,7 +2,13 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { wrapWithQueryClient } from '@/test/queryClientWrapper';
 import { clientesApi } from '@/api/endpoints/clientes';
-import { useClientes, useVeiculosDoCliente } from './useClientes';
+import {
+  normalizarPlaca,
+  termoBackendPlaca,
+  useBuscaVeiculosPorPlaca,
+  useClientes,
+  useVeiculosDoCliente,
+} from './useClientes';
 
 vi.mock('@/api/endpoints/clientes', () => ({
   clientesApi: {
@@ -47,5 +53,50 @@ describe('useClientes hooks', () => {
 
     await waitFor(() => expect(clientesApi.get).toHaveBeenCalledWith(1));
     await waitFor(() => expect(result.current.data).toEqual([]));
+  });
+});
+
+describe('useBuscaVeiculosPorPlaca', () => {
+  it('searches clientes by the normalized plate and flattens only the vehicles that match', async () => {
+    vi.mocked(clientesApi.list).mockResolvedValueOnce({
+      content: [
+        {
+          id: 1,
+          nome: 'Fernanda',
+          veiculos: [
+            { id: 10, placa: 'ABC-1D23' },
+            { id: 11, placa: 'XYZ9999' },
+          ],
+        },
+      ],
+    } as never);
+    const { result } = renderHook(() => useBuscaVeiculosPorPlaca('abc 1d'), { wrapper: wrapWithQueryClient() });
+
+    await waitFor(() => expect(result.current.data).toHaveLength(1));
+    // Só as 3 letras vão pro backend — casa "ABC-1D23" e "ABC1D23" gravados.
+    expect(clientesApi.list).toHaveBeenCalledWith({ busca: 'ABC', size: 50 });
+    expect(result.current.data[0]).toMatchObject({ id: 10, clienteId: 1, clienteNome: 'Fernanda' });
+  });
+
+  it('stays idle for an empty term', () => {
+    const { result } = renderHook(() => useBuscaVeiculosPorPlaca('  -  '), { wrapper: wrapWithQueryClient() });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('normalizarPlaca', () => {
+  it('ignores case, hyphens and spaces', () => {
+    expect(normalizarPlaca(' abc-1d23 ')).toBe('ABC1D23');
+    expect(normalizarPlaca(undefined)).toBe('');
+  });
+});
+
+describe('termoBackendPlaca', () => {
+  it('never sends a term that crosses the hyphen position of a stored plate', () => {
+    expect(termoBackendPlaca('ABC1D23')).toBe('ABC');
+    expect(termoBackendPlaca('ABC')).toBe('ABC');
+    expect(termoBackendPlaca('1D23')).toBe('1D23');
+    expect(termoBackendPlaca('AB')).toBe('AB');
   });
 });

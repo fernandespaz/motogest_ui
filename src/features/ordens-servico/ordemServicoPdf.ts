@@ -39,6 +39,8 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
       nomeFantasia: oficina.nomeFantasia,
       razaoSocial: oficina.razaoSocial,
       cnpj: formatCnpj(oficina.cnpj),
+      endereco: oficina.endereco,
+      contato: oficina.contato,
       logo: oficina.logo ?? undefined,
     },
     cliente: cliente

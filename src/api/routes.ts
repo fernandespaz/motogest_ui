@@ -131,5 +131,7 @@ export const API_ROUTES = {
   produtividade: {
     consultores: '/api/v1/produtividade/consultores',
     consultor: (usuarioId: number) => `/api/v1/produtividade/consultores/${usuarioId}`,
+    mecanicos: '/api/v1/produtividade/mecanicos',
+    mecanico: (usuarioId: number) => `/api/v1/produtividade/mecanicos/${usuarioId}`,
   },
 } as const;
