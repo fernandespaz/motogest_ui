@@ -1,7 +1,8 @@
 import { clientesApi } from '@/api/endpoints/clientes';
 import { veiculosApi } from '@/api/endpoints/veiculos';
 import type { OrcamentoResponse } from '@/api/types';
-import { formatCnpj, formatCurrency, formatDateTime, formatDocumento } from '@/lib/formatters';
+import { addDays } from 'date-fns';
+import { formatCnpj, formatCurrency, formatDate, formatDateTime, formatDocumento } from '@/lib/formatters';
 import { metaFor, orcamentoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
 import { resolverOficinaParaPdf } from '@/features/shared/pdf/logo';
@@ -16,6 +17,15 @@ function toLineItems(orcamento: OrcamentoResponse, tipo: 'SERVICO' | 'PRODUTO'):
       valorUnitario: item.valorUnitario ?? 0,
       valorTotal: item.valorTotal ?? (item.quantidade ?? 0) * (item.valorUnitario ?? 0),
     }));
+}
+
+/** Emissão (ou criação, se ainda não emitido) + validadeDias — impresso no quadro do cabeçalho. */
+export function calcularValidade(orcamento: Pick<OrcamentoResponse, 'dataEmissao' | 'createdAt' | 'validadeDias'>) {
+  const base = orcamento.dataEmissao ?? orcamento.createdAt;
+  if (!base || orcamento.validadeDias == null) return undefined;
+  const data = new Date(base);
+  if (Number.isNaN(data.getTime())) return undefined;
+  return formatDate(addDays(data, orcamento.validadeDias).toISOString());
 }
 
 export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promise<Blob> {
@@ -34,11 +44,15 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
     tipoDocumento: 'Orçamento',
     numero: String(orcamento.id ?? '—'),
     status: metaFor(orcamentoStatusMeta, orcamento.status).label,
-    dataEmissao: formatDateTime(orcamento.createdAt),
+    // Mesma base de calcularValidade — senão "emitido em" e "válido até" não fecham a conta.
+    dataEmissao: formatDateTime(orcamento.dataEmissao ?? orcamento.createdAt),
+    validade: calcularValidade(orcamento),
     oficina: {
       nomeFantasia: oficina.nomeFantasia,
       razaoSocial: oficina.razaoSocial,
       cnpj: formatCnpj(oficina.cnpj),
+      endereco: oficina.endereco,
+      contato: oficina.contato,
       logo: oficina.logo ?? undefined,
     },
     cliente: cliente

@@ -62,7 +62,7 @@ function nomesNaOrdem() {
 
 describe('ProdutividadeConsultoresPage', () => {
   beforeEach(() => {
-    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ'] });
+    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ'], perfil: 'Administrador', usuarioId: 99 });
     vi.mocked(useProdutividadeConsultores).mockReturnValue({
       data: relatorio,
       isLoading: false,
@@ -72,7 +72,7 @@ describe('ProdutividadeConsultoresPage', () => {
 
   it('reads the month from the URL and shows the oficina totals', () => {
     renderPage();
-    expect(useProdutividadeConsultores).toHaveBeenCalledWith('2026-09');
+    expect(useProdutividadeConsultores).toHaveBeenCalledWith('2026-09', { enabled: true });
     expect(screen.getByText('Setembro de 2026')).toBeInTheDocument();
     expect(screen.getByText('Taxa de conversão')).toBeInTheDocument();
     expect(screen.getByText('5 de 10 orçamentos aprovados')).toBeInTheDocument();
@@ -125,5 +125,13 @@ describe('ProdutividadeConsultoresPage', () => {
     useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ', 'HORA_TECNICA_GERENCIAR'] });
     renderPage();
     expect(screen.getByText('Configurar hora técnica')).toBeInTheDocument();
+  });
+
+  it('sends a Consultor straight to their own detail without loading the general report', () => {
+    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ'], perfil: 'Consultor Técnico', usuarioId: 1 });
+    renderPage();
+    expect(useProdutividadeConsultores).toHaveBeenCalledWith('2026-09', { enabled: false });
+    expect(screen.getByTestId('local')).toHaveTextContent('/produtividade/consultores/1?mes=2026-09');
+    expect(screen.queryByText('Ranking de consultores')).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Bike, ImagePlus, Plus, Search, Upload, X } from 'lucide-react';
+import { Car, ImagePlus, Plus, Search, Upload, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -29,7 +29,7 @@ export function ModeloVeiculoThumb({ base64, size = 36 }: { base64?: string | nu
   }
   return (
     <div style={style} className="flex shrink-0 items-center justify-center rounded-md bg-surface-alt text-ink-muted">
-      <Bike size={size * 0.55} />
+      <Car size={size * 0.55} />
     </div>
   );
 }
@@ -172,7 +172,7 @@ function ModeloVeiculoCatalogModal({
               </div>
             ) : filtrados.length === 0 ? (
               <EmptyState
-                icon={Bike}
+                icon={Car}
                 title="Nenhum modelo encontrado"
                 description="Cadastre esse modelo no catálogo pra reaproveitar (com imagem) nos próximos veículos."
                 action={

@@ -52,6 +52,35 @@ function labelValueRow(
   });
 }
 
+/** Corta um texto na largura disponível (com reticências) — o cabeçalho tem uma linha por dado. */
+function primeiraLinha(doc: InstanceType<Awaited<ReturnType<typeof loadPdfLibs>>['JsPDF']>, texto: string, largura: number): string {
+  const linhas: string[] = doc.splitTextToSize(texto, largura);
+  return linhas.length > 1 ? `${linhas[0].replace(/\s+\S*$/, '')}…` : (linhas[0] ?? '');
+}
+
+/** Rodapé em todas as páginas: identificação da oficina + paginação. */
+function drawFooters(doc: InstanceType<Awaited<ReturnType<typeof loadPdfLibs>>['JsPDF']>, data: OSDocumentData) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const total = doc.getNumberOfPages();
+  const identificacao = [data.oficina.nomeFantasia || data.oficina.razaoSocial, data.oficina.contato]
+    .filter(Boolean)
+    .join(' · ');
+  for (let pagina = 1; pagina <= total; pagina++) {
+    doc.setPage(pagina);
+    doc.setDrawColor(LINE);
+    doc.setLineWidth(0.3);
+    doc.line(PAGE_MARGIN, pageHeight - 12, pageWidth - PAGE_MARGIN, pageHeight - 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(INK_MUTED);
+    doc.text(identificacao, PAGE_MARGIN, pageHeight - 8);
+    doc.text(`${data.tipoDocumento} nº ${data.numero} · Página ${pagina} de ${total}`, pageWidth - PAGE_MARGIN, pageHeight - 8, {
+      align: 'right',
+    });
+  }
+}
+
 function itemRows(items: OSDocumentLineItem[]): (string | number)[][] {
   return items.map((item, i) => [
     String(i + 1),
@@ -67,47 +96,75 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   const doc = new JsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const contentWidth = pageWidth - PAGE_MARGIN * 2;
-  let y = PAGE_MARGIN;
+  // Começa logo abaixo da faixa da marca (ver Letterhead).
+  let y = 10;
 
   // ---- Letterhead ----
+  // Faixa fina na cor da marca no topo da folha + cabeçalho da oficina
+  // (logo, nome, razão social/CNPJ, endereço, contato) à esquerda e o quadro
+  // de identificação do documento à direita. Linhas sem dado (perfil que
+  // recebe a oficina resumida) são omitidas, nunca impressas vazias.
+  doc.setFillColor(BRAND);
+  doc.rect(0, 0, pageWidth, 3, 'F');
+
+  const boxWidth = 58;
+  const boxX = pageWidth - PAGE_MARGIN - boxWidth;
   let letterheadX = PAGE_MARGIN;
+  let logoBottom = y;
   if (data.oficina.logo) {
-    const alturaLogo = 15;
-    let larguraLogo = alturaLogo * (data.oficina.logo.largura / data.oficina.logo.altura);
-    if (!Number.isFinite(larguraLogo) || larguraLogo <= 0) larguraLogo = alturaLogo;
-    larguraLogo = Math.min(larguraLogo, 30);
-    doc.addImage(data.oficina.logo.dataUrl, 'PNG', PAGE_MARGIN, y - 1, larguraLogo, alturaLogo);
-    letterheadX = PAGE_MARGIN + larguraLogo + 4;
+    const alturaMax = 20;
+    const larguraMax = 38;
+    let largura = alturaMax * (data.oficina.logo.largura / data.oficina.logo.altura);
+    if (!Number.isFinite(largura) || largura <= 0) largura = alturaMax;
+    let altura = alturaMax;
+    if (largura > larguraMax) {
+      altura = alturaMax * (larguraMax / largura);
+      largura = larguraMax;
+    }
+    doc.addImage(data.oficina.logo.dataUrl, 'PNG', PAGE_MARGIN, y, largura, altura);
+    letterheadX = PAGE_MARGIN + largura + 5;
+    logoBottom = y + altura;
   }
-  doc.setFontSize(15);
-  doc.setTextColor(BRAND);
-  doc.setFont('helvetica', 'bold');
-  doc.text(data.oficina.nomeFantasia || data.oficina.razaoSocial, letterheadX, y + 4);
-  // Perfis sem OFICINA_READ (ver resolverOficinaParaPdf) caem pro fallback
-  // sem razão social/CNPJ — sem essa checagem, a linha imprimia "· CNPJ "
-  // vazia embaixo do nome da oficina.
-  const linhaRazaoSocialCnpj = [data.oficina.razaoSocial, data.oficina.cnpj ? `CNPJ ${data.oficina.cnpj}` : '']
-    .filter(Boolean)
-    .join(' · ');
-  if (linhaRazaoSocialCnpj) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(INK_MUTED);
-    doc.text(linhaRazaoSocialCnpj, letterheadX, y + 9);
-  }
+  const larguraTexto = boxX - 5 - letterheadX;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.setTextColor(INK);
-  doc.text(data.tipoDocumento.toUpperCase(), pageWidth - PAGE_MARGIN, y + 4, { align: 'right' });
+  doc.setFontSize(15);
+  doc.setTextColor(BRAND);
+  doc.text(primeiraLinha(doc, data.oficina.nomeFantasia || data.oficina.razaoSocial, larguraTexto), letterheadX, y + 5);
+
+  const linhasOficina = [
+    [data.oficina.razaoSocial, data.oficina.cnpj ? `CNPJ ${data.oficina.cnpj}` : ''].filter(Boolean).join(' · '),
+    data.oficina.endereco,
+    data.oficina.contato,
+  ].filter((linha): linha is string => !!linha);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(INK_MUTED);
-  doc.text(`Nº ${data.numero} · Status: ${data.status}`, pageWidth - PAGE_MARGIN, y + 9, { align: 'right' });
-  doc.text(`Emitido em ${data.dataEmissao}`, pageWidth - PAGE_MARGIN, y + 13, { align: 'right' });
+  let textoY = y + 10.5;
+  linhasOficina.forEach((linha) => {
+    doc.text(primeiraLinha(doc, linha, larguraTexto), letterheadX, textoY);
+    textoY += 4;
+  });
 
-  y += 18;
+  // Quadro do documento
+  const linhasQuadro = [`Nº ${data.numero}`, `Status: ${data.status}`, `Emitido em ${data.dataEmissao}`];
+  if (data.validade) linhasQuadro.push(`Válido até ${data.validade}`);
+  const boxHeight = 10 + linhasQuadro.length * 4;
+  doc.setDrawColor(BRAND);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(boxX, y, boxWidth, boxHeight, 1.5, 1.5, 'S');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(BRAND);
+  doc.text(data.tipoDocumento.toUpperCase(), boxX + boxWidth / 2, y + 6, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(INK);
+  linhasQuadro.forEach((linha, i) => doc.text(linha, boxX + boxWidth / 2, y + 11 + i * 4, { align: 'center' }));
+
+  y = Math.max(logoBottom, textoY - 2, y + boxHeight) + 5;
   doc.setDrawColor(LINE);
+  doc.setLineWidth(0.3);
   doc.line(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN, y);
   y += 6;
 
@@ -210,7 +267,7 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   y += 2;
   autoTable(doc, {
     startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 16 },
     head: [['Item', 'Descrição']],
     body: data.solicitacaoCliente
       ? data.solicitacaoCliente
@@ -233,7 +290,7 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   y += 2;
   autoTable(doc, {
     startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 16 },
     head: [['Item', 'Descrição do serviço', 'Qtd.', 'Valor unit.', 'Valor total']],
     body:
       data.servicos.length > 0
@@ -261,7 +318,7 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   y += 2;
   autoTable(doc, {
     startY: y,
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 16 },
     head: [['Item', 'Descrição', 'Qtd.', 'Valor unit.', 'Valor total']],
     body: data.pecas.length > 0 ? itemRows(data.pecas) : [['—', 'Nenhuma peça lançada', '', '', '']],
     styles: { fontSize: 8.5, textColor: INK, cellPadding: 2 },
@@ -319,5 +376,6 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
     doc.text(wrapped, PAGE_MARGIN, y);
   }
 
+  drawFooters(doc, data);
   return doc.output('blob');
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Bike } from 'lucide-react';
+import { Plus, Pencil, Trash2, Car } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -115,7 +115,7 @@ export function ClientesPage() {
                   </div>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
-                    <Bike size={13} /> Nenhum
+                    <Car size={13} /> Nenhum
                   </span>
                 ),
               hideBelow: 'md',

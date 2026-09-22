@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, FileText, Repeat, Wrench } from 'lucide-react';
 import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -24,6 +24,7 @@ import {
 } from '@/lib/formatters';
 import { IndicadoresGrid, MesSelector } from './IndicadoresConsultor';
 import { useMesReferencia } from './useMesReferencia';
+import { useConsultorRestritoAoProprio } from './ProdutividadeAbas';
 
 /**
  * Quem tem PRODUTIVIDADE_READ não necessariamente abre orçamento/OS (ex.: um
@@ -105,9 +106,17 @@ export function ConsultorDetalhePage() {
   const navigate = useNavigate();
   const [mes, setMes] = useMesReferencia();
   const [aba, setAba] = useState<'orcamentos' | 'servicos'>('orcamentos');
-  const { data, isLoading, isPlaceholderData, isError } = useProdutividadeConsultor(id, mes);
+  const proprioId = useConsultorRestritoAoProprio();
+  // Consultor abrindo o link de um colega: nem consulta, cai no próprio detalhe.
+  const idPermitido = proprioId ?? id;
+  const { data, isLoading, isPlaceholderData, isError } = useProdutividadeConsultor(idPermitido, mes);
 
-  const voltar = (
+  if (proprioId && id !== proprioId) {
+    return <Navigate to={`/produtividade/consultores/${proprioId}?mes=${mes}`} replace />;
+  }
+
+  // Sem ranking pra voltar quando a pessoa só vê os próprios números.
+  const voltar = proprioId ? null : (
     <Button variant="secondary" onClick={() => navigate(`/produtividade?mes=${mes}`)}>
       <ArrowLeft size={16} /> Voltar
     </Button>

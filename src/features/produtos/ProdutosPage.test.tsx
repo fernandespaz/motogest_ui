@@ -1,4 +1,4 @@
-import { render, screen, waitForElementToBeRemoved } from '@testing-library/react';
+import { render, screen, waitForElementToBeRemoved, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProdutos, useDeleteProduto, useProdutosAbaixoDoMinimo } from '@/hooks/useProdutos';
@@ -17,8 +17,26 @@ vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn()
 
 const produtos = {
   content: [
-    { id: 1, nome: 'Óleo Motor 10W30', codigo: 'OL-001', precoVenda: 32, quantidadeDisponivel: 40, quantidadeEstoque: 45, abaixoDoMinimo: false },
-    { id: 2, nome: 'Pastilha de Freio', codigo: 'PF-002', precoVenda: 89, quantidadeDisponivel: 1, quantidadeEstoque: 1, abaixoDoMinimo: true },
+    {
+      id: 1,
+      nome: 'Óleo Motor 10W30',
+      codigo: 'OL-001',
+      precoVenda: 32,
+      quantidadeDisponivel: 40,
+      quantidadeEstoque: 45,
+      abaixoDoMinimo: false,
+      categoria: 'OLEO_LUBRIFICANTE',
+    },
+    {
+      id: 2,
+      nome: 'Pastilha de Freio',
+      codigo: 'PF-002',
+      precoVenda: 89,
+      quantidadeDisponivel: 1,
+      quantidadeEstoque: 1,
+      abaixoDoMinimo: true,
+      categoria: 'FREIOS',
+    },
   ],
   pageNumber: 0,
   totalPages: 1,
@@ -35,12 +53,32 @@ describe('ProdutosPage', () => {
     vi.mocked(useDeleteProduto).mockReturnValue({ mutateAsync: deleteMutateAsync, isPending: false } as never);
   });
 
-  it('lists produtos with price, stock and status', () => {
+  it('lists produtos with price, stock, category and status', () => {
     render(<ProdutosPage />);
     expect(screen.getByText('Óleo Motor 10W30')).toBeInTheDocument();
     expect(screen.getByText('R$ 32,00')).toBeInTheDocument();
     expect(screen.getByText('Abaixo do mínimo')).toBeInTheDocument();
     expect(screen.getByText('OK')).toBeInTheDocument();
+    const table = within(screen.getByRole('table'));
+    expect(table.getByText('Óleo e lubrificante')).toBeInTheDocument();
+    expect(table.getByText('Freios')).toBeInTheDocument();
+  });
+
+  it('filters by categoria and resets to the first page', async () => {
+    render(<ProdutosPage />);
+    await userEvent.selectOptions(screen.getByDisplayValue('Todas as categorias'), 'FREIOS');
+
+    expect(useProdutos).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 0, categoria: 'FREIOS' }),
+    );
+    expect(useProdutosAbaixoDoMinimo).toHaveBeenLastCalledWith({ categoria: 'FREIOS' });
+  });
+
+  it('filters by busca (nome/código)', async () => {
+    render(<ProdutosPage />);
+    await userEvent.type(screen.getByPlaceholderText('Buscar por nome ou código...'), 'freio');
+
+    expect(useProdutos).toHaveBeenLastCalledWith(expect.objectContaining({ busca: 'freio' }));
   });
 
   it('shows the low-stock banner and toggles the filtered view', async () => {

@@ -477,7 +477,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os produtos cadastrados na oficina corrente */
+        /**
+         * Lista os produtos cadastrados na oficina corrente
+         * @description categoria e busca sao filtros opcionais e podem ser combinados; busca compara nome e codigo.
+         */
         get: operations["listar_4"];
         put?: never;
         /** Cadastra um novo produto no estoque */
@@ -855,23 +858,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/licenca/upgrade": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Realiza upgrade da licenca para um plano pago (stub — integracao de pagamento futura) */
-        post: operations["upgrade"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/financeiro/hora-tecnica/custos-fixos": {
         parameters: {
             query?: never;
@@ -1190,6 +1176,26 @@ export interface paths {
         patch: operations["atualizarStatus_1"];
         trace?: never;
     };
+    "/api/v1/usuarios/tecnicos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista os tecnicos (perfil de mecanico) ativos, para atribuir a uma OS
+         * @description Payload minimo (id, nome, perfilNome), sem e-mail. Nao exige USUARIO_READ.
+         */
+        get: operations["listarTecnicos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reservas-estoque": {
         parameters: {
             query?: never;
@@ -1332,6 +1338,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/produtividade/consultores/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Produtividade do proprio usuario autenticado no mes (visao do consultor)
+         * @description Mesmo formato do detalhe por consultor. Sem PRODUTIVIDADE_READ, horas tecnicas disponiveis e PH vem null — componentes da hora tecnica, que o consultor so' ve como preco final.
+         */
+        get: operations["minhaProdutividade"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfis/permissoes-disponiveis": {
         parameters: {
             query?: never;
@@ -1358,40 +1384,6 @@ export interface paths {
         };
         /** Chave publica do PagBank, para o frontend tokenizar cartao no navegador antes de chamar /pedido ou /assinatura */
         get: operations["obterChavePublica"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ordens-servico/{id}/pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Gera o PDF da Ordem de Servico */
-        get: operations["gerarPdf"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/orcamentos/{id}/pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Gera o PDF do orcamento */
-        get: operations["gerarPdf_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1688,6 +1680,8 @@ export interface components {
             precoVenda: number;
             estoqueMinimo: number;
             ativo?: boolean;
+            /** @enum {string} */
+            categoria?: "OLEO_LUBRIFICANTE" | "FILTROS" | "FREIOS" | "SUSPENSAO_DIRECAO" | "MOTOR" | "CORREIAS_TENSORES" | "TRANSMISSAO_EMBREAGEM" | "ARREFECIMENTO" | "IGNICAO_INJECAO" | "ELETRICA_BATERIA" | "AR_CONDICIONADO" | "ESCAPAMENTO" | "PNEUS_RODAS" | "CARROCERIA_ACESSORIOS" | "OUTROS";
         };
         ProdutoResponse: {
             /** Format: int64 */
@@ -1704,6 +1698,8 @@ export interface components {
             estoqueMinimo?: number;
             abaixoDoMinimo?: boolean;
             ativo?: boolean;
+            /** @enum {string} */
+            categoria?: "OLEO_LUBRIFICANTE" | "FILTROS" | "FREIOS" | "SUSPENSAO_DIRECAO" | "MOTOR" | "CORREIAS_TENSORES" | "TRANSMISSAO_EMBREAGEM" | "ARREFECIMENTO" | "IGNICAO_INJECAO" | "ELETRICA_BATERIA" | "AR_CONDICIONADO" | "ESCAPAMENTO" | "PNEUS_RODAS" | "CARROCERIA_ACESSORIOS" | "OUTROS";
             reservasAtivas?: components["schemas"]["ReservaEstoqueResponse"][];
         };
         ReservaEstoqueResponse: {
@@ -2258,28 +2254,6 @@ export interface components {
         PausarOrdemServicoRequest: {
             motivo: string;
         };
-        UpgradeLicencaRequest: {
-            plano: string;
-            provedorPagamento: string;
-        };
-        LicencaResponse: {
-            /** @enum {string} */
-            status?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
-            /** Format: date-time */
-            dataAtivacao?: string;
-            /** Format: date-time */
-            dataExpiracao?: string;
-            /** Format: date-time */
-            proximaCobranca?: string;
-            plano?: string;
-            expirada?: boolean;
-            /** Format: int64 */
-            diasRestantes?: number;
-            /** Format: int32 */
-            limiteUsuarios?: number;
-            /** Format: int64 */
-            usuariosAtivos?: number;
-        };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
             origemTipo: "ORCAMENTO" | "ORDEM_SERVICO";
@@ -2401,6 +2375,12 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        TecnicoResumoResponse: {
+            /** Format: int64 */
+            id?: number;
+            nome?: string;
+            perfilNome?: string;
         };
         PageResponseServicoResponse: {
             content?: components["schemas"]["ServicoResponse"][];
@@ -2626,6 +2606,24 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        LicencaResponse: {
+            /** @enum {string} */
+            status?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
+            /** Format: date-time */
+            dataAtivacao?: string;
+            /** Format: date-time */
+            dataExpiracao?: string;
+            /** Format: date-time */
+            proximaCobranca?: string;
+            plano?: string;
+            expirada?: boolean;
+            /** Format: int64 */
+            diasRestantes?: number;
+            /** Format: int32 */
+            limiteUsuarios?: number;
+            /** Format: int64 */
+            usuariosAtivos?: number;
         };
         AuditoriaParametroFinanceiroResponse: {
             /** Format: int64 */
@@ -3952,6 +3950,10 @@ export interface operations {
     listar_4: {
         parameters: {
             query: {
+                /** @description Filtra pela categoria exata do produto */
+                categoria?: "OLEO_LUBRIFICANTE" | "FILTROS" | "FREIOS" | "SUSPENSAO_DIRECAO" | "MOTOR" | "CORREIAS_TENSORES" | "TRANSMISSAO_EMBREAGEM" | "ARREFECIMENTO" | "IGNICAO_INJECAO" | "ELETRICA_BATERIA" | "AR_CONDICIONADO" | "ESCAPAMENTO" | "PNEUS_RODAS" | "CARROCERIA_ACESSORIOS" | "OUTROS";
+                /** @description Busca por nome ou codigo do produto */
+                busca?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -4680,30 +4682,6 @@ export interface operations {
             };
         };
     };
-    upgrade: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpgradeLicencaRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["LicencaResponse"];
-                };
-            };
-        };
-    };
     listarCustosFixos: {
         parameters: {
             query?: never;
@@ -5283,6 +5261,26 @@ export interface operations {
             };
         };
     };
+    listarTecnicos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TecnicoResumoResponse"][];
+                };
+            };
+        };
+    };
     listar_3: {
         parameters: {
             query: {
@@ -5351,7 +5349,10 @@ export interface operations {
     };
     listarAbaixoDoEstoqueMinimo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filtra pela categoria exata do produto */
+                categoria?: "OLEO_LUBRIFICANTE" | "FILTROS" | "FREIOS" | "SUSPENSAO_DIRECAO" | "MOTOR" | "CORREIAS_TENSORES" | "TRANSMISSAO_EMBREAGEM" | "ARREFECIMENTO" | "IGNICAO_INJECAO" | "ELETRICA_BATERIA" | "AR_CONDICIONADO" | "ESCAPAMENTO" | "PNEUS_RODAS" | "CARROCERIA_ACESSORIOS" | "OUTROS";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5477,6 +5478,32 @@ export interface operations {
             };
         };
     };
+    minhaProdutividade: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeConsultorDetalheResponse"];
+                };
+            };
+        };
+    };
     listarPermissoesDisponiveis: {
         parameters: {
             query?: never;
@@ -5513,50 +5540,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ChavePublicaResponse"];
-                };
-            };
-        };
-    };
-    gerarPdf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string[];
-                };
-            };
-        };
-    };
-    gerarPdf_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": string[];
                 };
             };
         };

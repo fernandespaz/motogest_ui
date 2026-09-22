@@ -28,6 +28,10 @@ import { PERMISSAO_GERENCIAR_HORA_TECNICA } from '@/hooks/useHoraTecnica';
 import { HoraTecnicaPage, HoraTecnicaSemAcesso } from '@/features/hora-tecnica/HoraTecnicaPage';
 import { ProdutividadeConsultoresPage } from '@/features/produtividade/ProdutividadeConsultoresPage';
 import { ConsultorDetalhePage } from '@/features/produtividade/ConsultorDetalhePage';
+import { ProdutividadeMecanicosPage } from '@/features/produtividade/ProdutividadeMecanicosPage';
+import { MecanicoDetalhePage } from '@/features/produtividade/MecanicoDetalhePage';
+import { MinhaProdutividadePage } from '@/features/produtividade/MinhaProdutividadePage';
+import { GuardaProdutividade } from '@/features/produtividade/ProdutividadeAbas';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -78,7 +82,9 @@ export const router = createBrowserRouter([
             path: '/produtividade',
             element: (
               <RequirePermission codigo="PRODUTIVIDADE_READ">
-                <ProdutividadeConsultoresPage />
+                <GuardaProdutividade permitirConsultor>
+                  <ProdutividadeConsultoresPage />
+                </GuardaProdutividade>
               </RequirePermission>
             ),
           },
@@ -86,10 +92,35 @@ export const router = createBrowserRouter([
             path: '/produtividade/consultores/:usuarioId',
             element: (
               <RequirePermission codigo="PRODUTIVIDADE_READ">
-                <ConsultorDetalhePage />
+                <GuardaProdutividade permitirConsultor>
+                  <ConsultorDetalhePage />
+                </GuardaProdutividade>
               </RequirePermission>
             ),
           },
+          {
+            path: '/produtividade/mecanicos',
+            element: (
+              <RequirePermission codigo="PRODUTIVIDADE_READ">
+                <GuardaProdutividade>
+                  <ProdutividadeMecanicosPage />
+                </GuardaProdutividade>
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/produtividade/mecanicos/:usuarioId',
+            element: (
+              <RequirePermission codigo="PRODUTIVIDADE_READ">
+                <GuardaProdutividade>
+                  <MecanicoDetalhePage />
+                </GuardaProdutividade>
+              </RequirePermission>
+            ),
+          },
+          // Sem RequirePermission na rota: a própria tela explica ao mecânico
+          // que o relatório depende de PRODUTIVIDADE_READ (ver o componente).
+          { path: '/minha-produtividade', element: <MinhaProdutividadePage /> },
           { path: '/usuarios', element: <UsuariosPage /> },
           { path: '/perfis', element: <PerfisPage /> },
           { path: '/descontos', element: <DescontosPage /> },

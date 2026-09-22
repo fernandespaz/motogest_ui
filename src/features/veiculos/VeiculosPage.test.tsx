@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
-import { useClientes } from '@/hooks/useClientes';
+import { useBuscaVeiculosPorPlaca, useClientes } from '@/hooks/useClientes';
+import { useAuthStore } from '@/store/authStore';
 import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import { toast } from '@/store/toastStore';
 import { VeiculosPage } from './VeiculosPage';
@@ -14,7 +15,7 @@ vi.mock('@/hooks/useVeiculos', () => ({
   useCreateVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
-vi.mock('@/hooks/useClientes', () => ({ useClientes: vi.fn() }));
+vi.mock('@/hooks/useClientes', () => ({ useClientes: vi.fn(), useBuscaVeiculosPorPlaca: vi.fn() }));
 vi.mock('@/hooks/useModelosVeiculo', () => ({
   useModelosVeiculo: vi.fn(() => ({ data: { content: [] } })),
   useCreateModeloVeiculo: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
@@ -28,7 +29,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 const veiculos = {
-  content: [{ id: 1, placa: 'MTG0001', marca: 'Honda', modelo: 'CG 160', clienteNome: 'Carlos Eduardo', kmAtual: 12000 }],
+  content: [{ id: 1, placa: 'MTG0001', marca: 'Volkswagen', modelo: 'Gol 1.6', clienteNome: 'Carlos Eduardo', kmAtual: 12000 }],
   pageNumber: 0,
   totalPages: 1,
   totalElements: 1,
@@ -49,13 +50,15 @@ describe('VeiculosPage', () => {
     mockNavigate.mockClear();
     vi.mocked(useVeiculos).mockReturnValue({ data: veiculos, isLoading: false } as never);
     vi.mocked(useClientes).mockReturnValue({ data: { totalElements: 5 }, isLoading: false } as never);
+    vi.mocked(useBuscaVeiculosPorPlaca).mockReturnValue({ data: [], isLoading: false } as never);
+    useAuthStore.setState({ permissoes: ['VEICULO_READ', 'CLIENTE_READ'] });
     deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useDeleteVeiculo).mockReturnValue({ mutateAsync: deleteMutateAsync, isPending: false } as never);
   });
 
   it('shows the catalog thumbnail for a row whose marca/modelo matches an entry', () => {
     vi.mocked(useModelosVeiculo).mockReturnValue({
-      data: { content: [{ id: 1, marca: 'Honda', modelo: 'CG 160', imagemBase64: 'aGVsbG8=' }] },
+      data: { content: [{ id: 1, marca: 'Volkswagen', modelo: 'Gol 1.6', imagemBase64: 'aGVsbG8=' }] },
     } as never);
     const { container } = renderPage();
     expect(container.querySelector('img')).toHaveAttribute('src', 'data:image/jpeg;base64,aGVsbG8=');
@@ -69,7 +72,7 @@ describe('VeiculosPage', () => {
   it('lists veículos with their placa, marca/modelo, and cliente', () => {
     renderPage();
     expect(screen.getByText('MTG0001')).toBeInTheDocument();
-    expect(screen.getByText('Honda CG 160')).toBeInTheDocument();
+    expect(screen.getByText('Volkswagen Gol 1.6')).toBeInTheDocument();
     expect(screen.getByText('Carlos Eduardo')).toBeInTheDocument();
   });
 
@@ -178,6 +181,34 @@ describe('VeiculosPage', () => {
 
     expect(screen.getByText('21 registros')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
-    expect(useVeiculos).toHaveBeenLastCalledWith({ page: 1, size: 20 });
+    expect(useVeiculos).toHaveBeenLastCalledWith({ page: 1, size: 20 }, { enabled: true });
+  });
+
+  it('searches by plate and shows only the matching vehicles, without pagination', async () => {
+    vi.mocked(useBuscaVeiculosPorPlaca).mockImplementation(
+      (termo: string) =>
+        ({
+          data: termo ? [{ id: 7, placa: 'ABC1D23', marca: 'Chevrolet', modelo: 'Onix', clienteNome: 'Fernanda' }] : [],
+          isLoading: false,
+        }) as never,
+    );
+    renderPage();
+    await userEvent.type(screen.getByLabelText('Buscar veículo por placa'), 'abc-1d');
+
+    expect(await screen.findByText('ABC1D23')).toBeInTheDocument();
+    expect(screen.queryByText('MTG0001')).not.toBeInTheDocument();
+    expect(useBuscaVeiculosPorPlaca).toHaveBeenLastCalledWith('abc-1d', { enabled: true });
+  });
+
+  it('explains an empty plate search instead of offering to create a vehicle', async () => {
+    renderPage();
+    await userEvent.type(screen.getByLabelText('Buscar veículo por placa'), 'ZZZ9');
+    expect(await screen.findByText('Nenhum veículo com essa placa')).toBeInTheDocument();
+  });
+
+  it('hides the plate search for profiles without CLIENTE_READ', () => {
+    useAuthStore.setState({ permissoes: ['VEICULO_READ'] });
+    renderPage();
+    expect(screen.queryByLabelText('Buscar veículo por placa')).not.toBeInTheDocument();
   });
 });

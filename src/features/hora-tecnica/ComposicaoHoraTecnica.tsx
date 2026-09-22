@@ -70,7 +70,7 @@ export function ComposicaoHoraTecnica({ horaTecnica }: { horaTecnica: HoraTecnic
         index={0}
         icon={Coins}
         sigla="CF"
-        titulo="Custos fixos"
+        titulo="Despesas fixas"
         valor={formatCurrency(c.custosFixos)}
         explicacao={`${c.itensCustoFixo?.length ?? 0} item(ns) por mês`}
       />
@@ -90,7 +90,7 @@ export function ComposicaoHoraTecnica({ horaTecnica }: { horaTecnica: HoraTecnic
         sigla="CH"
         titulo="Custo por hora"
         valor={c.custoPorHora == null ? '—' : formatCurrency(c.custoPorHora)}
-        explicacao="Custos fixos ÷ horas produtivas"
+        explicacao="Despesas fixas ÷ horas produtivas"
       />
       <Seta />
       <Etapa
@@ -117,7 +117,7 @@ export function HoraTecnicaNaoConfigurada() {
         <div>
           <p className="font-medium text-ink">Hora técnica ainda não configurada</p>
           <p className="mt-0.5 text-sm text-ink-muted">
-            Cadastre os custos fixos mensais e preencha os parâmetros abaixo. Assim que os dois existirem, o preço da
+            Cadastre as despesas fixas mensais (em Financeiro) e preencha os parâmetros abaixo. Assim que os dois existirem, o preço da
             hora técnica é calculado e passa a aparecer para os consultores nos orçamentos e OS.
           </p>
         </div>

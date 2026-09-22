@@ -1,11 +1,18 @@
 import { renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { wrapWithQueryClient } from '@/test/queryClientWrapper';
 import { produtividadeApi } from '@/api/endpoints/produtividade';
-import { useProdutividadeConsultor, useProdutividadeConsultores } from './useProdutividade';
+import {
+  INTERVALO_TEMPO_REAL_MS,
+  useProdutividadeConsultor,
+  useProdutividadeConsultores,
+  useProdutividadeMecanico,
+  useProdutividadeMecanicos,
+} from './useProdutividade';
+import { mesReferenciaAtual } from '@/lib/formatters';
 
 vi.mock('@/api/endpoints/produtividade', () => ({
-  produtividadeApi: { consultores: vi.fn(), consultor: vi.fn() },
+  produtividadeApi: { consultores: vi.fn(), consultor: vi.fn(), mecanicos: vi.fn(), mecanico: vi.fn() },
 }));
 
 describe('useProdutividadeConsultores', () => {
@@ -75,5 +82,41 @@ describe('useProdutividadeConsultor', () => {
 
     expect(result.current.isPlaceholderData).toBe(true);
     expect(result.current.data?.mes).toBe('2026-09');
+  });
+});
+
+describe('useProdutividadeMecanicos / useProdutividadeMecanico', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('polls the current month so the admin sees it live', async () => {
+    vi.mocked(produtividadeApi.mecanicos).mockResolvedValue({ mes: mesReferenciaAtual() });
+    renderHook(() => useProdutividadeMecanicos(mesReferenciaAtual()), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(produtividadeApi.mecanicos).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_TEMPO_REAL_MS + 10);
+
+    await waitFor(() => expect(produtividadeApi.mecanicos).toHaveBeenCalledTimes(2));
+  });
+
+  it('does not poll a closed month', async () => {
+    vi.mocked(produtividadeApi.mecanicos).mockResolvedValue({ mes: '2020-01' });
+    renderHook(() => useProdutividadeMecanicos('2020-01'), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(produtividadeApi.mecanicos).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_TEMPO_REAL_MS * 2);
+
+    expect(produtividadeApi.mecanicos).toHaveBeenCalledTimes(1);
+  });
+
+  it('mechanic detail stays idle when disabled (profile without PRODUTIVIDADE_READ)', () => {
+    const { result } = renderHook(() => useProdutividadeMecanico(3, '2026-09', { enabled: false }), {
+      wrapper: wrapWithQueryClient(),
+    });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(produtividadeApi.mecanico).not.toHaveBeenCalled();
   });
 });

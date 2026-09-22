@@ -93,6 +93,6 @@ describe('ParametrosHoraTecnicaForm', () => {
   it('suggests starting values and hints at registering fixed costs when never configured', () => {
     render(<ParametrosHoraTecnicaForm horaTecnica={{ configurado: false }} />);
     expect(screen.getByLabelText(/Horas por dia/)).toHaveValue(8);
-    expect(screen.getByText(/Cadastre ao menos um custo fixo/)).toBeInTheDocument();
+    expect(screen.getByText(/Cadastre ao menos uma despesa fixa/)).toBeInTheDocument();
   });
 });

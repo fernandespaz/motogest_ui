@@ -45,6 +45,7 @@ export type PausarOrdemServicoRequest = Schemas['PausarOrdemServicoRequest'];
 
 export type ProdutoRequest = Schemas['ProdutoRequest'];
 export type ProdutoResponse = Schemas['ProdutoResponse'];
+export type ProdutoCategoria = NonNullable<ProdutoRequest['categoria']>;
 
 export type ServicoRequest = Schemas['ServicoRequest'];
 export type ServicoResponse = Schemas['ServicoResponse'];
@@ -127,6 +128,13 @@ export type ProdutividadeConsultoresResponse = Schemas['ProdutividadeConsultores
 export type ProdutividadeConsultorDetalheResponse = Schemas['ProdutividadeConsultorDetalheResponse'];
 export type OrcamentoEmitido = Schemas['OrcamentoEmitido'];
 export type ServicoFechado = Schemas['ServicoFechado'];
+
+export type IndicadoresProdutividadeResponse = Schemas['IndicadoresProdutividadeResponse'];
+export type ProdutividadeMecanicoResponse = Schemas['ProdutividadeMecanicoResponse'];
+export type ProdutividadeOficinaResponse = Schemas['ProdutividadeOficinaResponse'];
+export type ProdutividadeMecanicoDetalheResponse = Schemas['ProdutividadeMecanicoDetalheResponse'];
+export type OrdemServicoProdutividadeResponse = Schemas['OrdemServicoProdutividadeResponse'];
+export type ProdutividadeDiariaResponse = Schemas['ProdutividadeDiariaResponse'];
 
 export interface PageResponse<T> {
   content: T[];

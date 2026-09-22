@@ -3,6 +3,7 @@ import {
   formatCardExpiry,
   formatCardNumber,
   formatCep,
+  formatMinutosEmHorasDecimais,
   formatCnpj,
   formatCpf,
   formatCurrency,
@@ -274,5 +275,13 @@ describe('formatCardExpiry', () => {
 
   it('strips non-digit characters and caps at 4 digits', () => {
     expect(formatCardExpiry('12/2028')).toBe('12/20');
+  });
+});
+
+describe('formatMinutosEmHorasDecimais', () => {
+  it('converts minutes to decimal hours, keeping "—" for missing data', () => {
+    expect(formatMinutosEmHorasDecimais(150)).toBe('2,5 h');
+    expect(formatMinutosEmHorasDecimais(0)).toBe('0 h');
+    expect(formatMinutosEmHorasDecimais(null)).toBe('—');
   });
 });

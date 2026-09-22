@@ -7,26 +7,38 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { useProdutos, useDeleteProduto, useProdutosAbaixoDoMinimo } from '@/hooks/useProdutos';
-import type { ProdutoResponse } from '@/api/types';
+import type { ProdutoCategoria, ProdutoResponse } from '@/api/types';
 import { formatCurrency } from '@/lib/formatters';
+import { PRODUTO_CATEGORIAS, PRODUTO_CATEGORIA_LABELS, produtoCategoriaLabel } from '@/lib/produtoCategoria';
 import { ProdutoFormModal } from './ProdutoFormModal';
 import { MovimentacaoModal } from './MovimentacaoModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const selectCompacto =
+  'h-8 shrink-0 rounded-lg border border-border bg-surface-alt px-2.5 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand-400';
+
 export function ProdutosPage() {
   const [page, setPage] = useState(0);
+  const [busca, setBusca] = useState('');
+  const [categoria, setCategoria] = useState<ProdutoCategoria | ''>('');
   const [modalProduto, setModalProduto] = useState<ProdutoResponse | null | undefined>(undefined);
   const [movProduto, setMovProduto] = useState<ProdutoResponse | null>(null);
   const [deleting, setDeleting] = useState<ProdutoResponse | null>(null);
   const [somenteAbaixoDoMinimo, setSomenteAbaixoDoMinimo] = useState(false);
 
-  const { data, isLoading } = useProdutos({ page, size: 20 });
-  const { data: abaixoDoMinimo } = useProdutosAbaixoDoMinimo();
+  const { data, isLoading } = useProdutos({ page, size: 20, busca: busca || undefined, categoria: categoria || undefined });
+  const { data: abaixoDoMinimo } = useProdutosAbaixoDoMinimo({ categoria: categoria || undefined });
   const deleteMutation = useDeleteProduto();
 
   const rows = somenteAbaixoDoMinimo ? abaixoDoMinimo ?? [] : data?.content ?? [];
+
+  function selecionarCategoria(novaCategoria: ProdutoCategoria | '') {
+    setCategoria(novaCategoria);
+    setPage(0);
+  }
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -50,6 +62,31 @@ export function ProdutosPage() {
           </Button>
         }
       />
+
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <SearchInput
+          value={busca}
+          onChange={(value) => {
+            setBusca(value);
+            setPage(0);
+          }}
+          placeholder="Buscar por nome ou código..."
+          className="w-full max-w-xs"
+        />
+
+        <select
+          value={categoria}
+          onChange={(e) => selecionarCategoria(e.target.value as ProdutoCategoria | '')}
+          className={selectCompacto}
+        >
+          <option value="">Todas as categorias</option>
+          {PRODUTO_CATEGORIAS.map((c) => (
+            <option key={c} value={c}>
+              {PRODUTO_CATEGORIA_LABELS[c]}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {!!abaixoDoMinimo?.length && (
         <button
@@ -81,6 +118,11 @@ export function ProdutosPage() {
                   <p className="text-xs text-ink-muted">{row.codigo}</p>
                 </div>
               ),
+            },
+            {
+              header: 'Categoria',
+              render: (row) => <Badge tone="neutral">{produtoCategoriaLabel(row.categoria)}</Badge>,
+              hideBelow: 'md',
             },
             { header: 'Preço venda', render: (row) => formatCurrency(row.precoVenda) },
             {

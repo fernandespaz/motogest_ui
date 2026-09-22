@@ -142,7 +142,7 @@ export function ParametrosHoraTecnicaForm({ horaTecnica }: { horaTecnica: HoraTe
                   {formatHorasDecimais(previa.hp)} produtivas
                 </span>
               ) : (
-                <span>Cadastre ao menos um custo fixo para ver a prévia do preço.</span>
+                <span>Cadastre ao menos uma despesa fixa (em Financeiro) para ver a prévia do preço.</span>
               )}
             </div>
             <Button type="submit" loading={mutation.isPending} disabled={!isDirty && composicao?.numeroMecanicos != null}>

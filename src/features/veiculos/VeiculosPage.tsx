@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, UserPlus, Bike } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserPlus, Car, SearchX } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,10 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
-import { useClientes } from '@/hooks/useClientes';
+import { useBuscaVeiculosPorPlaca, useClientes } from '@/hooks/useClientes';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAuthStore } from '@/store/authStore';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import type { VeiculoResponse } from '@/api/types';
 import { VeiculoFormModal } from './VeiculoFormModal';
@@ -31,7 +34,17 @@ export function VeiculosPage() {
   const [modalVeiculo, setModalVeiculo] = useState<VeiculoResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<VeiculoResponse | null>(null);
 
-  const { data, isLoading } = useVeiculos({ page, size: 20 });
+  const [busca, setBusca] = useState('');
+  const buscaDebounced = useDebouncedValue(busca.trim(), 300);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  // A busca por placa passa por GET /clientes (ver useBuscaVeiculosPorPlaca),
+  // então só aparece pra quem pode ler clientes.
+  const podeBuscar = hasPermission('CLIENTE_READ');
+  const buscando = podeBuscar && buscaDebounced.length > 0;
+
+  const { data, isLoading } = useVeiculos({ page, size: 20 }, { enabled: !buscando });
+  const resultadoBusca = useBuscaVeiculosPorPlaca(buscaDebounced, { enabled: buscando });
+  const linhas = buscando ? resultadoBusca.data : (data?.content ?? []);
   const { data: clientesCheck, isLoading: loadingClientesCheck } = useClientes({ size: 1 });
   // Busca o catálogo inteiro uma vez em vez de um request por linha — a
   // miniatura é só um casamento por marca+modelo em memória, sem custo extra
@@ -79,20 +92,38 @@ export function VeiculosPage() {
         }
       />
 
+      {podeBuscar && (
+        <SearchInput
+          className="mb-4 max-w-sm"
+          value={busca}
+          onChange={setBusca}
+          placeholder="Buscar por placa..."
+          aria-label="Buscar veículo por placa"
+        />
+      )}
+
       <Card>
         <DataTable<VeiculoResponse>
-          loading={isLoading}
-          rows={data?.content ?? []}
+          loading={buscando ? resultadoBusca.isLoading : isLoading}
+          rows={linhas}
           rowKey={(row) => row.id!}
-          emptyIcon={semClientes ? UserPlus : Bike}
-          emptyTitle={semClientes ? 'Cadastre um cliente primeiro' : 'Nenhum veículo cadastrado'}
+          emptyIcon={buscando ? SearchX : semClientes ? UserPlus : Car}
+          emptyTitle={
+            buscando
+              ? 'Nenhum veículo com essa placa'
+              : semClientes
+                ? 'Cadastre um cliente primeiro'
+                : 'Nenhum veículo cadastrado'
+          }
           emptyDescription={
-            semClientes
+            buscando
+              ? 'Confira a placa digitada — a busca aceita trechos, com ou sem hífen.'
+              : semClientes
               ? 'Todo veículo precisa estar vinculado a um cliente — comece por lá.'
               : 'Cadastre o primeiro veículo vinculado a um cliente.'
           }
           emptyAction={
-            semClientes ? (
+            buscando ? undefined : semClientes ? (
               <Button size="sm" onClick={() => navigate('/clientes')}>
                 <UserPlus size={16} /> Cadastrar cliente
               </Button>
@@ -149,7 +180,7 @@ export function VeiculosPage() {
           ]}
           onRowClick={(row) => setModalVeiculo(row)}
         />
-        {data && (
+        {!buscando && data && (
           <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
         )}
       </Card>

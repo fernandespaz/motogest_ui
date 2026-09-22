@@ -23,7 +23,15 @@ describe('produtosApi', () => {
 
     const result = await produtosApi.abaixoDoMinimo();
 
-    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtos/abaixo-do-minimo');
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtos/abaixo-do-minimo', { params: undefined });
     expect(result).toEqual([{ id: 1, nome: 'Óleo Motor' }]);
+  });
+
+  it('abaixoDoMinimo() forwards a categoria filter', async () => {
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] });
+
+    await produtosApi.abaixoDoMinimo({ categoria: 'FREIOS' });
+
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/produtos/abaixo-do-minimo', { params: { categoria: 'FREIOS' } });
   });
 });

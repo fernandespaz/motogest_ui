@@ -66,6 +66,33 @@ describe('ProdutoFormModal', () => {
     );
     expect(toast.success).toHaveBeenCalledWith('Produto cadastrado.');
     expect(onClose).toHaveBeenCalled();
+    // Sem categoria selecionada, o "" do select não pode ir como valor do enum.
+    expect(createMutateAsync.mock.calls[0][0].categoria).toBeUndefined();
+  });
+
+  it('sends the selected categoria', async () => {
+    render(<ProdutoFormModal open onClose={vi.fn()} produto={null} />);
+
+    await userEvent.type(screen.getByLabelText(/^Código/), 'PN-010');
+    await userEvent.type(screen.getByLabelText(/^Nome/), 'Filtro de Óleo');
+    await userEvent.type(screen.getByLabelText(/Preço de venda/), '25');
+    await userEvent.type(screen.getByLabelText(/Estoque mínimo/), '5');
+    await userEvent.selectOptions(screen.getByLabelText('Categoria'), 'FILTROS');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+    expect(createMutateAsync).toHaveBeenCalledWith(expect.objectContaining({ categoria: 'FILTROS' }));
+  });
+
+  it('prefills the categoria select when editing', () => {
+    render(
+      <ProdutoFormModal
+        open
+        onClose={vi.fn()}
+        produto={{ id: 1, codigo: 'OL-001', nome: 'Óleo Motor', precoVenda: 32, estoqueMinimo: 10, categoria: 'FREIOS' } as never}
+      />,
+    );
+    expect(screen.getByLabelText('Categoria')).toHaveValue('FREIOS');
   });
 
   it('updates an existing produto by id', async () => {

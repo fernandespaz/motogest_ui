@@ -1,4 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import { render as rtlRender, screen } from '@testing-library/react';
+import { useAuthStore } from '@/store/authStore';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useHoraTecnica } from '@/hooks/useHoraTecnica';
@@ -6,8 +9,10 @@ import { HoraTecnicaPage } from './HoraTecnicaPage';
 
 vi.mock('@/hooks/useHoraTecnica', () => ({ useHoraTecnica: vi.fn() }));
 vi.mock('./ParametrosHoraTecnicaForm', () => ({ ParametrosHoraTecnicaForm: () => <p>form-parametros</p> }));
-vi.mock('./CustosFixosCard', () => ({ CustosFixosCard: () => <p>custos-fixos</p> }));
 vi.mock('./AuditoriaHoraTecnicaCard', () => ({ AuditoriaHoraTecnicaCard: () => <p>historico</p> }));
+
+// O atalho pras despesas fixas é um <Link> — precisa de um router em volta.
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe('HoraTecnicaPage', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -45,5 +50,16 @@ describe('HoraTecnicaPage', () => {
     vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: false }, isLoading: false } as never);
     render(<HoraTecnicaPage />);
     expect(screen.getByText('Hora técnica ainda não configurada')).toBeInTheDocument();
+  });
+
+  it('points to Financeiro for the fixed expenses instead of editing them here', () => {
+    useAuthStore.setState({ permissoes: ['HORA_TECNICA_GERENCIAR', 'FINANCEIRO_READ'] });
+    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: false }, isLoading: false } as never);
+    render(<HoraTecnicaPage />);
+    expect(screen.queryByRole('button', { name: 'Custos fixos' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Gerenciar despesas fixas' })).toHaveAttribute(
+      'href',
+      '/financeiro?aba=despesas-fixas',
+    );
   });
 });

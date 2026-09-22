@@ -16,23 +16,29 @@ describe('filterNavByPermission', () => {
     expect(visible.some((i) => i.to === '/ordens-servico')).toBe(true);
   });
 
-  it('a full-access non-Mecânico profile sees every item except Minhas OS', () => {
+  it('a full-access non-Mecânico profile sees every item except the Mecânico-only screens', () => {
     const todasPermissoes = navItems.flatMap((i) => i.permissions ?? []);
     const visible = filterNavByPermission(permFrom(todasPermissoes), 'Administrador');
     expect(visible.map((i) => i.to)).not.toContain('/minhas-os');
-    expect(visible.length).toBe(navItems.length - 1);
+    expect(visible.map((i) => i.to)).not.toContain('/minha-produtividade');
+    expect(visible.length).toBe(navItems.length - 2);
   });
 
-  it('restricts a Mecânico profile to only Ordens de Serviço and Minhas OS, regardless of other granted permissions', () => {
+  it('restricts a Mecânico profile to Ordens de Serviço, Minhas OS and Minha produtividade, regardless of other granted permissions', () => {
     const todasPermissoes = navItems.flatMap((i) => i.permissions ?? []);
     const visible = filterNavByPermission(permFrom(todasPermissoes), 'Mecânico');
+    expect(visible.map((i) => i.to).sort()).toEqual(['/minha-produtividade', '/minhas-os', '/ordens-servico']);
+  });
+
+  it('hides Minha produtividade from a Mecânico without PRODUTIVIDADE_READ', () => {
+    const visible = filterNavByPermission(permFrom(['ORDEM_SERVICO_READ', 'ORDEM_SERVICO_WRITE']), 'Mecânico');
     expect(visible.map((i) => i.to).sort()).toEqual(['/minhas-os', '/ordens-servico']);
   });
 
   it('matches the Mecânico profile name case/accent-insensitively, same as isMecanico', () => {
     const todasPermissoes = navItems.flatMap((i) => i.permissions ?? []);
     const visible = filterNavByPermission(permFrom(todasPermissoes), 'MECANICO SENIOR');
-    expect(visible.map((i) => i.to).sort()).toEqual(['/minhas-os', '/ordens-servico']);
+    expect(visible.map((i) => i.to).sort()).toEqual(['/minha-produtividade', '/minhas-os', '/ordens-servico']);
   });
 });
 

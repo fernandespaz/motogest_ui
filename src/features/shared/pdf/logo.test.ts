@@ -128,6 +128,8 @@ describe('resolverOficinaParaPdf', () => {
       nomeFantasia: 'Oficina do Zé',
       razaoSocial: 'Zé Motos LTDA',
       cnpj: '11222333000181',
+      endereco: '',
+      contato: '',
       logo: { dataUrl: 'data:image/png;base64,live', largura: 100, altura: 50 },
     });
     expect(getNomeFixadoParaLogin).not.toHaveBeenCalled();
@@ -138,6 +140,7 @@ describe('resolverOficinaParaPdf', () => {
   // não só a logo.
   it('falls back to the browser-fixed nome/logo when GET /oficinas/atual is forbidden, without exposing CNPJ/razão social', async () => {
     vi.mocked(oficinasApi.atual).mockRejectedValueOnce(new Error('403'));
+    vi.mocked(oficinasApi.buscarLogoBlob).mockRejectedValueOnce(new Error('404'));
     vi.mocked(getNomeFixadoParaLogin).mockReturnValueOnce('Oficina do Zé');
     vi.mocked(getLogoFixadaParaLogin).mockReturnValueOnce('data:image/png;base64,fixada');
     stubImageBitmap(100, 50);
@@ -153,17 +156,61 @@ describe('resolverOficinaParaPdf', () => {
       nomeFantasia: 'Oficina do Zé',
       razaoSocial: '',
       cnpj: '',
+      endereco: '',
+      contato: '',
       logo: { dataUrl: 'data:image/png;base64,fixada-redimensionada', largura: 100, altura: 50 },
     });
   });
 
   it('falls back to "MotoGest" and no logo when there is neither a live oficina nor anything fixed in this browser', async () => {
     vi.mocked(oficinasApi.atual).mockRejectedValueOnce(new Error('403'));
+    vi.mocked(oficinasApi.buscarLogoBlob).mockRejectedValueOnce(new Error('404'));
     vi.mocked(getNomeFixadoParaLogin).mockReturnValueOnce(null);
     vi.mocked(getLogoFixadaParaLogin).mockReturnValueOnce(null);
 
     const result = await resolverOficinaParaPdf();
 
-    expect(result).toEqual({ nomeFantasia: 'MotoGest', razaoSocial: '', cnpj: '', logo: null });
+    expect(result).toEqual({
+      nomeFantasia: 'MotoGest',
+      razaoSocial: '',
+      cnpj: '',
+      endereco: '',
+      contato: '',
+      logo: null,
+    });
+  });
+
+  it('prints the full address and contact line in the letterhead for who can read them', async () => {
+    vi.mocked(oficinasApi.atual).mockResolvedValueOnce(
+      oficina({
+        nomeFantasia: 'Oficina do Zé',
+        logradouro: 'Rua das Flores',
+        numero: '100',
+        bairro: 'Centro',
+        cidade: 'São Paulo',
+        uf: 'SP',
+        cep: '01000000',
+        telefone: '11999990000',
+        email: 'contato@ze.com',
+      }),
+    );
+
+    const result = await resolverOficinaParaPdf();
+
+    expect(result.endereco).toBe('Rua das Flores, 100 · Centro · São Paulo/SP · CEP 01000-000');
+    expect(result.contato).toBe('(11) 99999-0000 · contato@ze.com');
+  });
+
+  it('still gets the logo from the permission-free logo endpoint when GET /oficinas/atual fails', async () => {
+    vi.mocked(oficinasApi.atual).mockRejectedValueOnce(new Error('403'));
+    vi.mocked(oficinasApi.buscarLogoBlob).mockResolvedValueOnce(new Blob(['fake']));
+    vi.mocked(getNomeFixadoParaLogin).mockReturnValueOnce('Oficina do Zé');
+    stubImageBitmap(100, 50);
+    stubCanvas('data:image/png;base64,endpoint');
+
+    const result = await resolverOficinaParaPdf();
+
+    expect(result.logo).toEqual({ dataUrl: 'data:image/png;base64,endpoint', largura: 100, altura: 50 });
+    expect(getLogoFixadaParaLogin).not.toHaveBeenCalled();
   });
 });
