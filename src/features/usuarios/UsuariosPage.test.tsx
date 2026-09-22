@@ -35,7 +35,7 @@ describe('UsuariosPage', () => {
   let deleteMutateAsync: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    useAuthStore.setState({ usuarioId: 1 });
+    useAuthStore.setState({ usuarioId: 1, permissoes: ['USUARIO_READ', 'USUARIO_WRITE'] });
     vi.mocked(useUsuarios).mockReturnValue({ data: usuarios, isLoading: false } as never);
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { plano: 'PRO', limiteUsuarios: null, usuariosAtivos: 2 } } as never);
     deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
@@ -56,6 +56,18 @@ describe('UsuariosPage', () => {
 
     expect(ownRow.querySelectorAll('button')).toHaveLength(1);
     expect(otherRow.querySelectorAll('button')).toHaveLength(2);
+  });
+
+  it('is read-only with USUARIO_READ alone — no create, edit or delete (backend requires USUARIO_WRITE)', async () => {
+    useAuthStore.setState({ permissoes: ['USUARIO_READ'] });
+    renderPage();
+
+    expect(screen.getByText('Fernanda Souza')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Novo usuário/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Fernanda Souza').closest('tr')!.querySelectorAll('button')).toHaveLength(0);
+
+    await userEvent.click(screen.getByText('Fernanda Souza'));
+    expect(screen.queryByText('Editar usuário')).not.toBeInTheDocument();
   });
 
   it('opens the create modal from "Novo usuário"', async () => {

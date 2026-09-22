@@ -9,12 +9,14 @@ import { useAuthStore } from '@/store/authStore';
 import { useServicos } from '@/hooks/useServicos';
 import { useProdutos } from '@/hooks/useProdutos';
 import { useDescontosPorOrigem } from '@/hooks/useDescontos';
+import { useHoraTecnica } from '@/hooks/useHoraTecnica';
 import { toast } from '@/store/toastStore';
 import { ItemsEditor, type ItemFormValue } from './ItemsEditor';
 
 vi.mock('@/hooks/useServicos', () => ({ useServicos: vi.fn() }));
 vi.mock('@/hooks/useProdutos', () => ({ useProdutos: vi.fn() }));
 vi.mock('@/hooks/useDescontos', () => ({ useDescontosPorOrigem: vi.fn() }));
+vi.mock('@/hooks/useHoraTecnica', () => ({ useHoraTecnica: vi.fn() }));
 vi.mock('@/store/toastStore', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('./SolicitarDescontoModal', () => ({
   SolicitarDescontoModal: (props: { itemDescricao: string; onClose: () => void }) => (
@@ -34,7 +36,7 @@ vi.mock('./ReservarEstoqueModal', () => ({
 }));
 
 const servicos = {
-  content: [{ id: 1, nome: 'Troca de Óleo', preco: 120 }],
+  content: [{ id: 1, nome: 'Troca de Óleo', preco: 120, duracaoMinutos: 90 }],
 };
 const produtos = {
   content: [
@@ -74,6 +76,8 @@ describe('ItemsEditor', () => {
     vi.mocked(useServicos).mockReturnValue({ data: servicos } as never);
     vi.mocked(useProdutos).mockReturnValue({ data: produtos } as never);
     vi.mocked(useDescontosPorOrigem).mockReturnValue({ data: { content: [] } } as never);
+    // Sem hora técnica configurada por padrão — preço de catálogo, comportamento anterior.
+    vi.mocked(useHoraTecnica).mockReturnValue({ data: undefined } as never);
   });
 
   it('starts on the Serviços tab, and picking from the search adds a compact line', async () => {

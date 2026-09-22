@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Building2,
   Percent,
+  TrendingUp,
+  Calculator,
 } from 'lucide-react';
 import { isMecanico } from '@/lib/perfil';
 
@@ -48,6 +50,8 @@ export const navItems: NavItem[] = [
   { label: 'Produtos e Estoque', to: '/produtos', icon: Package, group: 'gestao', permissions: ['ESTOQUE_READ'] },
   { label: 'Catálogo de Serviços', to: '/servicos', icon: Wrench, group: 'gestao', permissions: ['SERVICO_READ'] },
   { label: 'Financeiro', to: '/financeiro', icon: Wallet, group: 'gestao', permissions: ['FINANCEIRO_READ'] },
+  { label: 'Hora Técnica', to: '/hora-tecnica', icon: Calculator, group: 'gestao', permissions: ['HORA_TECNICA_GERENCIAR'] },
+  { label: 'Produtividade', to: '/produtividade', icon: TrendingUp, group: 'gestao', permissions: ['PRODUTIVIDADE_READ'] },
   {
     label: 'Solicitações de Desconto',
     to: '/descontos',

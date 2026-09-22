@@ -28,7 +28,14 @@ import {
   useTimerPauseOS,
   useTimerResumeOS,
 } from '@/hooks/useOrdensServico';
-import { ItemsEditor } from '@/features/shared/ItemsEditor';
+import {
+  ItemsEditor,
+  MENSAGEM_SERVICO_SEM_TEMPO,
+  erroListaItens,
+  itemParaPayload,
+  temServicoPorHTSemTempo,
+} from '@/features/shared/ItemsEditor';
+import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ChecklistTab } from './ChecklistTab';
 import { FotosTab } from './FotosTab';
 import type { ClienteResponse, OrdemServicoStatus } from '@/api/types';
@@ -49,6 +56,7 @@ const itemSchema = z.object({
   quantidade: z.coerce.number().int('Quantidade deve ser um número inteiro').positive('Quantidade inválida'),
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
+  precificadoPorHT: z.boolean().optional(),
 });
 
 const schema = z.object({
@@ -58,7 +66,10 @@ const schema = z.object({
   dataPrevisao: z.string().optional(),
   kmEntrada: z.coerce.number().optional(),
   observacoes: z.string().optional(),
-  itens: z.array(itemSchema).min(1, 'Adicione ao menos um item'),
+  itens: z
+    .array(itemSchema)
+    .min(1, 'Adicione ao menos um item')
+    .refine((itens) => !temServicoPorHTSemTempo(itens), MENSAGEM_SERVICO_SEM_TEMPO),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -237,9 +248,9 @@ export function OrdemServicoFormPage() {
       const payload = {
         ...values,
         dataPrevisao: values.dataPrevisao ? new Date(values.dataPrevisao).toISOString() : undefined,
-        // O "id" do item só existe no form pra ligar as ações de desconto/reserva
-        // ao item certo — ItemRequest não tem esse campo, então ele não vai no payload.
-        itens: values.itens.map(({ id: _id, ...item }) => item),
+        // "id" e "precificadoPorHT" são só do form; serviço cobrado pela hora
+        // técnica vai sem valorUnitario pro backend calcular (ver itemParaPayload).
+        itens: values.itens.map(itemParaPayload),
       };
       if (isEditing && osId) {
         const atualizada = await updateMutation.mutateAsync({ id: osId, payload });
@@ -566,9 +577,12 @@ export function OrdemServicoFormPage() {
                       limitarQuantidadeAoEstoque
                       origem={osId ? { tipo: 'ORDEM_SERVICO', id: osId } : undefined}
                     />
-                    {errors.itens && !Array.isArray(errors.itens) && (
-                      <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
+                    {erroListaItens(errors.itens) && (
+                      <p className="mt-1 text-xs font-medium text-danger">{erroListaItens(errors.itens)}</p>
                     )}
+                    <div className="mt-3">
+                      <HoraTecnicaReferencia name="itens" />
+                    </div>
                   </div>
 
                   <Textarea label="Observações" disabled={readOnly} {...register('observacoes')} />

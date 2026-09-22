@@ -24,6 +24,10 @@ export function UsuariosPage() {
   const [modalUsuario, setModalUsuario] = useState<UsuarioResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<UsuarioResponse | null>(null);
   const usuarioIdAtual = useAuthStore((s) => s.usuarioId);
+  // USUARIO_READ abre a tela; criar/editar/remover é USUARIO_WRITE (mesma
+  // divisão do backend). Sem ela a lista fica só de consulta — nenhuma ação
+  // que o backend recusaria com 403 aparece.
+  const podeEditar = useAuthStore((s) => s.hasPermission)('USUARIO_WRITE');
 
   const { data, isLoading } = useUsuarios();
   const { data: licenca } = useLicencaAtual();
@@ -63,17 +67,19 @@ export function UsuariosPage() {
           </>
         }
         action={
-          <Button
-            onClick={() => setModalUsuario(null)}
-            disabled={limiteAtingido}
-            title={limiteAtingido ? 'Limite de usuários do seu plano atingido' : undefined}
-          >
-            <Plus size={18} /> Novo usuário
-          </Button>
+          podeEditar && (
+            <Button
+              onClick={() => setModalUsuario(null)}
+              disabled={limiteAtingido}
+              title={limiteAtingido ? 'Limite de usuários do seu plano atingido' : undefined}
+            >
+              <Plus size={18} /> Novo usuário
+            </Button>
+          )
         }
       />
 
-      {limiteAtingido && (
+      {podeEditar && limiteAtingido && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white">
           <AlertTriangle size={16} />
           Limite de {limiteUsuarios} usuários ativos do plano {planoLabel(licenca?.plano) ?? 'atual'} atingido.
@@ -100,21 +106,22 @@ export function UsuariosPage() {
             },
             {
               header: '',
-              render: (row) => (
-                <div className="flex justify-end gap-1">
-                  <button onClick={() => setModalUsuario(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700">
-                    <Pencil size={16} />
-                  </button>
-                  {row.id !== usuarioIdAtual && (
-                    <button onClick={() => setDeleting(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger">
-                      <Trash2 size={16} />
+              render: (row) =>
+                podeEditar && (
+                  <div className="flex justify-end gap-1">
+                    <button onClick={() => setModalUsuario(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700">
+                      <Pencil size={16} />
                     </button>
-                  )}
-                </div>
-              ),
+                    {row.id !== usuarioIdAtual && (
+                      <button onClick={() => setDeleting(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ),
             },
           ]}
-          onRowClick={(row) => setModalUsuario(row)}
+          onRowClick={podeEditar ? (row) => setModalUsuario(row) : undefined}
         />
       </Card>
 

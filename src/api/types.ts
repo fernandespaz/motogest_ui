@@ -112,6 +112,22 @@ export type PagamentoTipo = NonNullable<PagamentoResponse['tipo']>;
 export type DashboardResponse = Schemas['DashboardResponse'];
 export type ResumoContasResponse = Schemas['ResumoContasResponse'];
 
+export type HoraTecnicaResponse = Schemas['HoraTecnicaResponse'];
+export type ComposicaoHoraTecnicaResponse = Schemas['ComposicaoHoraTecnicaResponse'];
+export type ParametrosHoraTecnicaRequest = Schemas['ParametrosHoraTecnicaRequest'];
+export type CustoFixoRequest = Schemas['CustoFixoRequest'];
+export type CustoFixoResponse = Schemas['CustoFixoResponse'];
+export type CategoriaCustoFixo = CustoFixoRequest['categoria'];
+export type AuditoriaParametroFinanceiroResponse = Schemas['AuditoriaParametroFinanceiroResponse'];
+export type AcaoAuditoria = NonNullable<AuditoriaParametroFinanceiroResponse['acao']>;
+
+export type IndicadoresConsultorResponse = Schemas['IndicadoresConsultorResponse'];
+export type ProdutividadeConsultorResponse = Schemas['ProdutividadeConsultorResponse'];
+export type ProdutividadeConsultoresResponse = Schemas['ProdutividadeConsultoresResponse'];
+export type ProdutividadeConsultorDetalheResponse = Schemas['ProdutividadeConsultorDetalheResponse'];
+export type OrcamentoEmitido = Schemas['OrcamentoEmitido'];
+export type ServicoFechado = Schemas['ServicoFechado'];
+
 export interface PageResponse<T> {
   content: T[];
   pageNumber: number;

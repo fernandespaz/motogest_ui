@@ -121,4 +121,15 @@ export const API_ROUTES = {
   dashboard: {
     base: '/api/v1/dashboard',
   },
+  horaTecnica: {
+    base: '/api/v1/financeiro/hora-tecnica',
+    parametros: '/api/v1/financeiro/hora-tecnica/parametros',
+    custosFixos: '/api/v1/financeiro/hora-tecnica/custos-fixos',
+    custoFixo: (id: number) => `/api/v1/financeiro/hora-tecnica/custos-fixos/${id}`,
+    auditoria: '/api/v1/financeiro/hora-tecnica/auditoria',
+  },
+  produtividade: {
+    consultores: '/api/v1/produtividade/consultores',
+    consultor: (usuarioId: number) => `/api/v1/produtividade/consultores/${usuarioId}`,
+  },
 } as const;

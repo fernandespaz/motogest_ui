@@ -23,6 +23,11 @@ import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { PerfisPage } from '@/features/perfis/PerfisPage';
 import { OficinaPage } from '@/features/oficina/OficinaPage';
 import { DescontosPage } from '@/features/descontos/DescontosPage';
+import { RequirePermission } from '@/auth/RequirePermission';
+import { PERMISSAO_GERENCIAR_HORA_TECNICA } from '@/hooks/useHoraTecnica';
+import { HoraTecnicaPage, HoraTecnicaSemAcesso } from '@/features/hora-tecnica/HoraTecnicaPage';
+import { ProdutividadeConsultoresPage } from '@/features/produtividade/ProdutividadeConsultoresPage';
+import { ConsultorDetalhePage } from '@/features/produtividade/ConsultorDetalhePage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -59,6 +64,32 @@ export const router = createBrowserRouter([
           { path: '/produtos', element: <ProdutosPage /> },
           { path: '/servicos', element: <ServicosPage /> },
           { path: '/financeiro', element: <FinanceiroPage /> },
+          // Gate na rota: sem a permissão a página nem monta, então nenhuma
+          // query dispara pra estourar 403 (o backend continua sendo a trava real).
+          {
+            path: '/hora-tecnica',
+            element: (
+              <RequirePermission codigo={PERMISSAO_GERENCIAR_HORA_TECNICA} fallback={<HoraTecnicaSemAcesso />}>
+                <HoraTecnicaPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/produtividade',
+            element: (
+              <RequirePermission codigo="PRODUTIVIDADE_READ">
+                <ProdutividadeConsultoresPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/produtividade/consultores/:usuarioId',
+            element: (
+              <RequirePermission codigo="PRODUTIVIDADE_READ">
+                <ConsultorDetalhePage />
+              </RequirePermission>
+            ),
+          },
           { path: '/usuarios', element: <UsuariosPage /> },
           { path: '/perfis', element: <PerfisPage /> },
           { path: '/descontos', element: <DescontosPage /> },

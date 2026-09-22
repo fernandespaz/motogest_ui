@@ -122,3 +122,46 @@ export function formatCardExpiry(value: string): string {
   if (digits.length <= 2) return digits;
   return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
+
+/** Percentual já calculado pelo backend (ex.: 42.5 → "42,5%"). `null` = indicador sem base de cálculo → "—". */
+export function formatPercent(value: number | undefined | null): string {
+  if (value == null) return '—';
+  return `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+}
+
+/** Horas decimais → "12,5 h". `null` = sem base de cálculo → "—". */
+export function formatHorasDecimais(value: number | undefined | null): string {
+  if (value == null) return '—';
+  return `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`;
+}
+
+/** Duração em minutos, legível pra pessoa (ex.: 45 → "45min", 135 → "2h 15min", 1580 → "1d 2h"). */
+export function formatDuracao(minutos: number | undefined | null): string {
+  if (minutos == null) return '—';
+  const total = Math.max(0, Math.round(minutos));
+  if (total < 60) return `${total}min`;
+  const dias = Math.floor(total / 1440);
+  const horas = Math.floor((total % 1440) / 60);
+  const mins = total % 60;
+  if (dias > 0) return horas ? `${dias}d ${horas}h` : `${dias}d`;
+  return mins ? `${horas}h ${mins}min` : `${horas}h`;
+}
+
+/** Mês de referência no formato dos relatórios do backend ("yyyy-MM"). */
+export function mesReferenciaAtual(hoje: Date = new Date()): string {
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Soma `delta` meses a um "yyyy-MM" (ex.: ("2026-01", -1) → "2025-12"). */
+export function deslocarMesReferencia(mes: string, delta: number): string {
+  const [ano, m] = mes.split('-').map(Number);
+  return mesReferenciaAtual(new Date(ano, m - 1 + delta, 1));
+}
+
+/** "2026-09" → "Setembro de 2026". */
+export function formatMesReferencia(mes: string): string {
+  const [ano, m] = mes.split('-').map(Number);
+  if (!ano || !m) return mes;
+  const texto = new Date(ano, m - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}

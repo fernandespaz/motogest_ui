@@ -16,11 +16,18 @@ import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import type { ClienteResponse, OrcamentoResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { ItemsEditor } from '@/features/shared/ItemsEditor';
+import {
+  ItemsEditor,
+  MENSAGEM_SERVICO_SEM_TEMPO,
+  erroListaItens,
+  itemParaPayload,
+  temServicoPorHTSemTempo,
+} from '@/features/shared/ItemsEditor';
+import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
-import { formatCurrency, formatDocumento } from '@/lib/formatters';
+import { formatCurrency, formatDateTime, formatDocumento, toDateTimeLocalValue } from '@/lib/formatters';
 import { useAuthStore } from '@/store/authStore';
 import { isMecanico } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
@@ -34,14 +41,25 @@ const itemSchema = z.object({
   quantidade: z.coerce.number().int('Quantidade deve ser um número inteiro').positive('Quantidade inválida'),
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
+  precificadoPorHT: z.boolean().optional(),
 });
 
 const schema = z.object({
   clienteId: z.coerce.number().positive('Selecione o cliente'),
   veiculoId: z.coerce.number().positive('Selecione o veículo'),
   validadeDias: z.coerce.number().optional(),
+  // "yyyy-MM-ddTHH:mm" local, sem fuso — o backend guarda LocalDateTime e
+  // compara com o próprio relógio. Base do "tempo médio de resposta" do
+  // consultor (emissão − entrada), por isso não pode estar no futuro.
+  dataEntradaVeiculo: z
+    .string()
+    .optional()
+    .refine((v) => !v || new Date(v).getTime() <= Date.now() + 60_000, 'A entrada não pode estar no futuro'),
   observacoes: z.string().optional(),
-  itens: z.array(itemSchema).min(1, 'Adicione ao menos um item'),
+  itens: z
+    .array(itemSchema)
+    .min(1, 'Adicione ao menos um item')
+    .refine((itens) => !temServicoPorHTSemTempo(itens), MENSAGEM_SERVICO_SEM_TEMPO),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -121,7 +139,7 @@ function OrcamentoFormContent() {
 
   const methods = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { itens: [], validadeDias: 7 },
+    defaultValues: { itens: [], validadeDias: 7, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
   });
   const {
     control,
@@ -147,6 +165,7 @@ function OrcamentoFormContent() {
         clienteId: orcamento.clienteId ?? 0,
         veiculoId: orcamento.veiculoId ?? 0,
         validadeDias: orcamento.validadeDias ?? 7,
+        dataEntradaVeiculo: toDateTimeLocalValue(orcamento.dataEntradaVeiculo),
         observacoes: orcamento.observacoes ?? '',
         itens: itensParaFormValues(orcamento.itens),
       });
@@ -180,10 +199,15 @@ function OrcamentoFormContent() {
       sublabel: `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() || undefined,
     }));
 
-  // O "id" do item só existe no form pra ligar as ações de desconto/reserva
-  // ao item certo — ItemRequest não tem esse campo, então ele não vai no payload.
+  // "id" e "precificadoPorHT" são só do form; serviço cobrado pela hora
+  // técnica vai sem valorUnitario pro backend calcular (ver itemParaPayload).
   function paraPayload(values: FormValues) {
-    return { ...values, itens: values.itens.map(({ id: _id, ...item }) => item) };
+    return {
+      ...values,
+      // Vazio = não informado: na criação o backend assume "agora"; na edição mantém o que já tinha.
+      dataEntradaVeiculo: values.dataEntradaVeiculo || undefined,
+      itens: values.itens.map(itemParaPayload),
+    };
   }
 
   async function onSubmit(values: FormValues) {
@@ -213,6 +237,13 @@ function OrcamentoFormContent() {
       toast.error('Selecione cliente e veículo antes de solicitar desconto ou reservar estoque.');
       return undefined;
     }
+    // Esse auto-save pula o zod (usa getValues direto) — sem esta checagem um
+    // serviço pela hora técnica sem tempo iria com valorUnitario 0 e ficaria
+    // gravado a R$ 0, já desatrelado da hora técnica ao recarregar.
+    if (temServicoPorHTSemTempo(valores.itens)) {
+      toast.error(MENSAGEM_SERVICO_SEM_TEMPO);
+      return undefined;
+    }
     try {
       const criado = await createMutation.mutateAsync(paraPayload(valores));
       if (!criado.id) return undefined;
@@ -221,6 +252,7 @@ function OrcamentoFormContent() {
         clienteId: criado.clienteId ?? valores.clienteId,
         veiculoId: criado.veiculoId ?? valores.veiculoId,
         validadeDias: criado.validadeDias ?? valores.validadeDias,
+        dataEntradaVeiculo: toDateTimeLocalValue(criado.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
         observacoes: criado.observacoes ?? valores.observacoes,
         itens: itensParaFormValues(criado.itens),
       });
@@ -248,6 +280,11 @@ function OrcamentoFormContent() {
     <div>
       <PageHeader
         title={isEditing ? `Orçamento #${orcamentoId}` : 'Novo orçamento'}
+        subtitle={
+          orcamento?.consultorNome
+            ? `Consultor: ${orcamento.consultorNome}${orcamento.dataEmissao ? ` · emitido em ${formatDateTime(orcamento.dataEmissao)}` : ''}`
+            : undefined
+        }
         action={
           <div className="flex items-center gap-2">
             {orcamento?.tokenAprovacao && orcamento.status !== 'RASCUNHO' && (
@@ -318,6 +355,15 @@ function OrcamentoFormContent() {
                     )}
                   />
                   <Input label="Validade (dias)" type="number" disabled={readOnly} {...register('validadeDias')} />
+                  <Input
+                    label="Entrada do veículo"
+                    type="datetime-local"
+                    disabled={readOnly}
+                    max={toDateTimeLocalValue(new Date().toISOString())}
+                    hint="Usada no tempo de resposta do orçamento"
+                    error={errors.dataEntradaVeiculo?.message}
+                    {...register('dataEntradaVeiculo')}
+                  />
                 </div>
 
                 <AnimatePresence>
@@ -365,9 +411,12 @@ function OrcamentoFormContent() {
                     origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
                     onGarantirOrigem={garantirOrigem}
                   />
-                  {errors.itens && !Array.isArray(errors.itens) && (
-                    <p className="mt-1 text-xs font-medium text-danger">{errors.itens.message as string}</p>
+                  {erroListaItens(errors.itens) && (
+                    <p className="mt-1 text-xs font-medium text-danger">{erroListaItens(errors.itens)}</p>
                   )}
+                  <div className="mt-3">
+                    <HoraTecnicaReferencia name="itens" />
+                  </div>
                 </div>
 
                 <div className="mt-4">

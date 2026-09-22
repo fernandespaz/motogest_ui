@@ -17,7 +17,43 @@ import {
   parseHorasParaMinutos,
   toDateInputValue,
   toDateTimeLocalValue,
+  formatPercent,
+  formatHorasDecimais,
+  formatDuracao,
+  mesReferenciaAtual,
+  deslocarMesReferencia,
+  formatMesReferencia,
 } from './formatters';
+
+describe('indicadores de produtividade', () => {
+  it('formatPercent shows one decimal in pt-BR and "—" when there is no base', () => {
+    expect(formatPercent(42.5)).toBe('42,5%');
+    expect(formatPercent(100)).toBe('100%');
+    expect(formatPercent(0)).toBe('0%');
+    expect(formatPercent(null)).toBe('—');
+  });
+
+  it('formatHorasDecimais', () => {
+    expect(formatHorasDecimais(12.5)).toBe('12,5 h');
+    expect(formatHorasDecimais(undefined)).toBe('—');
+  });
+
+  it('formatDuracao reads naturally at every scale', () => {
+    expect(formatDuracao(45)).toBe('45min');
+    expect(formatDuracao(120)).toBe('2h');
+    expect(formatDuracao(135)).toBe('2h 15min');
+    expect(formatDuracao(1440)).toBe('1d');
+    expect(formatDuracao(1580)).toBe('1d 2h');
+    expect(formatDuracao(null)).toBe('—');
+  });
+
+  it('month reference helpers roll over years', () => {
+    expect(mesReferenciaAtual(new Date(2026, 8, 22))).toBe('2026-09');
+    expect(deslocarMesReferencia('2026-01', -1)).toBe('2025-12');
+    expect(deslocarMesReferencia('2025-12', 1)).toBe('2026-01');
+    expect(formatMesReferencia('2026-09')).toBe('Setembro de 2026');
+  });
+});
 
 describe('formatCurrency', () => {
   it('formats a positive value as BRL', () => {
