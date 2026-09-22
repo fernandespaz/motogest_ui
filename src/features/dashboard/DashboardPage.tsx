@@ -1,6 +1,6 @@
 import { CalendarClock, ClipboardList, PackageX, Wallet, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { StatCard } from './StatCard';
+import { StatCard } from '@/components/ui/StatCard';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useDashboard } from '@/hooks/useDashboard';
 import { formatCurrency } from '@/lib/formatters';

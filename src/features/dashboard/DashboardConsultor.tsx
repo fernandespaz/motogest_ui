@@ -22,7 +22,7 @@ import { useDashboardConsultor } from '@/hooks/useDashboardConsultor';
 import { agendamentoStatusMeta, metaFor, ordemServicoStatusMeta } from '@/lib/statusMeta';
 import { formatCurrency } from '@/lib/formatters';
 import { IndicadoresGrid } from '@/features/produtividade/IndicadoresConsultor';
-import { StatCard } from './StatCard';
+import { StatCard } from '@/components/ui/StatCard';
 
 const MAX_ITENS = 6;
 

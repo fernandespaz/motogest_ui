@@ -2,6 +2,7 @@ import { render, screen, waitForElementToBeRemoved, within } from '@testing-libr
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProdutos, useDeleteProduto, useProdutosAbaixoDoMinimo } from '@/hooks/useProdutos';
+import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/store/toastStore';
 import { ProdutosPage } from './ProdutosPage';
 
@@ -47,6 +48,9 @@ describe('ProdutosPage', () => {
   let deleteMutateAsync: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    // ESTOQUE_WRITE por padrão — cada teste de restrição de perfil ajusta as
+    // permissões que precisa (ver bloco "com apenas ESTOQUE_READ" abaixo).
+    useAuthStore.setState({ permissoes: ['ESTOQUE_READ', 'ESTOQUE_WRITE'] });
     vi.mocked(useProdutos).mockReturnValue({ data: produtos, isLoading: false } as never);
     vi.mocked(useProdutosAbaixoDoMinimo).mockReturnValue({ data: [produtos.content[1]] } as never);
     deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
@@ -64,9 +68,17 @@ describe('ProdutosPage', () => {
     expect(table.getByText('Freios')).toBeInTheDocument();
   });
 
-  it('filters by categoria and resets to the first page', async () => {
+  it('shows accurate stat cards for total produtos and low-stock count', () => {
     render(<ProdutosPage />);
-    await userEvent.selectOptions(screen.getByDisplayValue('Todas as categorias'), 'FREIOS');
+    expect(screen.getByText('Produtos cadastrados')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('Abaixo do estoque mínimo')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+  });
+
+  it('filters by categoria chip and resets to the first page', async () => {
+    render(<ProdutosPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Freios' }));
 
     expect(useProdutos).toHaveBeenLastCalledWith(
       expect.objectContaining({ page: 0, categoria: 'FREIOS' }),
@@ -81,20 +93,20 @@ describe('ProdutosPage', () => {
     expect(useProdutos).toHaveBeenLastCalledWith(expect.objectContaining({ busca: 'freio' }));
   });
 
-  it('shows the low-stock banner and toggles the filtered view', async () => {
+  it('toggles the low-stock filtered view from its stat card', async () => {
     render(<ProdutosPage />);
-    const banner = screen.getByText(/produto\(s\) abaixo do estoque mínimo/);
-    expect(banner).toBeInTheDocument();
+    const statCard = screen.getByText('Abaixo do estoque mínimo').closest('[role="button"]')!;
 
-    await userEvent.click(banner);
+    await userEvent.click(statCard);
     expect(screen.queryByText('Óleo Motor 10W30')).not.toBeInTheDocument();
     expect(screen.getByText('Pastilha de Freio')).toBeInTheDocument();
   });
 
-  it('hides the low-stock banner when nothing is below the minimum', () => {
+  it('makes the low-stock stat card non-interactive when nothing is below the minimum', () => {
     vi.mocked(useProdutosAbaixoDoMinimo).mockReturnValue({ data: [] } as never);
     render(<ProdutosPage />);
-    expect(screen.queryByText(/abaixo do estoque mínimo/)).not.toBeInTheDocument();
+    const statCard = screen.getByText('Abaixo do estoque mínimo').closest('div')!;
+    expect(statCard.closest('[role="button"]')).not.toBeInTheDocument();
   });
 
   it('opens the movimentação modal from its row action', async () => {
@@ -147,5 +159,24 @@ describe('ProdutosPage', () => {
     vi.mocked(useProdutosAbaixoDoMinimo).mockReturnValue({ data: [] } as never);
     render(<ProdutosPage />);
     expect(screen.getByText('Nenhum produto cadastrado')).toBeInTheDocument();
+  });
+
+  describe('com apenas ESTOQUE_READ (ex.: Consultor Técnico, sem ESTOQUE_WRITE)', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ permissoes: ['ESTOQUE_READ'] });
+    });
+
+    it('is read-only — no create, edit, remove or movimentar action (backend requires ESTOQUE_WRITE)', async () => {
+      render(<ProdutosPage />);
+
+      expect(screen.getByText('Óleo Motor 10W30')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Novo produto/ })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Editar')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Remover')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Movimentar')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('Óleo Motor 10W30'));
+      expect(screen.queryByText('Editar produto')).not.toBeInTheDocument();
+    });
   });
 });
