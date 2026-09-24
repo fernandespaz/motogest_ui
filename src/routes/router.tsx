@@ -118,8 +118,9 @@ export const router = createBrowserRouter([
               </RequirePermission>
             ),
           },
-          // Sem RequirePermission na rota: a própria tela explica ao mecânico
-          // que o relatório depende de PRODUTIVIDADE_READ (ver o componente).
+          // Sem RequirePermission na rota: os dados vêm de GET
+          // /produtividade/mecanicos/me, autoescopado pelo token — não exige
+          // PRODUTIVIDADE_READ (ver MinhaProdutividadePage).
           { path: '/minha-produtividade', element: <MinhaProdutividadePage /> },
           { path: '/usuarios', element: <UsuariosPage /> },
           { path: '/perfis', element: <PerfisPage /> },

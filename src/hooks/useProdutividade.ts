@@ -8,6 +8,7 @@ export const produtividadeKeys = {
   consultor: (usuarioId: number, mes: string) => ['produtividade', 'consultores', mes, usuarioId] as const,
   mecanicos: (mes: string) => ['produtividade', 'mecanicos', mes] as const,
   mecanico: (usuarioId: number, mes: string) => ['produtividade', 'mecanicos', mes, usuarioId] as const,
+  mecanicoMe: (mes: string) => ['produtividade', 'mecanicos', mes, 'me'] as const,
 };
 
 /**
@@ -66,6 +67,23 @@ export function useProdutividadeMecanico(usuarioId: number | undefined, mes: str
     // Mesmo cuidado do detalhe de consultor: nunca mostra outro mecânico.
     placeholderData: (anterior, queryAnterior) =>
       queryAnterior?.queryKey[3] === usuarioId ? anterior : undefined,
+    refetchInterval: intervaloSeMesCorrente(mes),
+  });
+}
+
+/**
+ * Produtividade do próprio mecânico logado — GET /produtividade/mecanicos/me,
+ * autoescopado pelo token (exige só estar autenticado, não PRODUTIVIDADE_READ).
+ * Ver MinhaProdutividadePage: antes desse endpoint existir, a tela usava
+ * useProdutividadeMecanico(usuarioId, ...) contra o endpoint geral por id, que
+ * exige PRODUTIVIDADE_READ — permissão que também libera ver QUALQUER outro
+ * mecânico/consultor, um vazamento real pra quem só devia ver os próprios
+ * números.
+ */
+export function useProdutividadeMecanicoMe(mes: string) {
+  return useQuery({
+    queryKey: produtividadeKeys.mecanicoMe(mes),
+    queryFn: () => produtividadeApi.mecanicoMe(mes),
     refetchInterval: intervaloSeMesCorrente(mes),
   });
 }

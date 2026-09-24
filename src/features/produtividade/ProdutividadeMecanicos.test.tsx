@@ -2,7 +2,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useProdutividadeMecanico, useProdutividadeMecanicos } from '@/hooks/useProdutividade';
+import { useProdutividadeMecanicoMe, useProdutividadeMecanicos } from '@/hooks/useProdutividade';
 import { useAuthStore } from '@/store/authStore';
 import { ProdutividadeMecanicosPage } from './ProdutividadeMecanicosPage';
 import { MinhaProdutividadePage } from './MinhaProdutividadePage';
@@ -11,6 +11,7 @@ import { GuardaProdutividade } from './ProdutividadeAbas';
 vi.mock('@/hooks/useProdutividade', () => ({
   useProdutividadeMecanicos: vi.fn(),
   useProdutividadeMecanico: vi.fn(),
+  useProdutividadeMecanicoMe: vi.fn(),
 }));
 
 const indicadores = {
@@ -96,7 +97,7 @@ describe('ProdutividadeMecanicosPage', () => {
 
   it("sends a Mecânico to his own screen even with PRODUTIVIDADE_READ, never to colleagues' hours", () => {
     useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ'], perfil: 'Mecânico', usuarioId: 3 });
-    vi.mocked(useProdutividadeMecanico).mockReturnValue({ data: undefined, isLoading: true } as never);
+    vi.mocked(useProdutividadeMecanicoMe).mockReturnValue({ data: undefined, isLoading: true } as never);
     renderEm('/produtividade/mecanicos?mes=2026-09');
     expect(useProdutividadeMecanicos).not.toHaveBeenCalled();
     expect(screen.getByTestId('local')).toHaveTextContent('/minha-produtividade?mes=2026-09');
@@ -106,7 +107,7 @@ describe('ProdutividadeMecanicosPage', () => {
 describe('MinhaProdutividadePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useProdutividadeMecanico).mockReturnValue({
+    vi.mocked(useProdutividadeMecanicoMe).mockReturnValue({
       data: { mes: '2026-09', usuarioId: 3, usuarioNome: 'Marcos', indicadores, ordensConcluidas: [], horasPorDia: [] },
       isLoading: false,
       isPlaceholderData: false,
@@ -114,18 +115,16 @@ describe('MinhaProdutividadePage', () => {
     } as never);
   });
 
-  it("shows the logged-in mechanic's own technical hours", () => {
-    useAuthStore.setState({ permissoes: ['PRODUTIVIDADE_READ', 'ORDEM_SERVICO_READ'], perfil: 'Mecânico', usuarioId: 3 });
+  // O ponto central: GET /produtividade/mecanicos/me é autoescopado pelo
+  // token, então não recebe usuarioId nem depende de PRODUTIVIDADE_READ — ao
+  // contrário do antigo useProdutividadeMecanico(id), que exigia essa
+  // permissão e também liberava ver QUALQUER outro mecânico/consultor.
+  it("shows the logged-in mechanic's own technical hours without PRODUTIVIDADE_READ or any other permission", () => {
+    useAuthStore.setState({ permissoes: [], perfil: 'Mecânico', usuarioId: 3 });
     renderEm('/minha-produtividade?mes=2026-09');
-    expect(useProdutividadeMecanico).toHaveBeenCalledWith(3, '2026-09', { enabled: true });
+    expect(useProdutividadeMecanicoMe).toHaveBeenCalledWith('2026-09');
     expect(screen.getByText('Horas técnicas vendidas')).toBeInTheDocument();
     expect(screen.getByText('125%')).toBeInTheDocument();
-  });
-
-  it('does not query and explains why when the profile lacks PRODUTIVIDADE_READ', () => {
-    useAuthStore.setState({ permissoes: ['ORDEM_SERVICO_READ'], perfil: 'Mecânico', usuarioId: 3 });
-    renderEm('/minha-produtividade');
-    expect(useProdutividadeMecanico).toHaveBeenCalledWith(3, expect.any(String), { enabled: false });
-    expect(screen.getByText('Relatório não liberado para o seu perfil')).toBeInTheDocument();
+    expect(screen.queryByText('Relatório não liberado para o seu perfil')).not.toBeInTheDocument();
   });
 });

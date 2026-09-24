@@ -30,9 +30,9 @@ describe('filterNavByPermission', () => {
     expect(visible.map((i) => i.to).sort()).toEqual(['/minha-produtividade', '/minhas-os', '/ordens-servico']);
   });
 
-  it('hides Minha produtividade from a Mecânico without PRODUTIVIDADE_READ', () => {
+  it('shows Minha produtividade to a Mecânico even without PRODUTIVIDADE_READ — it has no permission gate, GET /produtividade/mecanicos/me is self-scoped', () => {
     const visible = filterNavByPermission(permFrom(['ORDEM_SERVICO_READ', 'ORDEM_SERVICO_WRITE']), 'Mecânico');
-    expect(visible.map((i) => i.to).sort()).toEqual(['/minhas-os', '/ordens-servico']);
+    expect(visible.map((i) => i.to).sort()).toEqual(['/minha-produtividade', '/minhas-os', '/ordens-servico']);
   });
 
   it('matches the Mecânico profile name case/accent-insensitively, same as isMecanico', () => {
@@ -61,5 +61,13 @@ describe('getLandingPath', () => {
 
   it('a Mecânico without ORDEM_SERVICO_WRITE falls through to the normal rules', () => {
     expect(getLandingPath(permFrom(['DASHBOARD_READ']), 'Mecânico')).toBe('/');
+  });
+
+  // Minha produtividade não tem `permissions` (autoescopada por token, ver
+  // nav.ts) — sem essa checagem, um Mecânico sem NENHUMA permissão relevante
+  // ainda tem um destino válido, e não deve cair em /login como um perfil
+  // sem nada visível cairia.
+  it('a Mecânico with no relevant permission at all still lands on Minha produtividade, not /login', () => {
+    expect(getLandingPath(permFrom([]), 'Mecânico')).toBe('/minha-produtividade');
   });
 });

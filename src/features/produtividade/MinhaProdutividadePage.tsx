@@ -1,9 +1,7 @@
-import { Lock } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
-import { useProdutividadeMecanico } from '@/hooks/useProdutividade';
-import { useAuthStore } from '@/store/authStore';
+import { useProdutividadeMecanicoMe } from '@/hooks/useProdutividade';
 import { formatMesReferencia } from '@/lib/formatters';
 import { MesSelector } from './IndicadoresConsultor';
 import { AoVivoBadge } from './IndicadoresMecanico';
@@ -13,53 +11,34 @@ import { useMesReferencia } from './useMesReferencia';
 /**
  * Produtividade mensal do próprio mecânico, em horas técnicas.
  *
- * O backend só expõe o detalhe por id (GET /produtividade/mecanicos/{id}),
- * atrás de PRODUTIVIDADE_READ — não existe um "/mecanicos/me" que devolva só
- * os dados de quem chama. Por isso a tela exige a mesma permissão; sem ela a
- * consulta nem sai (evita o 403 com toast global) e a tela explica o motivo.
+ * Usa GET /produtividade/mecanicos/me, autoescopado pelo token — exige só
+ * estar autenticado, não PRODUTIVIDADE_READ. Essa tela usava antes o mesmo
+ * endpoint geral por id que a visão gerencial usa (useProdutividadeMecanico),
+ * o que exigia dar PRODUTIVIDADE_READ ao Mecânico — permissão que também
+ * libera ver QUALQUER outro mecânico/consultor da oficina, não só os
+ * próprios números. O endpoint "/me" fecha esse vazamento.
  */
 export function MinhaProdutividadePage() {
-  const hasPermission = useAuthStore((s) => s.hasPermission);
-  const usuarioId = useAuthStore((s) => s.usuarioId) ?? undefined;
-  const podeVer = hasPermission('PRODUTIVIDADE_READ');
   const [mes, setMes] = useMesReferencia();
-  const { data, isLoading, isPlaceholderData, isFetching, isError } = useProdutividadeMecanico(usuarioId, mes, {
-    enabled: podeVer,
-  });
+  const { data, isLoading, isPlaceholderData, isFetching, isError } = useProdutividadeMecanicoMe(mes);
 
   const cabecalho = (
     <PageHeader
       title="Minha produtividade"
       subtitle={`Suas horas técnicas em ${formatMesReferencia(mes)}`}
       action={
-        podeVer ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <AoVivoBadge mes={mes} atualizando={isFetching && !isLoading} />
-            <MesSelector mes={mes} onChange={setMes} />
-          </div>
-        ) : undefined
+        <div className="flex flex-wrap items-center gap-2">
+          <AoVivoBadge mes={mes} atualizando={isFetching && !isLoading} />
+          <MesSelector mes={mes} onChange={setMes} />
+        </div>
       }
     />
   );
 
-  if (!podeVer) {
-    return (
-      <div className="flex flex-col gap-5">
-        {cabecalho}
-        <EmptyState
-          icon={Lock}
-          title="Relatório não liberado para o seu perfil"
-          description="Peça ao administrador da oficina para liberar a visualização de produtividade no seu perfil de acesso."
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-5">
       {cabecalho}
-      {/* Sessão antiga sem usuarioId deixaria a consulta desligada e o spinner eterno. */}
-      {isError || !usuarioId ? (
+      {isError ? (
         <EmptyState title="Não foi possível carregar sua produtividade" description="Tente novamente em instantes." />
       ) : isLoading || !data ? (
         <PageSpinner label="Calculando suas horas técnicas..." />
