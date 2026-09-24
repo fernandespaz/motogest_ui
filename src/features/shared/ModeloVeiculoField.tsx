@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import clsx from 'clsx';
 import { Car, ImagePlus, Plus, Search, Upload, X } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
@@ -21,14 +22,49 @@ function imagemSrc(base64?: string | null): string | undefined {
   return base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`;
 }
 
-export function ModeloVeiculoThumb({ base64, size = 36 }: { base64?: string | null; size?: number }) {
+// className, quando passado, substitui a caixa quadrada fixa (style com
+// height/width) por dimensões controladas via Tailwind pelo chamador — usado
+// pra a imagem "hero" em largura total do card de OS do Mecânico, que não é
+// quadrada. `size` continua só regulando o ícone de fallback nesse caso.
+// Nesse modo, o chamador também assume o fundo (bg-*) da caixa: as fotos do
+// catálogo costumam ter fundo branco/produto, então o fundo precisa casar com
+// a foto, não com o tema escuro do card por trás.
+export function ModeloVeiculoThumb({
+  base64,
+  size = 36,
+  className,
+  fit = 'cover',
+}: {
+  base64?: string | null;
+  size?: number;
+  className?: string;
+  /** 'cover' (padrão, miniaturas quadradas) recorta pra preencher a caixa —
+   *  numa caixa bem mais larga que alta isso sobra corte vertical e mostra a
+   *  margem branca nativa da foto nas laterais. 'contain' nunca corta nem
+   *  distorce: mostra a foto inteira, com qualquer sobra ficando pro fundo
+   *  que o chamador define via className. */
+  fit?: 'cover' | 'contain';
+}) {
   const src = imagemSrc(base64);
-  const style = { height: size, width: size };
+  const style = className ? undefined : { height: size, width: size };
   if (src) {
-    return <img src={src} alt="" style={style} className="shrink-0 rounded-md object-cover" />;
+    return (
+      <img
+        src={src}
+        alt=""
+        style={style}
+        className={clsx('shrink-0 rounded-md', fit === 'contain' ? 'object-contain' : 'object-cover', className)}
+      />
+    );
   }
   return (
-    <div style={style} className="flex shrink-0 items-center justify-center rounded-md bg-surface-alt text-ink-muted">
+    <div
+      style={style}
+      className={clsx(
+        'flex shrink-0 items-center justify-center rounded-md text-ink-muted',
+        className || 'bg-surface-alt',
+      )}
+    >
       <Car size={size * 0.55} />
     </div>
   );
