@@ -5,6 +5,7 @@ import { orcamentosApi } from '@/api/endpoints/orcamentos';
 import {
   orcamentosKeys,
   useOrcamentos,
+  useTodosOrcamentos,
   useEnviarOrcamento,
   useAprovarOrcamento,
   useRejeitarOrcamento,
@@ -30,6 +31,35 @@ describe('useOrcamentos hooks', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(orcamentosApi.list).toHaveBeenCalled();
+  });
+
+  // Bug real reportado por um usuário: OrcamentosPage filtrava uma página já
+  // paginada pelo backend (convertido, carteira do consultor), quebrando a
+  // contagem por página — uma sobrava com 2 itens, a seguinte com 5.
+  // useTodosOrcamentos busca todas as páginas do backend uma vez, pra a
+  // paginação da tela virar inteiramente local sobre o conjunto completo.
+  describe('useTodosOrcamentos()', () => {
+    it('fetches a single page and stops when totalPages is 1', async () => {
+      vi.mocked(orcamentosApi.list).mockResolvedValueOnce({ content: [{ id: 1 }, { id: 2 }], totalPages: 1 } as never);
+      const { result } = renderHook(() => useTodosOrcamentos('id,desc'), { wrapper: wrapWithQueryClient() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(orcamentosApi.list).toHaveBeenCalledTimes(1);
+      expect(orcamentosApi.list).toHaveBeenCalledWith({ page: 0, size: 200, sort: 'id,desc' });
+      expect(result.current.data).toEqual([{ id: 1 }, { id: 2 }]);
+    });
+
+    it('walks every page and concatenates them into one flat list', async () => {
+      vi.mocked(orcamentosApi.list)
+        .mockResolvedValueOnce({ content: [{ id: 1 }, { id: 2 }], totalPages: 3 } as never)
+        .mockResolvedValueOnce({ content: [{ id: 3 }, { id: 4 }], totalPages: 3 } as never)
+        .mockResolvedValueOnce({ content: [{ id: 5 }], totalPages: 3 } as never);
+      const { result } = renderHook(() => useTodosOrcamentos(), { wrapper: wrapWithQueryClient() });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(orcamentosApi.list).toHaveBeenCalledTimes(3);
+      expect(result.current.data).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }, { id: 5 }]);
+    });
   });
 
   it.each([

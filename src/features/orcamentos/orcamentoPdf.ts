@@ -79,6 +79,7 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
           kmAtual: veiculo.kmAtual != null ? `${veiculo.kmAtual.toLocaleString('pt-BR')} km` : undefined,
         }
       : { descricao: '', placa: orcamento.veiculoPlaca ?? '' },
+    consultor: orcamento.consultorNome,
     solicitacaoCliente: orcamento.observacoes,
     servicos,
     pecas,

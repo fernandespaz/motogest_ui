@@ -188,6 +188,7 @@ export function OrdensServicoPage() {
               ),
             },
             { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
+            { header: 'Consultor', render: (row) => row.consultorNome || '-', hideBelow: 'md' },
             { header: 'Técnico', render: (row) => row.usuarioResponsavelNome || '-', hideBelow: 'md' },
             { header: 'Abertura', render: (row) => formatDate(row.dataAbertura), hideBelow: 'sm' },
             { header: 'Valor', render: (row) => formatCurrency(row.valorTotal), hideBelow: 'md' },

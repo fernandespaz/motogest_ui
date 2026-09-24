@@ -94,11 +94,22 @@ describe('renderOSDocumentPdf', () => {
   it('renders the execução section only when OS-specific fields are present', async () => {
     const semExecucao = await renderOSDocumentPdf(baseData());
     const comExecucao = await renderOSDocumentPdf(
-      baseData({ consultor: 'Diego', dataAbertura: '01/01/2026', dataConclusao: '02/01/2026' }),
+      baseData({ tecnicoResponsavel: 'Marcos Mecânico', dataAbertura: '01/01/2026', dataConclusao: '02/01/2026' }),
     );
     // With an extra rendered section, the OS-specific document should be a
     // meaningfully different (larger) PDF than the bare Orçamento-shaped one.
     expect(comExecucao.size).not.toBe(semExecucao.size);
+  });
+
+  // Bug real: os dois campos usavam a mesma prop `consultor`, então o PDF da
+  // OS mostrava o mecânico no lugar do consultor. "Consultor" e "Tec.
+  // responsável" agora vêm de props diferentes e nunca se confundem.
+  it('keeps "Consultor" and "Tec. responsável" as independent fields', async () => {
+    const semTecnico = await renderOSDocumentPdf(baseData({ consultor: 'Ana Consultora' }));
+    const comTecnico = await renderOSDocumentPdf(
+      baseData({ consultor: 'Ana Consultora', tecnicoResponsavel: 'Marcos Mecânico' }),
+    );
+    expect(comTecnico.size).not.toBe(semTecnico.size);
   });
 
   it('renders wrapped observações text when present', async () => {

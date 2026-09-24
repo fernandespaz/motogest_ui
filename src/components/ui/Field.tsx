@@ -181,3 +181,15 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ label, cl
   </label>
 ));
 Checkbox.displayName = 'Checkbox';
+
+/** Valor exibido lado a lado com os campos de um form, sem ser editável —
+ *  pra dado que a tela mostra mas nunca envia no payload (ex.: dados do
+ *  veículo selecionado, consultor atribuído pelo backend). */
+export function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-ink-muted">{label}</p>
+      <p className="text-sm font-semibold text-ink">{value}</p>
+    </div>
+  );
+}

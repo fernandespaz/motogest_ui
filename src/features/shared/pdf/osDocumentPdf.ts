@@ -4,7 +4,10 @@ import { formatCurrency } from '@/lib/formatters';
 const PAGE_MARGIN = 12;
 const INK = '#1b2129';
 const INK_MUTED = '#565f6b';
-const BRAND = '#4f46e5';
+// Laranja-sinal da identidade da MotoGest (mesmo --brand-600/--brand-700 do
+// app — ver index.css), não o índigo genérico que estava aqui antes.
+const BRAND = '#ff5a1f'; // brand-600 — preenchimentos sólidos (faixa, caixa de total)
+const BRAND_TEXT = '#d9450f'; // brand-700 — texto sobre fundo claro, mesmo padrão de text-brand-700 no app
 const LINE = '#d9dbd1';
 
 /** jsPDF + autotable are ~180KB combined — loaded only when a PDF is actually requested. */
@@ -129,7 +132,7 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(15);
-  doc.setTextColor(BRAND);
+  doc.setTextColor(BRAND_TEXT);
   doc.text(primeiraLinha(doc, data.oficina.nomeFantasia || data.oficina.razaoSocial, larguraTexto), letterheadX, y + 5);
 
   const linhasOficina = [
@@ -155,7 +158,7 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   doc.roundedRect(boxX, y, boxWidth, boxHeight, 1.5, 1.5, 'S');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.setTextColor(BRAND);
+  doc.setTextColor(BRAND_TEXT);
   doc.text(data.tipoDocumento.toUpperCase(), boxX + boxWidth / 2, y + 6, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -345,14 +348,14 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   y += 18;
 
   // ---- Execução (only meaningful for Ordens de Serviço) ----
-  if (data.consultor || data.dataAbertura || data.dataConclusao) {
+  if (data.tecnicoResponsavel || data.dataAbertura || data.dataConclusao) {
     doc.setDrawColor(LINE);
     doc.line(PAGE_MARGIN, y, pageWidth - PAGE_MARGIN, y);
     y += 6;
     labelValueRow(
       doc,
       [
-        ['Tec. responsável', data.consultor],
+        ['Tec. responsável', data.tecnicoResponsavel],
         ['Início', data.dataAbertura],
         ['Término', data.dataConclusao],
       ],
