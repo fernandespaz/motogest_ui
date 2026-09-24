@@ -1301,6 +1301,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/produtividade/mecanicos/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Produtividade do proprio usuario autenticado no mes (visao do mecanico)
+         * @description Mesmo formato do detalhe por mecanico: OS concluidas e horas por dia.
+         */
+        get: operations["minhaProdutividade"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/produtividade/consultores": {
         parameters: {
             query?: never;
@@ -1349,7 +1369,7 @@ export interface paths {
          * Produtividade do proprio usuario autenticado no mes (visao do consultor)
          * @description Mesmo formato do detalhe por consultor. Sem PRODUTIVIDADE_READ, horas tecnicas disponiveis e PH vem null — componentes da hora tecnica, que o consultor so' ve como preco final.
          */
-        get: operations["minhaProdutividade"];
+        get: operations["minhaProdutividade_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5424,6 +5444,32 @@ export interface operations {
             };
         };
     };
+    minhaProdutividade: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-09
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutividadeMecanicoDetalheResponse"];
+                };
+            };
+        };
+    };
     relatorioMensal_1: {
         parameters: {
             query?: {
@@ -5478,7 +5524,7 @@ export interface operations {
             };
         };
     };
-    minhaProdutividade: {
+    minhaProdutividade_1: {
         parameters: {
             query?: {
                 /**

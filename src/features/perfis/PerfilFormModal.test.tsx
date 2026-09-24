@@ -16,6 +16,8 @@ const permissoes = [
   { id: 1, codigo: 'CLIENTE_READ', descricao: 'Ver clientes' },
   { id: 2, codigo: 'CLIENTE_WRITE', descricao: 'Editar clientes' },
   { id: 3, codigo: 'ORDEM_SERVICO_READ', descricao: 'Ver ordens de serviço' },
+  { id: 4, codigo: 'USUARIO_READ', descricao: 'Ver usuários' },
+  { id: 5, codigo: 'FUTURO_RECURSO_READ', descricao: 'Ver recurso futuro' },
 ];
 
 describe('PerfilFormModal', () => {
@@ -35,6 +37,18 @@ describe('PerfilFormModal', () => {
     expect(screen.getByLabelText('Ver clientes')).toBeInTheDocument();
     expect(screen.getByLabelText('Editar clientes')).toBeInTheDocument();
     expect(screen.getByText('Aplicar modelo')).toBeInTheDocument();
+  });
+
+  it('groups permissions into Gerencial/Comercial/Técnico/Outros sections by resource', () => {
+    render(<PerfilFormModal open onClose={vi.fn()} perfil={null} />);
+    // Gerencial: usuários. Comercial: clientes. Técnico: ordens de serviço.
+    // Outros: qualquer código sem categoria mapeada — nunca some da tela.
+    expect(screen.getByText('Gerencial')).toBeInTheDocument();
+    expect(screen.getByText('Comercial')).toBeInTheDocument();
+    expect(screen.getByText('Técnico')).toBeInTheDocument();
+    expect(screen.getByText('Outros')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ver usuários')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ver recurso futuro')).toBeInTheDocument();
   });
 
   it('hides the preset selector when editing an existing perfil', () => {

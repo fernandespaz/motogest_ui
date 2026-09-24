@@ -48,15 +48,16 @@ export const navItems: NavItem[] = [
     group: 'operacao',
     permissions: ['ORDEM_SERVICO_WRITE'],
   },
-  // Visão do próprio mecânico (horas técnicas do mês). Ainda depende de
-  // PRODUTIVIDADE_READ porque o backend não tem um "/mecanicos/me" — ver
-  // MinhaProdutividadePage.
+  // Visão do próprio mecânico (horas técnicas do mês), via GET
+  // /produtividade/mecanicos/me — autoescopado pelo token, sem depender de
+  // PRODUTIVIDADE_READ (essa permissão também libera ver os outros
+  // mecânicos/consultores da oficina, o que vazaria pra quem só devia ver
+  // os próprios números). Ver MinhaProdutividadePage.
   {
     label: 'Minha produtividade',
     to: '/minha-produtividade',
     icon: Gauge,
     group: 'operacao',
-    permissions: ['PRODUTIVIDADE_READ'],
   },
   { label: 'Produtos e Estoque', to: '/produtos', icon: Package, group: 'gestao', permissions: ['ESTOQUE_READ'] },
   { label: 'Catálogo de Serviços', to: '/servicos', icon: Wrench, group: 'gestao', permissions: ['SERVICO_READ'] },
@@ -119,6 +120,10 @@ export function filterNavByPermission(hasPermission: (codigo: string) => boolean
 export function getLandingPath(hasPermission: (codigo: string) => boolean, perfil?: string): string {
   if (isMecanico(perfil) && hasPermission('ORDEM_SERVICO_WRITE')) return '/minhas-os';
   if (hasPermission('DASHBOARD_READ')) return '/';
-  const firstAccessible = navItems.find((item) => isUnlocked(item, hasPermission));
+  // filterNavByPermission, não um scan cru de navItems: um item sem
+  // `permissions` (como "Minha produtividade", autoescopada por token) é
+  // "desbloqueado" pra isUnlocked sozinho, mas só faz sentido como destino
+  // pra quem o menu realmente mostra esse item (Mecânico, aqui).
+  const firstAccessible = filterNavByPermission(hasPermission, perfil)[0];
   return firstAccessible?.to ?? '/login';
 }

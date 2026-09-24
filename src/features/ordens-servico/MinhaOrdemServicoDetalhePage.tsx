@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   Play,
@@ -52,7 +52,10 @@ export function MinhaOrdemServicoDetalhePage() {
   const osId = id ? Number(id) : undefined;
   const navigate = useNavigate();
   const usuarioLogadoId = useAuthStore((s) => s.usuarioId);
-  const [tab, setTab] = useState('checklists');
+  // Permite que o card de "Minhas OS" (ver MinhasOrdensServicoPage) leve
+  // direto pra aba de Fotos com ?tab=fotos, em vez de sempre cair em Checklists.
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState(searchParams.get('tab') === 'fotos' ? 'fotos' : 'checklists');
   const [pausando, setPausando] = useState(false);
   const [motivoPausa, setMotivoPausa] = useState('');
 

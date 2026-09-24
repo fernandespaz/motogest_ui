@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, FileDown, Send, Check, X, Wrench, Trash2, MessageCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -9,7 +9,7 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import {
-  useOrcamentos,
+  useTodosOrcamentos,
   useDeleteOrcamento,
   useEnviarOrcamento,
   useAprovarOrcamento,
@@ -24,18 +24,52 @@ import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
+import { useAuthStore } from '@/store/authStore';
+import { isConsultor } from '@/lib/perfil';
+
+const TAMANHO_PAGINA = 20;
 
 export function OrcamentosPage() {
   const [page, setPage] = useState(0);
   const [deleting, setDeleting] = useState<OrcamentoResponse | null>(null);
   const navigate = useNavigate();
+  const perfil = useAuthStore((s) => s.perfil);
+  const usuarioId = useAuthStore((s) => s.usuarioId);
 
-  const { data, isLoading } = useOrcamentos({ page, size: 20, sort: 'id,desc' });
+  // GET /orcamentos não tem filtro de status nem de consultor no backend
+  // (confirmado no openapi.json — o único parâmetro é paginação), então os
+  // dois cortes abaixo são feitos no cliente. Filtrar uma página que o
+  // SERVIDOR já paginou quebra a contagem por página (uma sobra 2 itens
+  // depois do filtro, a seguinte 5...) — por isso useTodosOrcamentos busca o
+  // conjunto inteiro uma vez e a paginação abaixo é inteiramente local, sobre
+  // os dados já filtrados.
+  //
+  // IMPORTANTE: o filtro por consultor é só um recorte de UX pra evitar que
+  // um consultor veja (e tente puxar) a carteira de outro no dia a dia
+  // normal do app — não é controle de acesso de verdade. Alguém que chame
+  // GET /orcamentos direto (fora da UI) continua recebendo a lista inteira,
+  // porque ORCAMENTO_READ é uma permissão só, sem distinção entre "ver os
+  // próprios" e "ver todos". Pra uma garantia real, o backend precisaria
+  // escopar a listagem por consultor (mesmo caso do PRODUTIVIDADE_READ que já
+  // foi ajustado com um endpoint "/me" — aqui precisaria de algo equivalente).
+  const { data: todos, isLoading } = useTodosOrcamentos('id,desc');
   const imagensPorVeiculoId = useImagensPorVeiculoId();
-  // Um orçamento convertido já existe como Ordem de Serviço — mantê-lo aqui
-  // seria mostrar a mesma coisa em dois lugares. O backend não tem filtro de
-  // status na listagem, então isso é feito no cliente.
-  const rows = (data?.content ?? []).filter((o: OrcamentoResponse) => o.status !== 'CONVERTIDO');
+  const filtrados = useMemo(
+    () =>
+      (todos ?? []).filter(
+        (o: OrcamentoResponse) =>
+          o.status !== 'CONVERTIDO' && (!isConsultor(perfil) || usuarioId == null || o.consultorId === usuarioId),
+      ),
+    [todos, perfil, usuarioId],
+  );
+  const totalElements = filtrados.length;
+  const totalPages = Math.max(1, Math.ceil(totalElements / TAMANHO_PAGINA));
+  // Depois de remover um orçamento (ou o filtro de carteira encolher a
+  // lista), a página guardada em estado pode ficar maior que o total — sem
+  // isso, a tabela mostraria "nenhum encontrado" em vez de voltar pra uma
+  // página que existe.
+  const paginaAtual = Math.min(page, totalPages - 1);
+  const rows = filtrados.slice(paginaAtual * TAMANHO_PAGINA, (paginaAtual + 1) * TAMANHO_PAGINA);
   const deleteMutation = useDeleteOrcamento();
   const enviar = useEnviarOrcamento();
   const aprovar = useAprovarOrcamento();
@@ -242,9 +276,7 @@ export function OrcamentosPage() {
           ]}
           onRowClick={(row) => navigate(`/orcamentos/${row.id}`)}
         />
-        {data && (
-          <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
-        )}
+        {todos && <Pagination page={paginaAtual} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />}
       </Card>
 
       <ConfirmDialog

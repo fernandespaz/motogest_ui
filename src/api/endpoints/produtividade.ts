@@ -25,4 +25,9 @@ export const produtividadeApi = {
     apiClient
       .get<ProdutividadeMecanicoDetalheResponse>(API_ROUTES.produtividade.mecanico(usuarioId), { params: { mes } })
       .then((r) => r.data),
+  // Autoescopado pelo token — não exige PRODUTIVIDADE_READ (ver MinhaProdutividadePage).
+  mecanicoMe: (mes?: string) =>
+    apiClient
+      .get<ProdutividadeMecanicoDetalheResponse>(API_ROUTES.produtividade.mecanicoMe, { params: { mes } })
+      .then((r) => r.data),
 };

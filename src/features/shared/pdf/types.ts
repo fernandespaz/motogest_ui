@@ -61,8 +61,11 @@ export interface OSDocumentData {
     kmAtual?: string;
   };
 
-  /** Only present for Ordens de Serviço — Orçamentos leave these undefined. */
+  /** Consultor responsável — impresso no topo. Orçamento e OS têm os dois. */
   consultor?: string;
+  /** Só Ordem de Serviço: o mecânico que executou (não confundir com consultor acima). */
+  tecnicoResponsavel?: string;
+  /** Daqui pra baixo, só presente em Ordens de Serviço — Orçamentos deixam undefined. */
   previsaoEntrega?: string;
   dataAbertura?: string;
   dataConclusao?: string;

@@ -67,7 +67,8 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
           kmAtual: os.kmEntrada != null ? `${os.kmEntrada.toLocaleString('pt-BR')} km` : undefined,
         }
       : { descricao: '', placa: os.veiculoPlaca ?? '' },
-    consultor: os.usuarioResponsavelNome,
+    consultor: os.consultorNome,
+    tecnicoResponsavel: os.usuarioResponsavelNome,
     previsaoEntrega: formatDateTime(os.dataPrevisao),
     dataAbertura: formatDateTime(os.dataAbertura),
     dataConclusao: os.dataConclusao ? formatDateTime(os.dataConclusao) : undefined,

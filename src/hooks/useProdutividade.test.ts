@@ -7,12 +7,13 @@ import {
   useProdutividadeConsultor,
   useProdutividadeConsultores,
   useProdutividadeMecanico,
+  useProdutividadeMecanicoMe,
   useProdutividadeMecanicos,
 } from './useProdutividade';
 import { mesReferenciaAtual } from '@/lib/formatters';
 
 vi.mock('@/api/endpoints/produtividade', () => ({
-  produtividadeApi: { consultores: vi.fn(), consultor: vi.fn(), mecanicos: vi.fn(), mecanico: vi.fn() },
+  produtividadeApi: { consultores: vi.fn(), consultor: vi.fn(), mecanicos: vi.fn(), mecanico: vi.fn(), mecanicoMe: vi.fn() },
 }));
 
 describe('useProdutividadeConsultores', () => {
@@ -118,5 +119,34 @@ describe('useProdutividadeMecanicos / useProdutividadeMecanico', () => {
     });
     expect(result.current.fetchStatus).toBe('idle');
     expect(produtividadeApi.mecanico).not.toHaveBeenCalled();
+  });
+});
+
+describe('useProdutividadeMecanicoMe', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => vi.useRealTimers());
+
+  // Autoescopado pelo token — não recebe nem precisa de usuarioId, ao
+  // contrário de useProdutividadeMecanico (que exige PRODUTIVIDADE_READ e
+  // deixaria ver qualquer outro mecânico).
+  it('fetches the current mechanic’s own report without a usuarioId', async () => {
+    vi.mocked(produtividadeApi.mecanicoMe).mockResolvedValue({ usuarioId: 3, mes: '2020-01' });
+    const { result } = renderHook(() => useProdutividadeMecanicoMe('2020-01'), { wrapper: wrapWithQueryClient() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(produtividadeApi.mecanicoMe).toHaveBeenCalledWith('2020-01');
+  });
+
+  it('polls the current month so the mechanic sees it live', async () => {
+    vi.mocked(produtividadeApi.mecanicoMe).mockResolvedValue({ mes: mesReferenciaAtual() });
+    renderHook(() => useProdutividadeMecanicoMe(mesReferenciaAtual()), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(produtividadeApi.mecanicoMe).toHaveBeenCalledTimes(1));
+
+    await vi.advanceTimersByTimeAsync(INTERVALO_TEMPO_REAL_MS + 10);
+
+    await waitFor(() => expect(produtividadeApi.mecanicoMe).toHaveBeenCalledTimes(2));
   });
 });

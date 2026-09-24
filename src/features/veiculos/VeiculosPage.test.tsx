@@ -76,7 +76,7 @@ describe('VeiculosPage', () => {
     expect(screen.getByText('Carlos Eduardo')).toBeInTheDocument();
   });
 
-  it('redirects the "Novo veículo" action to /clientes when there are no clientes yet', async () => {
+  it('shows only the empty-state "Cadastrar cliente" action when there are no clientes yet, not a header button too', async () => {
     vi.mocked(useClientes).mockReturnValue({ data: { totalElements: 0 }, isLoading: false } as never);
     vi.mocked(useVeiculos).mockReturnValue({
       data: { content: [], pageNumber: 0, totalPages: 1, totalElements: 0 },
@@ -85,7 +85,9 @@ describe('VeiculosPage', () => {
     renderPage();
 
     expect(screen.getByText('Cadastre um cliente primeiro')).toBeInTheDocument();
-    await userEvent.click(screen.getAllByRole('button', { name: /Cadastrar cliente/ })[0]);
+    const botoes = screen.getAllByRole('button', { name: /Cadastrar cliente/ });
+    expect(botoes).toHaveLength(1);
+    await userEvent.click(botoes[0]);
     expect(mockNavigate).toHaveBeenCalledWith('/clientes');
   });
 
@@ -145,19 +147,6 @@ describe('VeiculosPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
     await waitForElementToBeRemoved(() => screen.queryByText('Remover veículo'));
-  });
-
-  it('offers the empty-state "Cadastrar cliente" action when there are no clientes', async () => {
-    vi.mocked(useClientes).mockReturnValue({ data: { totalElements: 0 }, isLoading: false } as never);
-    vi.mocked(useVeiculos).mockReturnValue({
-      data: { content: [], pageNumber: 0, totalPages: 1, totalElements: 0 },
-      isLoading: false,
-    } as never);
-    renderPage();
-
-    const buttons = screen.getAllByRole('button', { name: /Cadastrar cliente/ });
-    await userEvent.click(buttons[buttons.length - 1]);
-    expect(mockNavigate).toHaveBeenCalledWith('/clientes');
   });
 
   it('offers the empty-state "Novo veículo" action when there are clientes but no veículos yet', async () => {

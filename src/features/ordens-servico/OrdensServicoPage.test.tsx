@@ -65,6 +65,32 @@ describe('OrdensServicoPage row navigation', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/ordens-servico/42');
   });
+
+  // Com mais de um consultor na oficina, a lista precisa deixar claro de
+  // quem é cada OS sem precisar abrir uma por uma — a tabela só tinha a
+  // coluna de Técnico, nunca a de Consultor.
+  it('shows the consultor alongside the técnico for each row', () => {
+    useAuthStore.setState({ perfil: 'Consultor Técnico' });
+    vi.mocked(useOrdensServico).mockReturnValue({
+      data: {
+        ...data,
+        content: [{ ...data.content[0], consultorNome: 'Bruno Consultor', usuarioResponsavelNome: 'Marcos Mecânico' }],
+      },
+      isLoading: false,
+    } as never);
+    renderPage();
+
+    expect(screen.getByText('Consultor')).toBeInTheDocument();
+    expect(screen.getByText('Bruno Consultor')).toBeInTheDocument();
+    expect(screen.getByText('Marcos Mecânico')).toBeInTheDocument();
+  });
+
+  it('falls back to a dash when a row has no consultor on record', () => {
+    useAuthStore.setState({ perfil: 'Consultor Técnico' });
+    renderPage();
+
+    expect(screen.getAllByText('-').length).toBeGreaterThan(0);
+  });
 });
 
 describe('OrdensServicoPage filtros', () => {

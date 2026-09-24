@@ -6,13 +6,13 @@ import {
   CheckCircle2,
   AlertTriangle,
   ChevronRight,
-  LogOut,
   RefreshCw,
   Inbox,
   MessageSquareText,
   Wrench,
   Package,
   ClipboardList,
+  Camera,
 } from 'lucide-react';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Badge } from '@/components/ui/Badge';
@@ -33,7 +33,6 @@ export function MinhasOrdensServicoPage() {
   const navigate = useNavigate();
   const nome = useAuthStore((s) => s.nome);
   const usuarioId = useAuthStore((s) => s.usuarioId);
-  const logout = useAuthStore((s) => s.logout);
 
   const [aba, setAba] = useState<'inicio' | 'andamento'>('inicio');
   const [busca, setBusca] = useState('');
@@ -141,21 +140,14 @@ export function MinhasOrdensServicoPage() {
           <h1 className="font-display text-lg font-bold">Minhas Ordens de Serviço</h1>
           <p className="text-sm text-slate-400">Olá, {nome?.split(' ')[0]}</p>
         </div>
+        {/* Sair mora só no Sidebar (desktop) / gaveta "Mais" (mobile) — ver
+            comentário em Topbar.tsx. Duplicar o botão aqui já causou dois
+            "Sair" visíveis ao mesmo tempo pro Mecânico. */}
         <div className="flex items-center gap-2">
           <ThemeToggle variant="dark" />
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold">
             {getInitials(nome ?? '?')}
           </div>
-          <button
-            onClick={() => {
-              logout();
-              navigate('/login', { replace: true });
-            }}
-            className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
-            aria-label="Sair"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       </div>
 
@@ -245,12 +237,15 @@ export function MinhasOrdensServicoPage() {
                       : 'relative rounded-xl border-l-4 border-l-brand-600 bg-surface p-4 shadow-card'
                   }
                 >
-                  {/* A miniatura fica fora do fluxo (absolute) de propósito —
-                      ela é bem mais alta que a linha "OS ... · entrada ...", e
-                      se entrasse no flex normal dessa linha, a linha inteira
-                      cresceria pra caber ela e empurraria todo o resto do card
-                      pra baixo, sobrando um vão vazio embaixo do cabeçalho. */}
-                  <div className="absolute right-4 top-4 flex flex-col items-end gap-1.5">
+                  {/* A miniatura fica fora do fluxo (absolute) só a partir de
+                      lg: ela é bem mais alta que a linha "OS ... · entrada
+                      ...", e se entrasse no flex normal dessa linha, a linha
+                      inteira cresceria pra caber ela e empurraria todo o
+                      resto do card pra baixo. Abaixo de lg (tablet/mobile,
+                      onde o Mecânico realmente usa essa tela) o badge some
+                      daqui — vai inline com a placa — e a imagem vira o
+                      bloco "hero" mais abaixo, seguindo a hierarquia pedida. */}
+                  <div className="absolute right-4 top-4 hidden flex-col items-end gap-1.5 lg:flex">
                     <Badge tone={meta.tone}>{meta.label}</Badge>
                     <ModeloVeiculoThumb
                       base64={os.veiculoId != null ? imagensPorVeiculoId.get(os.veiculoId) : undefined}
@@ -258,11 +253,16 @@ export function MinhasOrdensServicoPage() {
                     />
                   </div>
 
-                  <p className="pr-28 font-mono text-xs text-ink-muted">
+                  <p className="font-mono text-xs text-ink-muted lg:pr-28">
                     OS {os.numero} · entrada {formatDateTime(os.dataAbertura)}
                   </p>
 
-                  <p className="mt-1.5 text-base font-semibold text-ink">{os.veiculoPlaca}</p>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <p className="text-base font-semibold text-ink">{os.veiculoPlaca}</p>
+                    <div className="lg:hidden">
+                      <Badge tone={meta.tone}>{meta.label}</Badge>
+                    </div>
+                  </div>
                   <p className="text-sm text-ink-muted">{os.clienteNome}</p>
 
                   {os.observacoes && (
@@ -294,6 +294,17 @@ export function MinhasOrdensServicoPage() {
                       ))}
                     </div>
                   )}
+
+                  {/* contain, não cover: as fotos do catálogo costumam ter
+                      bastante margem branca em volta do veículo — cover numa
+                      caixa curta e larga cortava o topo/base do carro e ainda
+                      assim mostrava aquela margem branca nas laterais. */}
+                  <ModeloVeiculoThumb
+                    base64={os.veiculoId != null ? imagensPorVeiculoId.get(os.veiculoId) : undefined}
+                    size={64}
+                    fit="contain"
+                    className="mt-3 h-40 w-full border border-border bg-white lg:hidden"
+                  />
 
                   {(os.tempoVendidoMinutos || os.tempoConsumidoMinutos) && (
                     <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
@@ -353,10 +364,19 @@ export function MinhasOrdensServicoPage() {
                     )}
                     <button
                       onClick={() => navigate(`/minhas-os/${os.id}`)}
-                      className="flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium text-ink-muted hover:bg-surface-alt"
+                      className="hidden shrink-0 items-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium text-ink-muted hover:bg-surface-alt lg:flex"
                     >
                       <ClipboardList size={14} /> Checklist/fotos <ChevronRight size={14} />
                     </button>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-2 lg:hidden">
+                    <Button size="sm" variant="secondary" onClick={() => navigate(`/minhas-os/${os.id}`)}>
+                      <ClipboardList size={14} /> Checklist
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => navigate(`/minhas-os/${os.id}?tab=fotos`)}>
+                      <Camera size={14} /> Fotos
+                    </Button>
                   </div>
                 </div>
               );

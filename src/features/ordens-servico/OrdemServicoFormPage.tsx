@@ -36,6 +36,7 @@ import {
   temServicoPorHTSemTempo,
 } from '@/features/shared/ItemsEditor';
 import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
+import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
 import { ChecklistTab } from './ChecklistTab';
 import { FotosTab } from './FotosTab';
 import type { ClienteResponse, OrdemServicoStatus } from '@/api/types';
@@ -352,6 +353,11 @@ export function OrdemServicoFormPage() {
     <div>
       <PageHeader
         title={isEditing ? `OS ${os?.numero ?? `#${osId}`}` : 'Nova Ordem de Serviço'}
+        // Não é um campo do request (o backend atribui a partir do orçamento
+        // de origem, ver OrdemServicoRequest em openapi.json) — só exibição,
+        // pra rastreabilidade no fechamento de mês: quem converteu o
+        // orçamento nesta OS.
+        subtitle={isEditing ? <ConsultorBadge nome={os?.consultorNome ?? '—'} /> : undefined}
         action={
           <div className="flex flex-wrap items-center gap-2">
             {isEditing && (

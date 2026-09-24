@@ -8,7 +8,7 @@ import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, Textarea } from '@/components/ui/Field';
+import { Input, Textarea, ReadOnlyField } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useClientes } from '@/hooks/useClientes';
@@ -25,11 +25,12 @@ import {
 } from '@/features/shared/ItemsEditor';
 import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
+import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDateTime, formatDocumento, toDateTimeLocalValue } from '@/lib/formatters';
 import { useAuthStore } from '@/store/authStore';
-import { isMecanico } from '@/lib/perfil';
+import { isMecanico, isConsultor } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
 
 const itemSchema = z.object({
@@ -82,15 +83,6 @@ function itensParaFormValues(itens: OrcamentoResponse['itens']): FormValues['ite
   );
 }
 
-function CampoBloqueado({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs font-medium text-ink-muted">{label}</p>
-      <p className="text-sm font-semibold text-ink">{value}</p>
-    </div>
-  );
-}
-
 export function OrcamentoFormPage() {
   // "/orcamentos/novo" e "/orcamentos/:id" apontam pro mesmo elemento de rota,
   // então o React Router reaproveita a mesma instância do componente ao
@@ -110,6 +102,8 @@ function OrcamentoFormContent() {
   const navigate = useNavigate();
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const perfil = useAuthStore((s) => s.perfil);
+  const nomeUsuarioLogado = useAuthStore((s) => s.nome);
+  const usuarioId = useAuthStore((s) => s.usuarioId);
   // Atalho de UX, não trava de segurança (ver lib/perfil.ts): Mecânico não
   // tem nenhum motivo de negócio pra estar aqui (orçamento é conversa com o
   // cliente antes da OS existir, não faz parte do trabalho técnico) — nem
@@ -123,6 +117,20 @@ function OrcamentoFormContent() {
   }, [redirecionandoForaDeOrcamento, hasPermission, perfil, navigate]);
 
   const { data: orcamento, isLoading } = useOrcamento(orcamentoId);
+  // Mesmo atalho de UX do redirecionamento acima, não controle de acesso de
+  // verdade (ver comentário em OrcamentosPage sobre o gap real: ORCAMENTO_READ
+  // não distingue "ver os próprios" de "ver todos" no backend) — evita que um
+  // consultor abra o orçamento de outro colando o id na URL, já que a lista
+  // já esconde isso mas não impede o acesso direto.
+  const bloqueadoPorOutroConsultor =
+    isEditing && isConsultor(perfil) && orcamento?.consultorId != null && orcamento.consultorId !== usuarioId;
+  useEffect(() => {
+    if (bloqueadoPorOutroConsultor) {
+      toast.error('Este orçamento pertence a outro consultor.');
+      navigate('/orcamentos', { replace: true });
+    }
+  }, [bloqueadoPorOutroConsultor, navigate]);
+
   const createMutation = useCreateOrcamento();
   const updateMutation = useUpdateOrcamento();
   // Id de um rascunho criado silenciosamente (ver garantirOrigem) antes do
@@ -156,6 +164,12 @@ function OrcamentoFormContent() {
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
+  // Consultor não é um campo do request (o backend atribui pelo token de
+  // quem cria/converte, ver OrcamentoRequest em openapi.json) — aqui é só
+  // exibição, sempre bloqueada. Num orçamento existente mostra quem
+  // efetivamente criou (pode ser outra pessoa editando); num novo, mostra
+  // quem está logado agora, já que é quem o backend vai atribuir ao salvar.
+  const consultorNome = isEditing ? (orcamento?.consultorNome ?? '—') : (nomeUsuarioLogado ?? '—');
   const selectedVeiculo = veiculos?.find((v) => v.id === veiculoId);
   const imagemVeiculo = useModeloVeiculoImagem(selectedVeiculo?.marca, selectedVeiculo?.modelo);
 
@@ -265,7 +279,7 @@ function OrcamentoFormContent() {
   }
 
   if (isEditing && isLoading) return <PageSpinner />;
-  if (redirecionandoForaDeOrcamento) return <PageSpinner />;
+  if (redirecionandoForaDeOrcamento || bloqueadoPorOutroConsultor) return <PageSpinner />;
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
@@ -281,9 +295,10 @@ function OrcamentoFormContent() {
       <PageHeader
         title={isEditing ? `Orçamento #${orcamentoId}` : 'Novo orçamento'}
         subtitle={
-          orcamento?.consultorNome
-            ? `Consultor: ${orcamento.consultorNome}${orcamento.dataEmissao ? ` · emitido em ${formatDateTime(orcamento.dataEmissao)}` : ''}`
-            : undefined
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <ConsultorBadge nome={consultorNome} />
+            {orcamento?.dataEmissao && <span>· emitido em {formatDateTime(orcamento.dataEmissao)}</span>}
+          </span>
         }
         action={
           <div className="flex items-center gap-2">
@@ -383,11 +398,11 @@ function OrcamentoFormContent() {
                           </p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                          <CampoBloqueado
+                          <ReadOnlyField
                             label="Modelo"
                             value={`${selectedVeiculo.marca ?? ''} ${selectedVeiculo.modelo ?? ''}`.trim() || '—'}
                           />
-                          <CampoBloqueado
+                          <ReadOnlyField
                             label="Ano"
                             value={
                               selectedVeiculo.anoFabricacao
@@ -395,8 +410,8 @@ function OrcamentoFormContent() {
                                 : '—'
                             }
                           />
-                          <CampoBloqueado label="Cor" value={selectedVeiculo.cor || '—'} />
-                          <CampoBloqueado label="Chassi" value={selectedVeiculo.chassi || '—'} />
+                          <ReadOnlyField label="Cor" value={selectedVeiculo.cor || '—'} />
+                          <ReadOnlyField label="Chassi" value={selectedVeiculo.chassi || '—'} />
                         </div>
                       </div>
                     </motion.div>

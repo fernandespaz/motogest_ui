@@ -79,12 +79,11 @@ export function VeiculosPage() {
       <PageHeader
         title="Veículos"
         subtitle="Veículos vinculados aos clientes da oficina"
+        // Sem cliente cadastrado, o card vazio abaixo já traz a única ação
+        // possível ("Cadastrar cliente") — repetir o botão aqui em cima seria
+        // duplicar a mesma ação na tela.
         action={
-          semClientes ? (
-            <Button onClick={() => navigate('/clientes')}>
-              <UserPlus size={18} /> Cadastrar cliente
-            </Button>
-          ) : (
+          semClientes ? undefined : (
             <Button onClick={() => setModalVeiculo(null)}>
               <Plus size={18} /> Novo veículo
             </Button>

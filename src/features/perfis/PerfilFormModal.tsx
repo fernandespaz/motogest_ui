@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import type { PerfilResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { PERFIL_PRESETS, type PerfilPresetKey } from './perfilPresets';
+import { PERMISSAO_CATEGORIA_LABELS, PERMISSAO_CATEGORIA_ORDEM, agruparPermissoesPorCategoria } from './permissaoCategoria';
 
 const FORM_ID = 'perfil-form';
 
@@ -32,6 +33,10 @@ export function PerfilFormModal({
 }) {
   const isEditing = !!perfil;
   const { data: permissoesDisponiveis } = usePermissoesDisponiveis();
+  const permissoesPorCategoria = useMemo(
+    () => agruparPermissoesPorCategoria(permissoesDisponiveis),
+    [permissoesDisponiveis],
+  );
   const createMutation = useCreatePerfil();
   const updateMutation = useUpdatePerfil();
 
@@ -88,7 +93,7 @@ export function PerfilFormModal({
       open={open}
       onClose={onClose}
       title={isEditing ? 'Editar perfil de acesso' : 'Novo perfil de acesso'}
-      size="lg"
+      size="xl"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
@@ -126,26 +131,37 @@ export function PerfilFormModal({
           <p className="mb-2 text-sm font-medium text-ink">
             Permissões <span className="text-danger">*</span>
           </p>
-          <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto rounded-lg border border-border p-3 sm:grid-cols-2">
-            {permissoesDisponiveis?.map((perm) => (
-              <Controller
-                key={perm.id}
-                control={control}
-                name="permissoes"
-                render={({ field }) => (
-                  <Checkbox
-                    label={perm.descricao ?? perm.codigo ?? ''}
-                    checked={field.value?.includes(perm.codigo!)}
-                    onChange={(e) => {
-                      const set = new Set(field.value ?? []);
-                      if (e.target.checked) set.add(perm.codigo!);
-                      else set.delete(perm.codigo!);
-                      field.onChange(Array.from(set));
-                    }}
-                  />
-                )}
-              />
-            ))}
+          <div className="flex flex-col gap-4 rounded-lg border border-border p-4">
+            {PERMISSAO_CATEGORIA_ORDEM.filter((categoria) => (permissoesPorCategoria.get(categoria)?.length ?? 0) > 0).map(
+              (categoria, i) => (
+                <fieldset key={categoria} className={i > 0 ? 'border-t border-border pt-4' : ''}>
+                  <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-300">
+                    {PERMISSAO_CATEGORIA_LABELS[categoria]}
+                  </legend>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {permissoesPorCategoria.get(categoria)!.map((perm) => (
+                      <Controller
+                        key={perm.id}
+                        control={control}
+                        name="permissoes"
+                        render={({ field }) => (
+                          <Checkbox
+                            label={perm.descricao ?? perm.codigo ?? ''}
+                            checked={field.value?.includes(perm.codigo!)}
+                            onChange={(e) => {
+                              const set = new Set(field.value ?? []);
+                              if (e.target.checked) set.add(perm.codigo!);
+                              else set.delete(perm.codigo!);
+                              field.onChange(Array.from(set));
+                            }}
+                          />
+                        )}
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+              ),
+            )}
           </div>
           {errors.permissoes && <p className="mt-1 text-xs font-medium text-danger">{errors.permissoes.message}</p>}
         </div>
