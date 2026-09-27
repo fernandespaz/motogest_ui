@@ -7,7 +7,9 @@ import {
   ChevronRight,
   Clock3,
   FileText,
+  PackageCheck,
   Plus,
+  Receipt,
   Send,
   Users,
   Wrench,
@@ -20,7 +22,7 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import { useAuthStore } from '@/store/authStore';
 import { useDashboardConsultor } from '@/hooks/useDashboardConsultor';
 import { agendamentoStatusMeta, metaFor, ordemServicoStatusMeta } from '@/lib/statusMeta';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { IndicadoresGrid } from '@/features/produtividade/IndicadoresConsultor';
 import { StatCard } from '@/components/ui/StatCard';
 
@@ -134,10 +136,22 @@ export function DashboardConsultor() {
       tone: 'brand' as const,
     },
     permissoes.podeOs && {
+      icon: Receipt,
+      label: 'Prontas para faturar',
+      value: String(carteira.osProntasParaFaturar.length),
+      tone: carteira.osProntasParaFaturar.length ? ('warning' as const) : ('brand' as const),
+    },
+    permissoes.podeOs && {
       icon: CheckCircle2,
       label: 'Prontas para entrega',
       value: String(carteira.osProntasParaEntrega.length),
       tone: carteira.osProntasParaEntrega.length ? ('success' as const) : ('brand' as const),
+    },
+    permissoes.podeOs && {
+      icon: PackageCheck,
+      label: 'OS entregues recentemente',
+      value: String(carteira.osEntregues.length),
+      tone: 'brand' as const,
     },
     permissoes.podeAgenda && {
       icon: CalendarClock,
@@ -223,8 +237,24 @@ export function DashboardConsultor() {
         )}
         {permissoes.podeOs && (
           <ListaPendencias
+            titulo="Prontas para faturar"
+            subtitulo="OS concluídas aguardando o caixa faturar — o veículo só é liberado depois de pago"
+            icone={Receipt}
+            verTodos="/ordens-servico"
+            vazio="Nenhuma OS sua concluída aguardando faturamento."
+            itens={carteira.osProntasParaFaturar.map((o) => ({
+              key: o.id!,
+              to: `/ordens-servico/${o.id}`,
+              titulo: `${o.numero ?? `#${o.id}`} · ${o.clienteNome ?? 'Cliente'}`,
+              detalhe: o.veiculoPlaca ?? '',
+              lateral: <span className="text-sm font-semibold text-ink">{formatCurrency(o.valorTotal)}</span>,
+            }))}
+          />
+        )}
+        {permissoes.podeOs && (
+          <ListaPendencias
             titulo="Prontas para entrega"
-            subtitulo="OS concluídas — hora de avisar o cliente"
+            subtitulo="OS já faturadas — falta confirmar a entrega com o checklist de saída"
             icone={Wrench}
             verTodos="/ordens-servico"
             vazio="Nenhum veículo seu pronto para entrega."
@@ -233,7 +263,11 @@ export function DashboardConsultor() {
               to: `/ordens-servico/${o.id}`,
               titulo: `${o.numero ?? `#${o.id}`} · ${o.clienteNome ?? 'Cliente'}`,
               detalhe: o.veiculoPlaca ?? '',
-              lateral: <span className="text-sm font-semibold text-ink">{formatCurrency(o.valorTotal)}</span>,
+              lateral: (
+                <span className="text-xs text-ink-muted">
+                  Faturada {o.dataFaturamento ? formatDate(o.dataFaturamento) : ''}
+                </span>
+              ),
             }))}
           />
         )}
@@ -254,6 +288,22 @@ export function DashboardConsultor() {
                 lateral: <Badge tone={meta.tone}>{meta.label}</Badge>,
               };
             })}
+          />
+        )}
+        {permissoes.podeOs && (
+          <ListaPendencias
+            titulo="OS entregues recentemente"
+            subtitulo="Últimas entregas — não é um fechamento mensal, é o histórico recente"
+            icone={PackageCheck}
+            verTodos="/ordens-servico"
+            vazio="Nenhuma OS sua entregue ainda."
+            itens={carteira.osEntregues.map((o) => ({
+              key: o.id!,
+              to: `/ordens-servico/${o.id}`,
+              titulo: `${o.numero ?? `#${o.id}`} · ${o.clienteNome ?? 'Cliente'}`,
+              detalhe: o.veiculoPlaca ?? '',
+              lateral: <span className="text-xs text-ink-muted">{formatDate(o.dataConclusao)}</span>,
+            }))}
           />
         )}
         {permissoes.podeAgenda && (

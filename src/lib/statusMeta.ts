@@ -45,6 +45,7 @@ export const ordemServicoStatusMeta: Record<string, { label: string; tone: Tone 
   AGUARDANDO_PECA: meta('Aguardando peça', 'andamento'),
   PAUSADA: meta('Pausada', 'andamento'),
   CONCLUIDA: meta('Concluída', 'concluido'),
+  FATURADO: meta('Faturada', 'concluido'),
   CANCELADA: meta('Cancelada', 'cancelado'),
   ENTREGUE: meta('Entregue', 'concluido'),
 };
@@ -69,6 +70,11 @@ export const pagamentoStatusMeta: Record<string, { label: string; tone: Tone }> 
   PAGO: meta('Pago', 'concluido'),
   RECUSADO: meta('Recusado', 'cancelado'),
   CANCELADO: meta('Cancelado', 'neutro'),
+};
+
+export const caixaSessaoStatusMeta: Record<string, { label: string; tone: Tone }> = {
+  ABERTO: meta('Aberto', 'andamento'),
+  FECHADO: meta('Fechado', 'concluido'),
 };
 
 export const checklistSituacaoMeta: Record<string, { label: string; tone: Tone }> = {

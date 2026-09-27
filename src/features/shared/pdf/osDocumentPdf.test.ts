@@ -112,6 +112,19 @@ describe('renderOSDocumentPdf', () => {
     expect(comTecnico.size).not.toBe(semTecnico.size);
   });
 
+  // Recibo emitido pelo Faturar no Caixa — o selo "PAGO NO CAIXA" só deve
+  // aparecer quando o documento representa um pagamento já efetuado.
+  it('renders the PAGO NO CAIXA seal only when pagamento is present', async () => {
+    const semPagamento = await renderOSDocumentPdf(baseData());
+    const comPagamento = await renderOSDocumentPdf(
+      baseData({
+        tipoDocumento: 'Recibo de Pagamento',
+        pagamento: { formaPagamento: 'Pix', dataPagamento: '27/09/2026 10:00', caixaSessaoIdentificador: 'CX-0001' },
+      }),
+    );
+    expect(comPagamento.size).not.toBe(semPagamento.size);
+  });
+
   it('renders wrapped observações text when present', async () => {
     const blob = await renderOSDocumentPdf(
       baseData({ observacoes: 'Cliente solicitou retorno em caso de peça em falta.' }),

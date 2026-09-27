@@ -37,7 +37,22 @@ export type ItemResponse = Schemas['ItemResponse'];
 export type TipoItem = NonNullable<ItemRequest['tipoItem']>;
 
 export type OrdemServicoRequest = Schemas['OrdemServicoRequest'];
-export type OrdemServicoResponse = Schemas['OrdemServicoResponse'];
+/**
+ * ATENÇÃO — divergência temporária do contrato ao vivo (27/09/2026): o
+ * backend fez um rollback/branch trocada que removeu `status: "FATURADO"`,
+ * `clienteDocumento` e `dataFaturamento` de OrdemServicoResponse (junto com
+ * todo o módulo de sessões de caixa — ver CaixaSessaoResponse etc. abaixo).
+ * Isso é declarado à mão aqui, por cima do gerado, só pra manter o código de
+ * Faturar no Caixa/FATURADO compilando enquanto o time de backend confirma se
+ * foi acidental. Assim que o schema.d.ts gerado voltar a ter esses campos,
+ * troque de volta pra `Schemas['OrdemServicoResponse']` puro.
+ */
+export type OrdemServicoResponse = Omit<Schemas['OrdemServicoResponse'], 'status'> & {
+  status?: NonNullable<Schemas['OrdemServicoResponse']['status']> | 'FATURADO';
+  clienteDocumento?: string;
+  /** Format: date-time */
+  dataFaturamento?: string;
+};
 export type OrdemServicoStatus = NonNullable<OrdemServicoResponse['status']>;
 export type OrdemServicoPublicoResponse = Schemas['OrdemServicoPublicoResponse'];
 export type OrdemServicoPausaResponse = Schemas['OrdemServicoPausaResponse'];
@@ -50,10 +65,139 @@ export type ProdutoCategoria = NonNullable<ProdutoRequest['categoria']>;
 export type ServicoRequest = Schemas['ServicoRequest'];
 export type ServicoResponse = Schemas['ServicoResponse'];
 
-export type CaixaMovimentoRequest = Schemas['CaixaMovimentoRequest'];
-export type CaixaMovimentoResponse = Schemas['CaixaMovimentoResponse'];
+/**
+ * ATENÇÃO — divergência temporária do contrato ao vivo (27/09/2026): o
+ * backend removeu por completo o módulo de sessões de caixa/faturamento
+ * (`/caixa/sessoes/*`, `/caixa/faturamento/*`, `/caixa/relatorios/*`) e
+ * reverteu CaixaMovimentoResponse/Request pro formato antigo, sem
+ * `formaPagamento`/`caixaSessaoId`/`caixaSessaoIdentificador`. Provavelmente
+ * um rollback acidental (branch trocada) — aguardando confirmação do time de
+ * backend. Todos os tipos abaixo ficam declarados à mão (não mais derivados
+ * de `Schemas[...]`, que não os tem mais) só pra manter as telas de Meu
+ * Caixa/Faturar OS/relatórios compilando enquanto isso não se resolve. Assim
+ * que os endpoints voltarem, troque de volta pra `Schemas['...']` puro.
+ */
+export type CaixaMovimentoRequest = Schemas['CaixaMovimentoRequest'] & {
+  formaPagamento?: 'DINHEIRO' | 'CARTAO' | 'PIX' | 'TRANSFERENCIA';
+};
+export type CaixaMovimentoResponse = Schemas['CaixaMovimentoResponse'] & {
+  formaPagamento?: 'DINHEIRO' | 'CARTAO' | 'PIX' | 'TRANSFERENCIA';
+  caixaSessaoId?: number;
+  caixaSessaoIdentificador?: string;
+};
 export type CaixaTipo = NonNullable<CaixaMovimentoRequest['tipo']>;
 export type CaixaCategoria = NonNullable<CaixaMovimentoRequest['categoria']>;
+export type FormaPagamento = NonNullable<CaixaMovimentoRequest['formaPagamento']>;
+
+export interface SaldoPorFormaPagamentoResponse {
+  dinheiro?: number;
+  cartao?: number;
+  pix?: number;
+  transferencia?: number;
+  total?: number;
+}
+
+export type CaixaSessaoStatus = 'ABERTO' | 'FECHADO';
+
+export interface CaixaSessaoResponse {
+  id?: number;
+  identificador?: string;
+  turno?: string;
+  status?: CaixaSessaoStatus;
+  abertoPorUsuarioId?: number;
+  abertoPorUsuarioNome?: string;
+  abertoEm?: string;
+  saldoInicial?: SaldoPorFormaPagamentoResponse;
+  totalEntradas?: SaldoPorFormaPagamentoResponse;
+  totalSaidas?: SaldoPorFormaPagamentoResponse;
+  saldoAtual?: SaldoPorFormaPagamentoResponse;
+  fechadoPorUsuarioId?: number;
+  fechadoPorUsuarioNome?: string;
+  fechadoEm?: string;
+  saldoFinalInformado?: SaldoPorFormaPagamentoResponse;
+  saldoFinalCalculado?: SaldoPorFormaPagamentoResponse;
+  divergencia?: SaldoPorFormaPagamentoResponse;
+  observacaoFechamento?: string;
+  justificativaDivergencia?: string;
+}
+
+export interface CaixaSessaoAberturaRequest {
+  turno?: string;
+  saldoInicialDinheiro?: number;
+  saldoInicialCartao?: number;
+  saldoInicialPix?: number;
+  saldoInicialTransferencia?: number;
+}
+
+export interface CaixaSessaoFechamentoRequest {
+  saldoFinalInformadoDinheiro: number;
+  saldoFinalInformadoCartao: number;
+  saldoFinalInformadoPix: number;
+  saldoFinalInformadoTransferencia: number;
+  observacao?: string;
+  justificativaDivergencia?: string;
+}
+
+export interface CaixaSessaoReaberturaRequest {
+  motivo: string;
+}
+
+export type CaixaSessaoEventoTipo = 'ABERTURA' | 'FECHAMENTO' | 'REABERTURA';
+
+export interface CaixaSessaoEventoResponse {
+  id?: number;
+  tipo?: CaixaSessaoEventoTipo;
+  usuarioId?: number;
+  usuarioNome?: string;
+  ocorridoEm?: string;
+  observacao?: string;
+}
+
+export interface FaturamentoOrdemServicoRequest {
+  formaPagamento: FormaPagamento;
+}
+
+export interface FaturamentoOrdemServicoResponse {
+  ordemServicoId?: number;
+  ordemServicoNumero?: string;
+  clienteId?: number;
+  clienteNome?: string;
+  valor?: number;
+  formaPagamento?: FormaPagamento;
+  contaReceberId?: number;
+  caixaMovimentoId?: number;
+  caixaSessaoIdentificador?: string;
+  recebidoEm?: string;
+}
+
+export interface PontoDiarioCaixaResponse {
+  data?: string;
+  totalEntradas?: number;
+  totalSaidas?: number;
+  saldoDia?: number;
+}
+
+export interface RelatorioCaixaDiarioResponse {
+  data?: string;
+  totalEntradas?: number;
+  totalSaidas?: number;
+  saldoDia?: number;
+  movimentos?: CaixaMovimentoResponse[];
+  sessoes?: CaixaSessaoResponse[];
+}
+
+export interface RelatorioCaixaPeriodoResponse {
+  inicio?: string;
+  fim?: string;
+  totalEntradas?: number;
+  totalSaidas?: number;
+  saldoPeriodo?: number;
+  diaDePicoDeEntrada?: string;
+  diaDePicoDeSaida?: string;
+  pontosDiarios?: PontoDiarioCaixaResponse[];
+}
+
+export type FormatoExportacaoCaixa = 'PDF' | 'XLSX';
 
 export type ContaPagarRequest = Schemas['ContaPagarRequest'];
 export type ContaPagarResponse = Schemas['ContaPagarResponse'];
@@ -93,7 +237,11 @@ export type PermissaoResponse = Schemas['PermissaoResponse'];
 export type UsuarioRequest = Schemas['UsuarioRequest'];
 export type UsuarioResponse = Schemas['UsuarioResponse'];
 
-export type OficinaResponse = Schemas['OficinaResponse'];
+// ATENÇÃO — mesma divergência temporária citada acima: o backend também
+// removeu `logoUrl` de OficinaResponse (só sobrou `logoImagemDisponivel`).
+// Ver features/shared/pdf/logo.ts e hooks/useOficina.ts, que dependem dele
+// pra logo externa (URL, não upload).
+export type OficinaResponse = Schemas['OficinaResponse'] & { logoUrl?: string };
 export type OficinaRegistrationRequest = Schemas['OficinaRegistrationRequest'];
 export type OficinaUpdateRequest = Schemas['OficinaUpdateRequest'];
 export type AdminOficinaResponse = Schemas['AdminOficinaResponse'];
@@ -112,12 +260,16 @@ export type PagamentoTipo = NonNullable<PagamentoResponse['tipo']>;
 export type DashboardResponse = Schemas['DashboardResponse'];
 export type ResumoContasResponse = Schemas['ResumoContasResponse'];
 
-export type HoraTecnicaResponse = Schemas['HoraTecnicaResponse'];
-export type ComposicaoHoraTecnicaResponse = Schemas['ComposicaoHoraTecnicaResponse'];
-export type ParametrosHoraTecnicaRequest = Schemas['ParametrosHoraTecnicaRequest'];
-export type CustoFixoRequest = Schemas['CustoFixoRequest'];
-export type CustoFixoResponse = Schemas['CustoFixoResponse'];
-export type CategoriaCustoFixo = CustoFixoRequest['categoria'];
+// Precificação por categoria de serviço (27/09/2026) — substituiu por
+// completo o modelo antigo de PHT único calculado a partir de custos fixos.
+export type CategoriaServico = Schemas['ServicoRequest']['categoria'];
+export type CategoriaHoraTecnicaItemRequest = Schemas['CategoriaHoraTecnicaItemRequest'];
+export type CategoriaHoraTecnicaRequest = Schemas['CategoriaHoraTecnicaRequest'];
+export type CategoriaHoraTecnicaResponse = Schemas['CategoriaHoraTecnicaResponse'];
+
+export type CapacidadeProdutivaRequest = Schemas['CapacidadeProdutivaRequest'];
+export type CapacidadeProdutivaResponse = Schemas['CapacidadeProdutivaResponse'];
+
 export type AuditoriaParametroFinanceiroResponse = Schemas['AuditoriaParametroFinanceiroResponse'];
 export type AcaoAuditoria = NonNullable<AuditoriaParametroFinanceiroResponse['acao']>;
 

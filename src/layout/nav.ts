@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Calculator,
   Gauge,
+  Banknote,
+  Factory,
 } from 'lucide-react';
 import { isMecanico } from '@/lib/perfil';
 
@@ -59,10 +61,35 @@ export const navItems: NavItem[] = [
     icon: Gauge,
     group: 'operacao',
   },
+  // Tela do operador de caixa — abrir/fechar turno, lançar entrada/saída,
+  // faturar OS. CAIXA_OPERAR é o código de "operar o próprio caixa"; quem só
+  // gerencia todos os caixas (CAIXA_GERENCIAR) acessa isso pela aba Caixa em
+  // Financeiro, não por aqui.
+  { label: 'Meu Caixa', to: '/caixa', icon: Banknote, group: 'operacao', permissions: ['CAIXA_OPERAR'] },
   { label: 'Produtos e Estoque', to: '/produtos', icon: Package, group: 'gestao', permissions: ['ESTOQUE_READ'] },
   { label: 'Catálogo de Serviços', to: '/servicos', icon: Wrench, group: 'gestao', permissions: ['SERVICO_READ'] },
-  { label: 'Financeiro', to: '/financeiro', icon: Wallet, group: 'gestao', permissions: ['FINANCEIRO_READ'] },
+  // FINANCEIRO_READ abre as abas de Contas a Pagar/Receber/Despesas Fixas;
+  // CAIXA_GERENCIAR sozinho (sem FINANCEIRO_READ) já é suficiente pra abrir a
+  // página e cair direto na aba Caixa — ver FinanceiroPage, cuja aba caixa é
+  // gated por CAIXA_GERENCIAR, não por FINANCEIRO_READ.
+  {
+    label: 'Financeiro',
+    to: '/financeiro',
+    icon: Wallet,
+    group: 'gestao',
+    permissions: ['FINANCEIRO_READ', 'CAIXA_GERENCIAR'],
+  },
   { label: 'Hora Técnica', to: '/hora-tecnica', icon: Calculator, group: 'gestao', permissions: ['HORA_TECNICA_GERENCIAR'] },
+  // Tela própria, separada da Hora Técnica — permissão dedicada
+  // (CAPACIDADE_PRODUTIVA_GERENCIAR) conforme a doc de Precificação por
+  // Categoria de Serviço.
+  {
+    label: 'Capacidade Produtiva',
+    to: '/capacidade-produtiva',
+    icon: Factory,
+    group: 'gestao',
+    permissions: ['CAPACIDADE_PRODUTIVA_GERENCIAR'],
+  },
   { label: 'Produtividade', to: '/produtividade', icon: TrendingUp, group: 'gestao', permissions: ['PRODUTIVIDADE_READ'] },
   {
     label: 'Solicitações de Desconto',

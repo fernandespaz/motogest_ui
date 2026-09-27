@@ -6,7 +6,9 @@ import {
   formatMinutosEmHorasDecimais,
   formatCnpj,
   formatCpf,
+  formatCpfOuCnpj,
   formatCurrency,
+  labelCpfOuCnpj,
   formatDate,
   formatDateTime,
   formatDocumento,
@@ -124,6 +126,30 @@ describe('formatDocumento', () => {
 
   it('routes to formatCnpj for PJ', () => {
     expect(formatDocumento('98765432000188', 'PJ')).toBe(formatCnpj('98765432000188'));
+  });
+});
+
+describe('formatCpfOuCnpj', () => {
+  it('formats an 11-digit value as CPF', () => {
+    expect(formatCpfOuCnpj('12345678901')).toBe(formatCpf('12345678901'));
+  });
+
+  it('formats a 14-digit value as CNPJ', () => {
+    expect(formatCpfOuCnpj('98765432000188')).toBe(formatCnpj('98765432000188'));
+  });
+
+  it('strips non-digit characters before deciding CPF vs CNPJ', () => {
+    expect(formatCpfOuCnpj('123.456.789-01')).toBe(formatCpf('12345678901'));
+  });
+});
+
+describe('labelCpfOuCnpj', () => {
+  it('labels an 11-digit value as CPF', () => {
+    expect(labelCpfOuCnpj('12345678901')).toBe('CPF');
+  });
+
+  it('labels a 14-digit value as CNPJ', () => {
+    expect(labelCpfOuCnpj('98765432000188')).toBe('CNPJ');
   });
 });
 

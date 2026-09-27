@@ -4,15 +4,20 @@ import { contasPagarApi } from '@/api/endpoints/contasPagar';
 import { contasReceberApi } from '@/api/endpoints/contasReceber';
 import type {
   CaixaMovimentoRequest,
+  CaixaSessaoAberturaRequest,
+  CaixaSessaoFechamentoRequest,
+  CaixaSessaoReaberturaRequest,
   ContaPagarRequest,
   ContaPagarResponse,
   ContaReceberRequest,
   ContaReceberResponse,
+  FaturamentoOrdemServicoRequest,
   PageParams,
 } from '@/api/types';
+import { ordensServicoKeys } from './useOrdensServico';
 import { createCrudHooks } from './factory';
 
-// Caixa
+// Caixa — lançamentos
 export const caixaKeys = {
   all: ['caixa'] as const,
   list: (params?: PageParams) => ['caixa', 'list', params] as const,
@@ -46,6 +51,116 @@ export function useRegistrarCaixa() {
     mutationFn: (payload: CaixaMovimentoRequest) => caixaApi.registrar(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: caixaKeys.all }),
     meta: { hasLocalErrorHandling: true },
+  });
+}
+
+// Caixa — sessões (turnos)
+export const caixaSessaoKeys = {
+  all: ['caixa', 'sessoes'] as const,
+  list: (params?: PageParams) => ['caixa', 'sessoes', 'list', params] as const,
+  aberta: ['caixa', 'sessoes', 'aberta'] as const,
+  detail: (id: number) => ['caixa', 'sessoes', 'detail', id] as const,
+  eventos: (id: number) => ['caixa', 'sessoes', 'eventos', id] as const,
+};
+
+export function useCaixaSessoes(params?: PageParams, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: caixaSessaoKeys.list(params),
+    queryFn: () => caixaApi.sessoes.listar(params),
+    enabled: options?.enabled,
+  });
+}
+
+/** Sessão aberta do operador atual — `data === null` (sem erro) é o estado normal "nenhum turno aberto". */
+export function useCaixaSessaoAberta(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: caixaSessaoKeys.aberta,
+    queryFn: () => caixaApi.sessoes.aberta(),
+    enabled: options?.enabled,
+  });
+}
+
+export function useCaixaSessao(id: number | undefined) {
+  return useQuery({
+    queryKey: caixaSessaoKeys.detail(id!),
+    queryFn: () => caixaApi.sessoes.buscarPorId(id!),
+    enabled: !!id,
+  });
+}
+
+export function useCaixaSessaoEventos(id: number | undefined) {
+  return useQuery({
+    queryKey: caixaSessaoKeys.eventos(id!),
+    queryFn: () => caixaApi.sessoes.eventos(id!),
+    enabled: !!id,
+  });
+}
+
+export function useAbrirCaixaSessao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CaixaSessaoAberturaRequest) => caixaApi.sessoes.abrir(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: caixaSessaoKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useFecharCaixaSessao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: CaixaSessaoFechamentoRequest }) =>
+      caixaApi.sessoes.fechar(id, payload),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: caixaSessaoKeys.all });
+      qc.invalidateQueries({ queryKey: caixaSessaoKeys.eventos(variables.id) });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useReabrirCaixaSessao() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: CaixaSessaoReaberturaRequest }) =>
+      caixaApi.sessoes.reabrir(id, payload),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: caixaSessaoKeys.all });
+      qc.invalidateQueries({ queryKey: caixaSessaoKeys.eventos(variables.id) });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+/** Fatura uma OS direto no caixa (cria/liquida a Conta a Receber e alimenta a sessão aberta) — invalida os três recursos que essa única ação afeta. */
+export function useFaturarOrdemServico() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ordemServicoId, payload }: { ordemServicoId: number; payload: FaturamentoOrdemServicoRequest }) =>
+      caixaApi.faturar(ordemServicoId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: caixaSessaoKeys.all });
+      qc.invalidateQueries({ queryKey: caixaKeys.all });
+      qc.invalidateQueries({ queryKey: contasReceberKeys.all });
+      qc.invalidateQueries({ queryKey: ordensServicoKeys.all });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+// Caixa — relatórios (só quem tem CAIXA_GERENCIAR acessa essas telas; ver CaixaRelatoriosTab)
+export function useRelatorioCaixaDiario(data: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['caixa', 'relatorios', 'diario', data] as const,
+    queryFn: () => caixaApi.relatorios.diario(data),
+    enabled: (options?.enabled ?? true) && !!data,
+  });
+}
+
+export function useRelatorioCaixaPeriodo(inicio: string, fim: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['caixa', 'relatorios', 'periodo', inicio, fim] as const,
+    queryFn: () => caixaApi.relatorios.periodo(inicio, fim),
+    enabled: (options?.enabled ?? true) && !!inicio && !!fim,
   });
 }
 

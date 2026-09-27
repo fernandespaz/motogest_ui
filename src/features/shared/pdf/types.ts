@@ -80,4 +80,15 @@ export interface OSDocumentData {
   totalGeral: number;
 
   observacoes?: string;
+
+  /**
+   * Só presente quando o documento é impresso como recibo de um pagamento já
+   * efetuado (ver Faturar no Caixa) — o renderer desenha um selo "PAGO NO
+   * CAIXA" com esses dados. Ausente em qualquer outra impressão de OS/Orçamento.
+   */
+  pagamento?: {
+    formaPagamento: string;
+    dataPagamento: string;
+    caixaSessaoIdentificador?: string;
+  };
 }

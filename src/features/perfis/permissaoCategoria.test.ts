@@ -7,7 +7,10 @@ describe('categoriaDaPermissao', () => {
     expect(categoriaDaPermissao('USUARIO_WRITE')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('PERFIL_READ')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('FINANCEIRO_READ')).toBe('GERENCIAL');
+    expect(categoriaDaPermissao('CAIXA_OPERAR')).toBe('GERENCIAL');
+    expect(categoriaDaPermissao('CAIXA_GERENCIAR')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('HORA_TECNICA_GERENCIAR')).toBe('GERENCIAL');
+    expect(categoriaDaPermissao('CAPACIDADE_PRODUTIVA_GERENCIAR')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('DESCONTO_APROVAR')).toBe('GERENCIAL');
   });
 
@@ -59,7 +62,10 @@ describe('categoriaDaPermissao', () => {
       'ESTOQUE_WRITE',
       'ESTOQUE_RESERVAR',
       'FINANCEIRO_READ',
+      'CAIXA_OPERAR',
+      'CAIXA_GERENCIAR',
       'HORA_TECNICA_GERENCIAR',
+      'CAPACIDADE_PRODUTIVA_GERENCIAR',
       'PRODUTIVIDADE_READ',
       'DESCONTO_APROVAR',
       'DASHBOARD_READ',

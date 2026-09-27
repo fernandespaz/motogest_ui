@@ -74,6 +74,22 @@ export const API_ROUTES = {
     movimentos: '/api/v1/caixa/movimentos',
     periodo: '/api/v1/caixa/movimentos/periodo',
     saldo: '/api/v1/caixa/saldo',
+    faturamento: (ordemServicoId: number) => `/api/v1/caixa/faturamento/${ordemServicoId}`,
+    sessoes: {
+      base: '/api/v1/caixa/sessoes',
+      aberta: '/api/v1/caixa/sessoes/aberta',
+      detail: (id: number) => `/api/v1/caixa/sessoes/${id}`,
+      eventos: (id: number) => `/api/v1/caixa/sessoes/${id}/eventos`,
+      fechar: (id: number) => `/api/v1/caixa/sessoes/${id}/fechar`,
+      reabrir: (id: number) => `/api/v1/caixa/sessoes/${id}/reabrir`,
+      exportar: (id: number) => `/api/v1/caixa/sessoes/${id}/exportar`,
+    },
+    relatorios: {
+      diario: '/api/v1/caixa/relatorios/diario',
+      diarioExportar: '/api/v1/caixa/relatorios/diario/exportar',
+      periodo: '/api/v1/caixa/relatorios/periodo',
+      periodoExportar: '/api/v1/caixa/relatorios/periodo/exportar',
+    },
   },
   contasPagar: {
     base: '/api/v1/contas-pagar',
@@ -122,10 +138,11 @@ export const API_ROUTES = {
   },
   horaTecnica: {
     base: '/api/v1/financeiro/hora-tecnica',
-    parametros: '/api/v1/financeiro/hora-tecnica/parametros',
-    custosFixos: '/api/v1/financeiro/hora-tecnica/custos-fixos',
-    custoFixo: (id: number) => `/api/v1/financeiro/hora-tecnica/custos-fixos/${id}`,
     auditoria: '/api/v1/financeiro/hora-tecnica/auditoria',
+  },
+  capacidadeProdutiva: {
+    base: '/api/v1/financeiro/capacidade-produtiva',
+    auditoria: '/api/v1/financeiro/capacidade-produtiva/auditoria',
   },
   produtividade: {
     consultores: '/api/v1/produtividade/consultores',

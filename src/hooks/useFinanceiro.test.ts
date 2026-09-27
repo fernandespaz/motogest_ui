@@ -6,12 +6,23 @@ import { contasPagarApi } from '@/api/endpoints/contasPagar';
 import { contasReceberApi } from '@/api/endpoints/contasReceber';
 import {
   caixaKeys,
+  caixaSessaoKeys,
   contasPagarKeys,
   contasReceberKeys,
   useCaixaMovimentos,
   useCaixaPeriodo,
   useCaixaSaldo,
   useRegistrarCaixa,
+  useCaixaSessoes,
+  useCaixaSessaoAberta,
+  useCaixaSessao,
+  useCaixaSessaoEventos,
+  useAbrirCaixaSessao,
+  useFecharCaixaSessao,
+  useReabrirCaixaSessao,
+  useFaturarOrdemServico,
+  useRelatorioCaixaDiario,
+  useRelatorioCaixaPeriodo,
   useContasPagar,
   useContasPagarPendentes,
   usePagarConta,
@@ -21,9 +32,32 @@ import {
   useReceberConta,
   useCancelarContaReceber,
 } from './useFinanceiro';
+import { ordensServicoKeys } from './useOrdensServico';
 
 vi.mock('@/api/endpoints/caixa', () => ({
-  caixaApi: { list: vi.fn(), periodo: vi.fn(), saldo: vi.fn(), registrar: vi.fn() },
+  caixaApi: {
+    list: vi.fn(),
+    periodo: vi.fn(),
+    saldo: vi.fn(),
+    registrar: vi.fn(),
+    faturar: vi.fn(),
+    sessoes: {
+      listar: vi.fn(),
+      abrir: vi.fn(),
+      aberta: vi.fn(),
+      buscarPorId: vi.fn(),
+      eventos: vi.fn(),
+      fechar: vi.fn(),
+      reabrir: vi.fn(),
+      exportar: vi.fn(),
+    },
+    relatorios: {
+      diario: vi.fn(),
+      diarioExportar: vi.fn(),
+      periodo: vi.fn(),
+      periodoExportar: vi.fn(),
+    },
+  },
 }));
 vi.mock('@/api/endpoints/contasPagar', () => ({
   contasPagarApi: {
@@ -91,6 +125,102 @@ describe('caixa hooks', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaKeys.all });
+  });
+});
+
+describe('caixa sessão hooks', () => {
+  it('useCaixaSessoes() lists sessions when enabled', async () => {
+    vi.mocked(caixaApi.sessoes.listar).mockResolvedValueOnce({ content: [] } as never);
+    const { result } = renderHook(() => useCaixaSessoes({ size: 20 }, { enabled: true }), {
+      wrapper: wrapWithQueryClient(),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(caixaApi.sessoes.listar).toHaveBeenCalledWith({ size: 20 });
+  });
+
+  it('useCaixaSessaoAberta() resolves to null when there is no open session, without erroring', async () => {
+    vi.mocked(caixaApi.sessoes.aberta).mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useCaixaSessaoAberta({ enabled: true }), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBeNull();
+  });
+
+  it('useCaixaSessao() stays disabled without an id', () => {
+    const { result } = renderHook(() => useCaixaSessao(undefined), { wrapper: wrapWithQueryClient() });
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('useCaixaSessaoEventos() fetches the audit trail for a session', async () => {
+    vi.mocked(caixaApi.sessoes.eventos).mockResolvedValueOnce([{ id: 1, tipo: 'ABERTURA' }] as never);
+    const { result } = renderHook(() => useCaixaSessaoEventos(7), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(caixaApi.sessoes.eventos).toHaveBeenCalledWith(7);
+  });
+
+  it('useAbrirCaixaSessao() invalidates every caixa-sessao query on success', async () => {
+    vi.mocked(caixaApi.sessoes.abrir).mockResolvedValueOnce({ id: 1, status: 'ABERTO' } as never);
+    const client = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useAbrirCaixaSessao(), { wrapper: wrapWithQueryClient(client) });
+
+    result.current.mutate({ turno: 'Manhã' } as never);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.all });
+  });
+
+  it('useFecharCaixaSessao() invalidates the sessions list and that session\'s eventos', async () => {
+    vi.mocked(caixaApi.sessoes.fechar).mockResolvedValueOnce({ id: 9, status: 'FECHADO' } as never);
+    const client = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useFecharCaixaSessao(), { wrapper: wrapWithQueryClient(client) });
+
+    result.current.mutate({ id: 9, payload: {} as never });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.eventos(9) });
+  });
+
+  it('useReabrirCaixaSessao() invalidates the sessions list and that session\'s eventos', async () => {
+    vi.mocked(caixaApi.sessoes.reabrir).mockResolvedValueOnce({ id: 9, status: 'ABERTO' } as never);
+    const client = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useReabrirCaixaSessao(), { wrapper: wrapWithQueryClient(client) });
+
+    result.current.mutate({ id: 9, payload: { motivo: 'Erro de digitação no fechamento' } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.eventos(9) });
+  });
+
+  it('useFaturarOrdemServico() invalidates caixa, contas a receber and ordens de serviço on success', async () => {
+    vi.mocked(caixaApi.faturar).mockResolvedValueOnce({ ordemServicoId: 3 } as never);
+    const client = createTestQueryClient();
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
+    const { result } = renderHook(() => useFaturarOrdemServico(), { wrapper: wrapWithQueryClient(client) });
+
+    result.current.mutate({ ordemServicoId: 3, payload: { formaPagamento: 'PIX' } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(caixaApi.faturar).toHaveBeenCalledWith(3, { formaPagamento: 'PIX' });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaSessaoKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: caixaKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: contasReceberKeys.all });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ordensServicoKeys.all });
+  });
+
+  it('useRelatorioCaixaDiario() fetches once a date is set', async () => {
+    vi.mocked(caixaApi.relatorios.diario).mockResolvedValueOnce({ saldoDia: 100 } as never);
+    const { result } = renderHook(() => useRelatorioCaixaDiario('2026-01-15'), { wrapper: wrapWithQueryClient() });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(caixaApi.relatorios.diario).toHaveBeenCalledWith('2026-01-15');
+  });
+
+  it('useRelatorioCaixaPeriodo() stays disabled until both dates are set', () => {
+    const { result } = renderHook(() => useRelatorioCaixaPeriodo('', ''), { wrapper: wrapWithQueryClient() });
+    expect(result.current.fetchStatus).toBe('idle');
   });
 });
 

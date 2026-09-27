@@ -347,6 +347,30 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   doc.text(formatCurrency(data.totalGeral), pageWidth - PAGE_MARGIN - 66, y + 9.5);
   y += 18;
 
+  // ---- Selo de pagamento (só quando impresso como recibo pelo Faturar no Caixa) ----
+  if (data.pagamento) {
+    const GREEN = '#1a7f37';
+    doc.setDrawColor(GREEN);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(PAGE_MARGIN, y, contentWidth, 14, 1.5, 1.5, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(GREEN);
+    doc.text('PAGO NO CAIXA', PAGE_MARGIN + 4, y + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(INK);
+    const detalhesPagamento = [
+      `Forma de pagamento: ${data.pagamento.formaPagamento}`,
+      `Pago em ${data.pagamento.dataPagamento}`,
+      data.pagamento.caixaSessaoIdentificador ? `Caixa ${data.pagamento.caixaSessaoIdentificador}` : '',
+    ]
+      .filter(Boolean)
+      .join('  ·  ');
+    doc.text(detalhesPagamento, PAGE_MARGIN + 4, y + 11);
+    y += 20;
+  }
+
   // ---- Execução (only meaningful for Ordens de Serviço) ----
   if (data.tecnicoResponsavel || data.dataAbertura || data.dataConclusao) {
     doc.setDrawColor(LINE);

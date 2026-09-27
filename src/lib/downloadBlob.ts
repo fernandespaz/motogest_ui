@@ -22,3 +22,13 @@ export async function openPdfInNewTab(fetchBlob: () => Promise<Blob>, filename: 
     throw error;
   }
 }
+
+/** Baixa um blob direto (ex.: planilha Excel) — sem tentar abrir em nova aba, que não faz sentido pra um formato que o navegador não renderiza. */
+export function saveBlobAsFile(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

@@ -37,10 +37,28 @@ describe('carregarLogoParaPdf', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns null without any network call when there is no logo at all', async () => {
+  // GET /oficinas/atual/logo é documentado como acessível a qualquer perfil
+  // autenticado (não é dado sensível) — por isso sempre tentamos, em vez de só
+  // quando `logoImagemDisponivel` vem true. Sem isso, uma oficina que
+  // realmente tem logo mas cujo perfil recebe a versão resumida de
+  // /oficinas/atual (sem esse campo populado) nunca teria a logo impressa.
+  it('still tries the permission-free logo endpoint even without logoImagemDisponivel set, returning null only if that also comes up empty', async () => {
+    vi.mocked(oficinasApi.buscarLogoBlob).mockRejectedValueOnce(new Error('404'));
+
     const result = await carregarLogoParaPdf(oficina());
+
     expect(result).toBeNull();
-    expect(oficinasApi.buscarLogoBlob).not.toHaveBeenCalled();
+    expect(oficinasApi.buscarLogoBlob).toHaveBeenCalled();
+  });
+
+  it('resolves the logo via the permission-free endpoint even when logoImagemDisponivel is missing/false on the oficina response', async () => {
+    vi.mocked(oficinasApi.buscarLogoBlob).mockResolvedValueOnce(new Blob(['fake']));
+    stubImageBitmap(100, 50);
+    stubCanvas('data:image/png;base64,sem-flag');
+
+    const result = await carregarLogoParaPdf(oficina({ logoImagemDisponivel: undefined }));
+
+    expect(result).toEqual({ dataUrl: 'data:image/png;base64,sem-flag', largura: 100, altura: 50 });
   });
 
   it('builds a scaled-down data URL from the uploaded logo image', async () => {

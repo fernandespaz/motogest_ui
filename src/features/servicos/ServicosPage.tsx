@@ -17,6 +17,21 @@ import { ServicoFormModal } from './ServicoFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
+const TOM_CATEGORIA = { A: 'success', B: 'brand', C: 'warning' } as const;
+
+function formatFaixaHoras(min: number | undefined, max: number | undefined): string {
+  if (min == null && max == null) return '—';
+  const fmt = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  if (min != null && max != null && min !== max) return `${fmt(min)}–${fmt(max)} h`;
+  return `${fmt(min ?? max ?? 0)} h`;
+}
+
+function formatFaixaPreco(min: number | undefined | null, max: number | undefined | null): string {
+  if (min == null && max == null) return 'Sem sugestão (categoria sem hora técnica configurada)';
+  if (min != null && max != null && min !== max) return `${formatCurrency(min)} – ${formatCurrency(max)}`;
+  return formatCurrency(min ?? max ?? 0);
+}
+
 const TAMANHO_PAGINA = 20;
 
 export function ServicosPage() {
@@ -85,8 +100,20 @@ export function ServicosPage() {
           emptyTitle="Nenhum serviço cadastrado"
           columns={[
             { header: 'Nome', render: (row) => <span className="font-medium text-ink">{row.nome}</span> },
-            { header: 'Preço', render: (row) => formatCurrency(row.preco) },
-            { header: 'Duração', render: (row) => (row.duracaoMinutos ? `${row.duracaoMinutos} min` : '—'), hideBelow: 'sm' },
+            {
+              header: 'Categoria',
+              render: (row) => (row.categoria ? <Badge tone={TOM_CATEGORIA[row.categoria]}>{row.categoria}</Badge> : '—'),
+            },
+            { header: 'Tempo', render: (row) => formatFaixaHoras(row.tempoMinHoras, row.tempoMaxHoras), hideBelow: 'sm' },
+            {
+              header: 'Faixa de preço sugerida',
+              render: (row) => (
+                <span className={row.precoMinSugerido == null && row.precoMaxSugerido == null ? 'text-ink-muted' : undefined}>
+                  {formatFaixaPreco(row.precoMinSugerido, row.precoMaxSugerido)}
+                </span>
+              ),
+              hideBelow: 'md',
+            },
             {
               header: 'Status',
               render: (row) => <Badge tone={row.ativo === false ? 'neutral' : 'success'}>{row.ativo === false ? 'Inativo' : 'Ativo'}</Badge>,

@@ -22,6 +22,8 @@ interface DataTableProps<T> {
   emptyIcon?: LucideIcon;
   emptyAction?: ReactNode;
   onRowClick?: (row: T) => void;
+  /** Opcional — destaca a linha (ex.: seleção que só avança pra próxima etapa num botão à parte, não no próprio clique). Sem isso, comportamento idêntico ao de antes. */
+  isRowSelected?: (row: T) => boolean;
 }
 
 const hideClass = { sm: 'hidden sm:table-cell', md: 'hidden md:table-cell', lg: 'hidden lg:table-cell' };
@@ -36,6 +38,7 @@ export function DataTable<T>({
   emptyIcon,
   emptyAction,
   onRowClick,
+  isRowSelected,
 }: DataTableProps<T>) {
   if (loading) return <PageSpinner label="Carregando registros..." />;
   if (rows.length === 0) {
@@ -62,7 +65,7 @@ export function DataTable<T>({
               animate={{ opacity: 1 }}
               transition={{ delay: Math.min(idx * 0.02, 0.3) }}
               onClick={() => onRowClick?.(row)}
-              className={`border-b border-border last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-surface-alt' : ''}`}
+              className={`border-b border-border last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-surface-alt' : ''} ${isRowSelected?.(row) ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
             >
               {columns.map((col, i) => (
                 <td key={i} className={`px-4 py-3 sm:px-5 ${col.className ?? ''} ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>

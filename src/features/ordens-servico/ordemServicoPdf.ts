@@ -5,7 +5,7 @@ import { formatCnpj, formatDateTime, formatDocumento } from '@/lib/formatters';
 import { metaFor, ordemServicoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
 import { resolverOficinaParaPdf } from '@/features/shared/pdf/logo';
-import type { OSDocumentLineItem } from '@/features/shared/pdf/types';
+import type { OSDocumentData, OSDocumentLineItem } from '@/features/shared/pdf/types';
 
 function toLineItems(os: OrdemServicoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
   return (os.itens ?? [])
@@ -18,7 +18,10 @@ function toLineItems(os: OrdemServicoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSD
     }));
 }
 
-export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promise<Blob> {
+export async function buildOrdemServicoPdfBlob(
+  os: OrdemServicoResponse,
+  opcoes?: { tipoDocumento?: string; pagamento?: OSDocumentData['pagamento'] },
+): Promise<Blob> {
   const [cliente, veiculo, oficina] = await Promise.all([
     os.clienteId ? clientesApi.get(os.clienteId) : Promise.resolve(null),
     os.veiculoId ? veiculosApi.get(os.veiculoId) : Promise.resolve(null),
@@ -31,7 +34,7 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
   const totalPecas = pecas.reduce((sum, i) => sum + i.valorTotal, 0);
 
   return renderOSDocumentPdf({
-    tipoDocumento: 'Ordem de Serviço',
+    tipoDocumento: opcoes?.tipoDocumento ?? 'Ordem de Serviço',
     numero: os.numero ?? String(os.id ?? '—'),
     status: metaFor(ordemServicoStatusMeta, os.status).label,
     dataEmissao: formatDateTime(os.dataAbertura),
@@ -80,5 +83,6 @@ export async function buildOrdemServicoPdfBlob(os: OrdemServicoResponse): Promis
     totalServicos,
     totalPecas,
     totalGeral: os.valorTotal ?? totalServicos + totalPecas,
+    pagamento: opcoes?.pagamento,
   });
 }

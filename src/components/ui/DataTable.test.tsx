@@ -62,4 +62,32 @@ describe('DataTable', () => {
     await userEvent.click(screen.getByText('Carlos'));
     expect(onRowClick).toHaveBeenCalledWith(rows[0]);
   });
+
+  // Usado por telas onde selecionar uma linha e confirmar a ação são etapas
+  // separadas (ex.: FaturarOSModal) — o destaque precisa ser só visual, sem
+  // afetar `onRowClick`, que continua dependendo inteiramente do call site.
+  it('highlights only the row isRowSelected marks as selected, without changing onRowClick', async () => {
+    const onRowClick = vi.fn();
+    render(
+      <DataTable
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        onRowClick={onRowClick}
+        isRowSelected={(r) => r.id === 2}
+      />,
+    );
+
+    expect(screen.getByText('Carlos').closest('tr')).not.toHaveClass('bg-brand-50');
+    expect(screen.getByText('Fernanda').closest('tr')).toHaveClass('bg-brand-50');
+
+    await userEvent.click(screen.getByText('Carlos'));
+    expect(onRowClick).toHaveBeenCalledWith(rows[0]);
+  });
+
+  it('has no selection highlight at all when isRowSelected is not passed', () => {
+    render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} />);
+
+    expect(screen.getByText('Carlos').closest('tr')).not.toHaveClass('bg-brand-50');
+  });
 });

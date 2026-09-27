@@ -182,16 +182,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/parametros": {
+    "/api/v1/financeiro/hora-tecnica": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Define numero de mecanicos, horas/dia, dias uteis, eficiencia, impostos e margem (auditado) */
-        put: operations["atualizarParametros"];
+        /** Lista a hora tecnica configurada para cada categoria (A/B/C) */
+        get: operations["consultar"];
+        /** Define o valor da hora tecnica das 3 categorias (A/B/C) e o arredondamento comercial (auditado) */
+        put: operations["atualizar_8"];
         post?: never;
         delete?: never;
         options?: never;
@@ -199,19 +200,19 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/custos-fixos/{id}": {
+    "/api/v1/financeiro/capacidade-produtiva": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Atualiza um custo fixo mensal (auditado) */
-        put: operations["atualizarCustoFixo"];
+        /** Capacidade produtiva atual da oficina e HP calculado */
+        get: operations["consultar_1"];
+        /** Define numero de mecanicos, horas/dia, dias uteis e eficiencia (auditado) */
+        put: operations["atualizar_9"];
         post?: never;
-        /** Remove um custo fixo mensal (auditado) */
-        delete: operations["excluirCustoFixo"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -227,7 +228,7 @@ export interface paths {
         /** Busca uma conta a receber pelo id */
         get: operations["buscarPorId_9"];
         /** Atualiza uma conta a receber pendente */
-        put: operations["atualizar_8"];
+        put: operations["atualizar_10"];
         post?: never;
         delete?: never;
         options?: never;
@@ -245,7 +246,7 @@ export interface paths {
         /** Busca uma conta a pagar pelo id */
         get: operations["buscarPorId_10"];
         /** Atualiza uma conta a pagar pendente */
-        put: operations["atualizar_9"];
+        put: operations["atualizar_11"];
         post?: never;
         delete?: never;
         options?: never;
@@ -263,7 +264,7 @@ export interface paths {
         /** Busca um cliente pelo id */
         get: operations["buscarPorId_11"];
         /** Atualiza um cliente existente */
-        put: operations["atualizar_10"];
+        put: operations["atualizar_12"];
         post?: never;
         /** Remove um cliente */
         delete: operations["excluir_8"];
@@ -282,7 +283,7 @@ export interface paths {
         /** Busca um agendamento pelo id */
         get: operations["buscarPorId_12"];
         /** Atualiza um agendamento existente */
-        put: operations["atualizar_11"];
+        put: operations["atualizar_13"];
         post?: never;
         /** Remove um agendamento */
         delete: operations["excluir_9"];
@@ -858,24 +859,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/custos-fixos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista os custos fixos mensais da oficina */
-        get: operations["listarCustosFixos"];
-        put?: never;
-        /** Cadastra um custo fixo mensal (auditado) */
-        post: operations["criarCustoFixo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -1080,6 +1063,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Encerra a sessao ativa do usuario autenticado, liberando a vaga do plano imediatamente */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -1188,6 +1188,23 @@ export interface paths {
          * @description Payload minimo (id, nome, perfilNome), sem e-mail. Nao exige USUARIO_READ.
          */
         get: operations["listarTecnicos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usuarios/sessoes-ativas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista os usuarios da oficina corrente com sessao ativa (logados agora) */
+        get: operations["listarSessoesAtivas"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1412,6 +1429,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ordens-servico/disponiveis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista as Ordens de Servico Aprovadas ainda sem tecnico responsavel
+         * @description A fila que qualquer mecanico pode assumir — iniciar o cronometro (/timer/start) numa dessas atribui automaticamente quem iniciou.
+         */
+        get: operations["listarDisponiveis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/movimentacoes-estoque": {
         parameters: {
             query?: never;
@@ -1446,15 +1483,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica": {
+    "/api/v1/financeiro/hora-tecnica/auditoria": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Preco da hora tecnica (PHT); a composicao (CF, HP, CH, impostos, margem) so' para quem gerencia */
-        get: operations["consultar"];
+        /** Historico de alteracoes da hora tecnica por categoria (mais recentes primeiro) */
+        get: operations["auditoria"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1463,7 +1500,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/auditoria": {
+    "/api/v1/financeiro/capacidade-produtiva/auditoria": {
         parameters: {
             query?: never;
             header?: never;
@@ -1471,7 +1508,7 @@ export interface paths {
             cookie?: never;
         };
         /** Historico de alteracoes dos parametros financeiros (mais recentes primeiro) */
-        get: operations["auditoria"];
+        get: operations["auditoria_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1599,6 +1636,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/usuarios/{id}/sessao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Encerra manualmente a sessao ativa de um usuario, liberando a vaga do plano */
+        delete: operations["encerrarSessao"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fotos/{id}": {
         parameters: {
             query?: never;
@@ -1676,9 +1730,10 @@ export interface components {
         ServicoRequest: {
             nome: string;
             descricao?: string;
-            preco: number;
-            /** Format: int32 */
-            duracaoMinutos?: number;
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
+            tempoMinHoras: number;
+            tempoMaxHoras: number;
             ativo?: boolean;
         };
         ServicoResponse: {
@@ -1686,9 +1741,12 @@ export interface components {
             id?: number;
             nome?: string;
             descricao?: string;
-            preco?: number;
-            /** Format: int32 */
-            duracaoMinutos?: number;
+            /** @enum {string} */
+            categoria?: "A" | "B" | "C";
+            tempoMinHoras?: number;
+            tempoMaxHoras?: number;
+            precoMinSugerido?: number;
+            precoMaxSugerido?: number;
             ativo?: boolean;
         };
         ProdutoRequest: {
@@ -1913,7 +1971,6 @@ export interface components {
             cidade?: string;
             uf?: string;
             cep?: string;
-            logoUrl?: string;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
             /** Format: int32 */
@@ -1936,7 +1993,6 @@ export interface components {
             uf?: string;
             cep?: string;
             ativo?: boolean;
-            logoUrl?: string;
             logoImagemDisponivel?: boolean;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
@@ -1952,19 +2008,33 @@ export interface components {
             modelo?: string;
             imagemBase64?: string;
         };
-        ParametrosHoraTecnicaRequest: {
+        CategoriaHoraTecnicaItemRequest: {
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
+            valorHora: number;
+        };
+        CategoriaHoraTecnicaRequest: {
+            categorias: components["schemas"]["CategoriaHoraTecnicaItemRequest"][];
+            /** Format: int32 */
+            arredondamentoComercial: number;
+        };
+        CategoriaHoraTecnicaResponse: {
+            /** @enum {string} */
+            categoria?: "A" | "B" | "C";
+            valorHora?: number;
+            /** Format: int32 */
+            arredondamentoComercial?: number;
+        };
+        CapacidadeProdutivaRequest: {
             /** Format: int32 */
             numeroMecanicos: number;
             horasPorDia: number;
             /** Format: int32 */
             diasUteisMes: number;
             eficienciaPercentual: number;
-            impostosPercentual: number;
-            margemLucroPercentual: number;
         };
-        ComposicaoHoraTecnicaResponse: {
-            custosFixos?: number;
-            itensCustoFixo?: components["schemas"]["CustoFixoResponse"][];
+        CapacidadeProdutivaResponse: {
+            configurado?: boolean;
             /** Format: int32 */
             numeroMecanicos?: number;
             horasPorDia?: number;
@@ -1972,28 +2042,6 @@ export interface components {
             diasUteisMes?: number;
             eficienciaPercentual?: number;
             horasProdutivas?: number;
-            custoPorHora?: number;
-            impostosPercentual?: number;
-            margemLucroPercentual?: number;
-        };
-        CustoFixoResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** @enum {string} */
-            categoria?: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
-            descricao?: string;
-            valorMensal?: number;
-        };
-        HoraTecnicaResponse: {
-            configurado?: boolean;
-            precoHoraTecnica?: number;
-            composicao?: components["schemas"]["ComposicaoHoraTecnicaResponse"];
-        };
-        CustoFixoRequest: {
-            /** @enum {string} */
-            categoria: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
-            descricao: string;
-            valorMensal: number;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -2402,6 +2450,17 @@ export interface components {
             nome?: string;
             perfilNome?: string;
         };
+        SessaoAtivaResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nome?: string;
+            email?: string;
+            perfilNome?: string;
+            /** Format: date-time */
+            sessaoIniciadaEm?: string;
+            /** Format: date-time */
+            sessaoExpiraEm?: string;
+        };
         PageResponseServicoResponse: {
             content?: components["schemas"]["ServicoResponse"][];
             /** Format: int32 */
@@ -2769,7 +2828,6 @@ export interface components {
             nomeFantasia?: string;
             cnpj?: string;
             email?: string;
-            logoUrl?: string;
             ativo?: boolean;
             /** @enum {string} */
             statusLicenca?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
@@ -3375,63 +3433,11 @@ export interface operations {
             };
         };
     };
-    atualizarParametros: {
+    consultar: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ParametrosHoraTecnicaRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["HoraTecnicaResponse"];
-                };
-            };
-        };
-    };
-    atualizarCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustoFixoRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"];
-                };
-            };
-        };
-    };
-    excluirCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3441,7 +3447,77 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    atualizar_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoriaHoraTecnicaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    consultar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CapacidadeProdutivaResponse"];
+                };
+            };
+        };
+    };
+    atualizar_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapacidadeProdutivaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CapacidadeProdutivaResponse"];
+                };
             };
         };
     };
@@ -3467,7 +3543,7 @@ export interface operations {
             };
         };
     };
-    atualizar_8: {
+    atualizar_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3515,7 +3591,7 @@ export interface operations {
             };
         };
     };
-    atualizar_9: {
+    atualizar_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -3563,7 +3639,7 @@ export interface operations {
             };
         };
     };
-    atualizar_10: {
+    atualizar_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -3631,7 +3707,7 @@ export interface operations {
             };
         };
     };
-    atualizar_11: {
+    atualizar_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -4702,50 +4778,6 @@ export interface operations {
             };
         };
     };
-    listarCustosFixos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"][];
-                };
-            };
-        };
-    };
-    criarCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustoFixoRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"];
-                };
-            };
-        };
-    };
     listar_12: {
         parameters: {
             query: {
@@ -5117,6 +5149,24 @@ export interface operations {
             };
         };
     };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -5297,6 +5347,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TecnicoResumoResponse"][];
+                };
+            };
+        };
+    };
+    listarSessoesAtivas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SessaoAtivaResponse"][];
                 };
             };
         };
@@ -5590,6 +5660,28 @@ export interface operations {
             };
         };
     };
+    listarDisponiveis: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseOrdemServicoResponse"];
+                };
+            };
+        };
+    };
     listar_10: {
         parameters: {
             query: {
@@ -5632,9 +5724,11 @@ export interface operations {
             };
         };
     };
-    consultar: {
+    auditoria: {
         parameters: {
-            query?: never;
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5647,12 +5741,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["HoraTecnicaResponse"];
+                    "*/*": components["schemas"]["PageResponseAuditoriaParametroFinanceiroResponse"];
                 };
             };
         };
     };
-    auditoria: {
+    auditoria_1: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5830,6 +5924,26 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AgendamentoResponse"][];
                 };
+            };
+        };
+    };
+    encerrarSessao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

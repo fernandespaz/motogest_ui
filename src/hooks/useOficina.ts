@@ -124,15 +124,15 @@ export function useAtualizarOficina() {
  * src> puro) — busca o blob uma vez (via apiClient, com o auth junto) e devolve
  * uma blob: URL local que Sidebar/Topbar/Minha Oficina compartilham via cache.
  *
- * GET /oficinas/atual/logo exige a MESMA permissão OFICINA_READ de GET
- * /oficinas/atual (confirmado direto no backend) — perfis operacionais
- * (Mecânico, Consultor Técnico) não têm, então nunca conseguem buscar a logo
- * pela rota autenticada. Como último recurso, cai pra logo fixada neste
- * navegador (a mesma cache usada na tela de login) — só funciona se ALGUÉM
- * com OFICINA_READ já tiver aberto o app nesse aparelho antes; sem isso, é a
- * "MG" mesmo. Resolver de verdade exigiria o backend liberar essa rota (é só
- * branding, não é dado sensível de configuração) pra qualquer usuário do
- * tenant, não só quem tem OFICINA_READ.
+ * A doc do backend hoje descreve essa rota como acessível a qualquer perfil
+ * autenticado do tenant (não é dado sensível) — por isso a busca não depende
+ * de `logoImagemDisponivel` vir preenchido em GET /oficinas/atual (que devolve
+ * uma versão resumida pra quem não tem OFICINA_READ, e nada garante que esse
+ * campo específico venha certo nela — mesma causa raiz do bug corrigido em
+ * features/shared/pdf/logo.ts). Só não tenta quando já existe `logoUrl` (uma
+ * URL externa já é diretamente usável num <img src>, sem precisar do blob
+ * autenticado). Se mesmo assim não houver logo (404), cai pra logo fixada
+ * neste navegador (mesma cache da tela de login).
  */
 export function useOficinaLogoSrc(): string | undefined {
   const { data: oficina } = useOficinaAtual();
@@ -146,7 +146,7 @@ export function useOficinaLogoSrc(): string | undefined {
       logoBlobUrlEmUso = url;
       return url;
     },
-    enabled: !!oficina?.logoImagemDisponivel,
+    enabled: !!oficina && !oficina.logoUrl,
     staleTime: Infinity,
     meta: { silentError: true },
   });

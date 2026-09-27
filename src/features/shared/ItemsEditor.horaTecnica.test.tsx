@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useServicos } from '@/hooks/useServicos';
 import { useProdutos } from '@/hooks/useProdutos';
 import { useDescontosPorOrigem } from '@/hooks/useDescontos';
-import { useHoraTecnica } from '@/hooks/useHoraTecnica';
+import { useCategoriasHoraTecnica } from '@/hooks/useHoraTecnica';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -17,19 +17,23 @@ import {
   erroListaItens,
   itemParaPayload,
   temServicoPorHTSemTempo,
-  valorPorHoraTecnica,
+  valorPorCategoria,
   type ItemFormValue,
 } from './ItemsEditor';
 
 vi.mock('@/hooks/useServicos', () => ({ useServicos: vi.fn() }));
 vi.mock('@/hooks/useProdutos', () => ({ useProdutos: vi.fn() }));
 vi.mock('@/hooks/useDescontos', () => ({ useDescontosPorOrigem: vi.fn() }));
-vi.mock('@/hooks/useHoraTecnica', () => ({ useHoraTecnica: vi.fn() }));
+vi.mock('@/hooks/useHoraTecnica', () => ({ useCategoriasHoraTecnica: vi.fn() }));
 
-const PHT = 102.98;
+const VALOR_HORA_A = 102.98;
+const ARREDONDAMENTO = 5;
 
-// "Revisão Completa" do print: preço de catálogo R$ 250, duração padrão 1h30.
-const servicos = { content: [{ id: 1, nome: 'Revisão Completa', preco: 250, duracaoMinutos: 90 }] };
+// "Revisão Completa" da categoria A: tempo mínimo 1h30, faixa sugerida R$200-300.
+const servicos = {
+  content: [{ id: 1, nome: 'Revisão Completa', categoria: 'A', tempoMinHoras: 1.5, tempoMaxHoras: 2, precoMinSugerido: 200, precoMaxSugerido: 300 }],
+};
+const categoriasHT = [{ categoria: 'A' as const, valorHora: VALOR_HORA_A, arredondamentoComercial: ARREDONDAMENTO }];
 
 let valoresAtuais: () => { itens: ItemFormValue[] };
 
@@ -51,25 +55,24 @@ async function adicionarServico() {
   await userEvent.click(await screen.findByRole('button', { name: /Revisão Completa/ }));
 }
 
-describe('ItemsEditor — serviço cobrado pela hora técnica', () => {
+describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', () => {
   beforeEach(() => {
     // Perfil Consultor: sem DESCONTO_APROVAR, não edita preço direto.
     useAuthStore.setState({ permissoes: ['SERVICO_READ', 'ORCAMENTO_READ'] });
     vi.mocked(useServicos).mockReturnValue({ data: servicos } as never);
     vi.mocked(useProdutos).mockReturnValue({ data: { content: [] } } as never);
     vi.mocked(useDescontosPorOrigem).mockReturnValue({ data: { content: [] } } as never);
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: true, precoHoraTecnica: PHT } } as never);
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: categoriasHT } as never);
   });
 
-  it('prices a new service as PHT × catalog duration, never the catalog price (reported bug)', async () => {
+  it('prices a new service as valorHora(categoria) × tempo mínimo, rounded up, never a fixed catalog price', async () => {
     render(<Harness />);
     await adicionarServico();
 
     const linha = screen.getByTestId('item-row-0');
-    // 1h30 × R$ 102,98 = R$ 154,47 — e não os R$ 250 do catálogo.
-    expect(within(linha).getByLabelText('Valor unitário')).toHaveValue(154.47);
-    expect(within(linha).queryByText('R$ 250,00')).not.toBeInTheDocument();
-    expect(within(linha).getByText('Hora técnica R$ 102,98/h')).toBeInTheDocument();
+    // 1h30 × R$ 102,98 = R$ 154,47 → arredonda pra cima em múltiplos de 5 → R$ 155.
+    expect(within(linha).getByLabelText('Valor unitário')).toHaveValue(155);
+    expect(within(linha).getByText('Hora técnica R$ 102,98/h (cat. A)')).toBeInTheDocument();
     expect(valoresAtuais().itens[0]).toMatchObject({ tempoVendidoMinutos: 90, precificadoPorHT: true });
   });
 
@@ -78,13 +81,13 @@ describe('ItemsEditor — serviço cobrado pela hora técnica', () => {
     await adicionarServico();
     await userEvent.click(screen.getByRole('button', { name: '+1:00' }));
 
-    // 2h30 × 102,98 = 257,45
-    expect(screen.getByLabelText('Valor unitário')).toHaveValue(257.45);
+    // 2h30 × 102,98 = 257,45 → arredonda pra cima em múltiplos de 5 → 260.
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(260);
   });
 
   it('flags a service with no sold time instead of silently pricing it at zero', async () => {
     vi.mocked(useServicos).mockReturnValue({
-      data: { content: [{ id: 1, nome: 'Revisão Completa', preco: 250 }] },
+      data: { content: [{ id: 1, nome: 'Revisão Completa', categoria: 'A' }] },
     } as never);
     render(<Harness />);
     await adicionarServico();
@@ -93,34 +96,35 @@ describe('ItemsEditor — serviço cobrado pela hora técnica', () => {
     expect(temServicoPorHTSemTempo(valoresAtuais().itens)).toBe(true);
   });
 
-  it('keeps the catalog price when the oficina has no PHT configured', async () => {
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: false } } as never);
+  it('requires manual pricing when the categoria has no hora técnica configured', async () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: [] } as never);
     render(<Harness />);
     await adicionarServico();
 
-    expect(screen.getByLabelText('Valor unitário')).toHaveValue(250);
+    // Sem valorHora pra categoria A: usa a faixa sugerida mínima como ponto de partida manual.
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(200);
     expect(valoresAtuais().itens[0].precificadoPorHT).toBe(false);
   });
 
-  it('keeps a saved service linked to the PHT when its stored value matches PHT × time', async () => {
+  it('keeps a saved service linked to hora técnica when its stored value matches valorHora(categoria) × tempo', async () => {
     render(
       <Harness
         defaultItens={[
-          { id: 7, tipoItem: 'SERVICO', descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 154.47, tempoVendidoMinutos: 90 },
+          { id: 7, tipoItem: 'SERVICO', servicoId: 1, descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 155, tempoVendidoMinutos: 90 },
         ]}
       />,
     );
     await waitFor(() => expect(valoresAtuais().itens[0].precificadoPorHT).toBe(true));
 
     await userEvent.click(screen.getByRole('button', { name: '+1:00' }));
-    expect(screen.getByLabelText('Valor unitário')).toHaveValue(257.45);
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(260);
   });
 
-  it('preserves a saved price that differs from PHT × time (approved discount or older PHT)', async () => {
+  it('preserves a saved price that differs from valorHora(categoria) × tempo (approved discount or older valorHora)', async () => {
     render(
       <Harness
         defaultItens={[
-          { id: 7, tipoItem: 'SERVICO', descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 130, tempoVendidoMinutos: 90 },
+          { id: 7, tipoItem: 'SERVICO', servicoId: 1, descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 130, tempoVendidoMinutos: 90 },
         ]}
       />,
     );
@@ -131,7 +135,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica', () => {
     expect(screen.queryByText(/Hora técnica R\$/)).not.toBeInTheDocument();
   });
 
-  it('an admin typing a price detaches the item from the PHT', async () => {
+  it('an admin typing a price detaches the item from hora técnica', async () => {
     useAuthStore.setState({ permissoes: ['SERVICO_READ', 'DESCONTO_APROVAR'] });
     render(<Harness />);
     await adicionarServico();
@@ -183,7 +187,7 @@ describe('itemParaPayload', () => {
     tipoItem: 'SERVICO',
     descricao: 'Revisão',
     quantidade: 1,
-    valorUnitario: 154.47,
+    valorUnitario: 155,
     tempoVendidoMinutos: 90,
   };
 
@@ -197,25 +201,43 @@ describe('itemParaPayload', () => {
 
   it('sends the on-screen price for fixed-price items (keeps approved discounts)', () => {
     expect(itemParaPayload({ ...base, valorUnitario: 130, precificadoPorHT: false }).valorUnitario).toBe(130);
-    expect(itemParaPayload({ ...base, precificadoPorHT: undefined }).valorUnitario).toBe(154.47);
+    expect(itemParaPayload({ ...base, precificadoPorHT: undefined }).valorUnitario).toBe(155);
+  });
+});
+
+describe('valorPorCategoria', () => {
+  it('rounds up to the nearest multiple of the arredondamento comercial', () => {
+    expect(valorPorCategoria(102.98, 90, 5)).toBe(155);
+    expect(valorPorCategoria(100, 30, 10)).toBe(50);
+    expect(valorPorCategoria(33.33, 20, 1)).toBe(12);
   });
 
-  it('matches the backend rounding (HALF_UP, 2 places)', () => {
-    expect(valorPorHoraTecnica(102.98, 90)).toBe(154.47);
-    expect(valorPorHoraTecnica(100, 20)).toBe(33.33);
-    // Fronteira x,xx5 onde Math.round em ponto flutuante erra pra baixo.
-    expect(valorPorHoraTecnica(50.19, 30)).toBe(25.1);
-    expect(valorPorHoraTecnica(50.38, 45)).toBe(37.79);
+  it('does not round up a value that already lands on an exact multiple', () => {
+    expect(valorPorCategoria(150, 60, 5)).toBe(150);
+    expect(valorPorCategoria(100, 60, 10)).toBe(100);
   });
 
-  it('agrees with an exact HALF_UP reference across a wide range of PHT × minutes', () => {
+  it('returns the raw amount when there is no arredondamento (defensive, backend always sends one)', () => {
+    expect(valorPorCategoria(102.98, 90, 0)).toBeCloseTo(154.47);
+  });
+
+  // Mesma classe de bug que a fórmula antiga (HALF_UP em cents) existia pra
+  // evitar: ponto flutuante pode arredondar 1 passo errado perto de um
+  // múltiplo exato do arredondamento. Referência em BigInt: bruto =
+  // (centavos × minutos) / 6000 (reais exatos), e ceilDiv((a+b-1)/b) dá o
+  // número de "degraus" de arredondamento sem nenhuma casa decimal flutuante.
+  it('agrees with an exact ceil-to-multiple reference across a wide range of valorHora × minutos × arredondamento', () => {
     const minutos = [15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240];
-    for (let centavos = 1000; centavos < 30000; centavos += 7) {
+    const arredondamentos = [1, 5, 10, 50];
+    for (let centavos = 1000; centavos < 30000; centavos += 700) {
       for (const m of minutos) {
-        // Referência em BigInt: HALF_UP(centavos*m / 60).
-        const n = BigInt(centavos) * BigInt(m);
-        const esperado = Number((2n * n + 60n) / 120n) / 100;
-        expect(valorPorHoraTecnica(centavos / 100, m)).toBe(esperado);
+        for (const arred of arredondamentos) {
+          const numerador = BigInt(centavos) * BigInt(m);
+          const denominador = 6000n * BigInt(arred);
+          const degraus = (numerador + denominador - 1n) / denominador;
+          const esperado = Number(degraus * BigInt(arred));
+          expect(valorPorCategoria(centavos / 100, m, arred)).toBe(esperado);
+        }
       }
     }
   });

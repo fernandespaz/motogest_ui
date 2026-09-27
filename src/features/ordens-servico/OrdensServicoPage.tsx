@@ -15,7 +15,7 @@ import { useUsuarios } from '@/hooks/useUsuarios';
 import { useAuthStore } from '@/store/authStore';
 import { isMecanico } from '@/lib/perfil';
 import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
-import { formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCpfOuCnpj, formatCurrency, formatDate, labelCpfOuCnpj } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
@@ -30,6 +30,7 @@ const statusEmDestaque: OrdemServicoStatus[] = ['ABERTA', 'APROVADA', 'EM_ANDAME
 const statusOutros: OrdemServicoStatus[] = [
   'AGUARDANDO_APROVACAO',
   'CONCLUIDA',
+  'FATURADO',
   'CANCELADA',
   'ENTREGUE',
 ];
@@ -188,7 +189,21 @@ export function OrdensServicoPage() {
                 </span>
               ),
             },
-            { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
+            {
+              header: 'Cliente',
+              render: (row) => (
+                <div>
+                  <p className="text-ink">
+                    {row.clienteNome ?? ''} — {row.veiculoPlaca ?? ''}
+                  </p>
+                  {row.clienteDocumento && (
+                    <p className="text-xs text-ink-muted">
+                      {labelCpfOuCnpj(row.clienteDocumento)}: {formatCpfOuCnpj(row.clienteDocumento)}
+                    </p>
+                  )}
+                </div>
+              ),
+            },
             { header: 'Consultor', render: (row) => row.consultorNome || '-', hideBelow: 'md' },
             { header: 'Técnico', render: (row) => row.usuarioResponsavelNome || '-', hideBelow: 'md' },
             { header: 'Abertura', render: (row) => formatDate(row.dataAbertura), hideBelow: 'sm' },

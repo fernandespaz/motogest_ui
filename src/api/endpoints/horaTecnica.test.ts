@@ -9,43 +9,26 @@ vi.mock('../client', () => ({
 describe('horaTecnicaApi', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('consultar() GETs the PHT', async () => {
-    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { configurado: true, precoHoraTecnica: 150 } });
+  it('consultar() GETs the categories', async () => {
+    const categorias = [{ categoria: 'A' as const, valorHora: 80, arredondamentoComercial: 5 }];
+    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: categorias });
     const result = await horaTecnicaApi.consultar();
     expect(apiClient.get).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica');
-    expect(result).toEqual({ configurado: true, precoHoraTecnica: 150 });
+    expect(result).toEqual(categorias);
   });
 
-  it('atualizarParametros() PUTs to /parametros', async () => {
+  it('atualizar() PUTs all 3 categories at once', async () => {
     const payload = {
-      numeroMecanicos: 2,
-      horasPorDia: 8,
-      diasUteisMes: 22,
-      eficienciaPercentual: 80,
-      impostosPercentual: 10,
-      margemLucroPercentual: 20,
+      categorias: [
+        { categoria: 'A' as const, valorHora: 80 },
+        { categoria: 'B' as const, valorHora: 100 },
+        { categoria: 'C' as const, valorHora: 130 },
+      ],
+      arredondamentoComercial: 5,
     };
-    vi.mocked(apiClient.put).mockResolvedValueOnce({ data: {} });
-    await horaTecnicaApi.atualizarParametros(payload);
-    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica/parametros', payload);
-  });
-
-  it('CRUDs custos fixos on /custos-fixos', async () => {
-    const payload = { categoria: 'ALUGUEL' as const, descricao: 'Galpão', valorMensal: 3000 };
-    vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] });
-    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: { id: 1 } });
-    vi.mocked(apiClient.put).mockResolvedValueOnce({ data: { id: 1 } });
-    vi.mocked(apiClient.delete).mockResolvedValueOnce({ data: undefined });
-
-    await horaTecnicaApi.listarCustosFixos();
-    await horaTecnicaApi.criarCustoFixo(payload);
-    await horaTecnicaApi.atualizarCustoFixo(1, payload);
-    await horaTecnicaApi.excluirCustoFixo(1);
-
-    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica/custos-fixos');
-    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica/custos-fixos', payload);
-    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica/custos-fixos/1', payload);
-    expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica/custos-fixos/1');
+    vi.mocked(apiClient.put).mockResolvedValueOnce({ data: [] });
+    await horaTecnicaApi.atualizar(payload);
+    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/financeiro/hora-tecnica', payload);
   });
 
   it('auditoria() forwards pagination params', async () => {

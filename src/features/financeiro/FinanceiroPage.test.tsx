@@ -1,14 +1,12 @@
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
 import { FinanceiroPage } from './FinanceiroPage';
 
-vi.mock('./CaixaTab', () => ({ CaixaTab: () => <p>aba-caixa</p> }));
+vi.mock('./CaixaAdminTab', () => ({ CaixaAdminTab: () => <p>aba-caixa</p> }));
 vi.mock('./ContasPagarTab', () => ({ ContasPagarTab: () => <p>aba-pagar</p> }));
 vi.mock('./ContasReceberTab', () => ({ ContasReceberTab: () => <p>aba-receber</p> }));
-vi.mock('./DespesasFixasTab', () => ({ DespesasFixasTab: () => <p>aba-despesas-fixas</p> }));
 
 function renderPage(url = '/financeiro') {
   return render(
@@ -19,32 +17,28 @@ function renderPage(url = '/financeiro') {
 }
 
 describe('FinanceiroPage', () => {
-  beforeEach(() => useAuthStore.setState({ permissoes: ['FINANCEIRO_READ', 'HORA_TECNICA_GERENCIAR'] }));
-
-  it('shows the fixed expenses next to the payables for who manages them', async () => {
-    renderPage();
-    await userEvent.click(screen.getByRole('button', { name: 'Despesas Fixas' }));
-    expect(screen.getByText('aba-despesas-fixas')).toBeInTheDocument();
-  });
+  beforeEach(() => useAuthStore.setState({ permissoes: ['FINANCEIRO_READ', 'CAIXA_GERENCIAR'] }));
 
   it('opens straight on the tab named in ?aba=', () => {
-    renderPage('/financeiro?aba=despesas-fixas');
-    expect(screen.getByText('aba-despesas-fixas')).toBeInTheDocument();
+    renderPage('/financeiro?aba=receber');
+    expect(screen.getByText('aba-receber')).toBeInTheDocument();
   });
 
-  it('hides the fixed-expenses tab (and never mounts it) without HORA_TECNICA_GERENCIAR', () => {
+  // CAIXA_GERENCIAR é um código próprio, separado de FINANCEIRO_READ — o
+  // Perfil Caixa (CAIXA_OPERAR) opera pela tela "Meu Caixa" (/caixa), nunca
+  // por aqui, e quem só tem FINANCEIRO_READ não deveria ver todos os turnos.
+  it('hides the caixa tab (and never mounts it) without CAIXA_GERENCIAR, even with FINANCEIRO_READ', () => {
     useAuthStore.setState({ permissoes: ['FINANCEIRO_READ'] });
-    renderPage('/financeiro?aba=despesas-fixas');
-    expect(screen.queryByRole('button', { name: 'Despesas Fixas' })).not.toBeInTheDocument();
-    expect(screen.queryByText('aba-despesas-fixas')).not.toBeInTheDocument();
-    expect(screen.getByText('aba-caixa')).toBeInTheDocument();
-  });
-
-  it('lets who only manages the technical hour reach the fixed expenses, hiding the tabs that would 403', () => {
-    useAuthStore.setState({ permissoes: ['HORA_TECNICA_GERENCIAR'] });
-    renderPage('/financeiro');
-    expect(screen.getByText('aba-despesas-fixas')).toBeInTheDocument();
+    renderPage('/financeiro?aba=caixa');
     expect(screen.queryByRole('button', { name: 'Caixa' })).not.toBeInTheDocument();
     expect(screen.queryByText('aba-caixa')).not.toBeInTheDocument();
+    expect(screen.getByText('aba-pagar')).toBeInTheDocument();
+  });
+
+  it('shows the caixa tab for who has CAIXA_GERENCIAR without FINANCEIRO_READ, hiding contas a pagar/receber', () => {
+    useAuthStore.setState({ permissoes: ['CAIXA_GERENCIAR'] });
+    renderPage('/financeiro');
+    expect(screen.getByText('aba-caixa')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Contas a Pagar' })).not.toBeInTheDocument();
   });
 });

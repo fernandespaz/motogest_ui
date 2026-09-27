@@ -13,7 +13,18 @@ vi.mock('@/hooks/useServicos', () => ({
 }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-const servicos = [{ id: 1, nome: 'Troca de Óleo', preco: 120, duracaoMinutos: 30, ativo: true }];
+const servicos = [
+  {
+    id: 1,
+    nome: 'Troca de Óleo',
+    categoria: 'A' as const,
+    tempoMinHoras: 0.5,
+    tempoMaxHoras: 1,
+    precoMinSugerido: 100,
+    precoMaxSugerido: 150,
+    ativo: true,
+  },
+];
 
 describe('ServicosPage', () => {
   let deleteMutateAsync: ReturnType<typeof vi.fn>;
@@ -24,11 +35,22 @@ describe('ServicosPage', () => {
     vi.mocked(useDeleteServico).mockReturnValue({ mutateAsync: deleteMutateAsync, isPending: false } as never);
   });
 
-  it('lists servicos with their formatted price and status', () => {
+  it('lists servicos with their categoria, tempo, suggested price range and status', () => {
     render(<ServicosPage />);
     expect(screen.getByText('Troca de Óleo')).toBeInTheDocument();
-    expect(screen.getByText('R$ 120,00')).toBeInTheDocument();
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('0,5–1 h')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100,00 – R$ 150,00')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
+  });
+
+  it('shows an explanatory placeholder when the categoria has no suggested price range yet', () => {
+    vi.mocked(useTodosServicos).mockReturnValue({
+      data: [{ id: 2, nome: 'Serviço Novo', categoria: 'B' as const, tempoMinHoras: 1, tempoMaxHoras: 1, ativo: true }],
+      isLoading: false,
+    } as never);
+    render(<ServicosPage />);
+    expect(screen.getByText('Sem sugestão (categoria sem hora técnica configurada)')).toBeInTheDocument();
   });
 
   it('opens the create modal from "Novo serviço"', async () => {
@@ -114,8 +136,11 @@ describe('ServicosPage', () => {
     const muitos = Array.from({ length: 21 }, (_, i) => ({
       id: i + 1,
       nome: `Serviço ${i + 1}`,
-      preco: 100,
-      duracaoMinutos: 30,
+      categoria: 'A' as const,
+      tempoMinHoras: 1,
+      tempoMaxHoras: 1,
+      precoMinSugerido: 100,
+      precoMaxSugerido: 100,
       ativo: true,
     }));
     vi.mocked(useTodosServicos).mockReturnValue({ data: muitos, isLoading: false } as never);
@@ -129,8 +154,8 @@ describe('ServicosPage', () => {
 
   it('filters by nome and resets to the first page', async () => {
     const varios = [
-      { id: 1, nome: 'Troca de Óleo', preco: 120, duracaoMinutos: 30, ativo: true },
-      { id: 2, nome: 'Alinhamento', preco: 80, duracaoMinutos: 20, ativo: true },
+      { id: 1, nome: 'Troca de Óleo', categoria: 'A' as const, tempoMinHoras: 0.5, tempoMaxHoras: 1, ativo: true },
+      { id: 2, nome: 'Alinhamento', categoria: 'B' as const, tempoMinHoras: 0.5, tempoMaxHoras: 1, ativo: true },
     ];
     vi.mocked(useTodosServicos).mockReturnValue({ data: varios, isLoading: false } as never);
     render(<ServicosPage />);

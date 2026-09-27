@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -13,7 +14,10 @@ import {
 } from '@/hooks/useOrdensServico';
 import { useClientes, useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useUsuarios } from '@/hooks/useUsuarios';
+import { useFaturarOrdemServico } from '@/hooks/useFinanceiro';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from '@/store/toastStore';
+import { formatCurrency } from '@/lib/formatters';
 import { OrdemServicoFormPage } from './OrdemServicoFormPage';
 
 vi.mock('@/hooks/useOrdensServico', () => ({
@@ -26,6 +30,8 @@ vi.mock('@/hooks/useOrdensServico', () => ({
   useTimerPauseOS: vi.fn(),
   useTimerResumeOS: vi.fn(),
 }));
+vi.mock('@/hooks/useFinanceiro', () => ({ useFaturarOrdemServico: vi.fn() }));
+vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@/hooks/useClientes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useClientes')>();
   return { ...actual, useClientes: vi.fn(), useVeiculosDoCliente: vi.fn() };
@@ -66,6 +72,7 @@ describe('OrdemServicoFormPage — rastreabilidade do consultor e trava do técn
     vi.mocked(useTimerStartOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useTimerPauseOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useTimerResumeOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useClientes).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
     vi.mocked(useVeiculosDoCliente).mockReturnValue({ data: [] } as never);
     vi.mocked(useUsuarios).mockReturnValue({ data: mecanicos } as never);
@@ -146,6 +153,19 @@ describe('OrdemServicoFormPage — rastreabilidade do consultor e trava do técn
     }
   });
 
+  // FATURADO é o status novo que o backend passou a aceitar depois que uma OS
+  // é faturada no caixa — trava a edição igual a Concluída/Cancelada/Entregue,
+  // nunca deveria voltar a ficar editável só porque já foi paga.
+  it('locks the whole form once the OS is Faturada', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'FATURADO', itens: [] },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    expect(screen.getByText('Esta OS não está mais em um status editável — os dados ficam bloqueados a partir daqui.')).toBeInTheDocument();
+  });
+
   // OrdemServicoResponse só devolve veiculoId+veiculoPlaca (sem chassi) — o
   // chassi vem de cruzar com a lista de veículos do cliente (useVeiculosDoCliente,
   // já carregada pro combobox de Veículo), a mesma fonte que o combobox usa.
@@ -170,5 +190,157 @@ describe('OrdemServicoFormPage — rastreabilidade do consultor e trava do técn
     renderPage('9');
 
     expect(screen.queryByText('Chassi')).not.toBeInTheDocument();
+  });
+});
+
+describe('OrdemServicoFormPage — Faturar no Caixa', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ nome: 'Ana Consultora', perfil: 'Consultor Técnico', usuarioId: 1 });
+    vi.mocked(useCreateOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useUpdateOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useAtualizarStatusOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useEnviarOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerStartOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerPauseOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerResumeOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useClientes).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
+    vi.mocked(useVeiculosDoCliente).mockReturnValue({ data: [] } as never);
+    vi.mocked(useUsuarios).mockReturnValue({ data: mecanicos } as never);
+  });
+
+  const osConcluida = {
+    id: 9,
+    numero: 'OS-000009',
+    status: 'CONCLUIDA' as const,
+    valorTotal: 350,
+    itens: [],
+  };
+
+  it('shows "Faturar no Caixa" for a concluded OS when the profile can operate a caixa', () => {
+    useAuthStore.setState({ hasPermission: (codigo: string) => codigo === 'CAIXA_OPERAR' });
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrdemServico).mockReturnValue({ data: osConcluida, isLoading: false } as never);
+    renderPage('9');
+
+    expect(screen.getByRole('button', { name: /Faturar no Caixa/ })).toBeInTheDocument();
+  });
+
+  it('hides "Faturar no Caixa" without CAIXA_OPERAR, even for a concluded OS', () => {
+    useAuthStore.setState({ hasPermission: () => false });
+    vi.mocked(useOrdemServico).mockReturnValue({ data: osConcluida, isLoading: false } as never);
+    renderPage('9');
+
+    expect(screen.queryByRole('button', { name: /Faturar no Caixa/ })).not.toBeInTheDocument();
+  });
+
+  it('hides "Faturar no Caixa" for an OS that is not yet Concluída/Entregue', () => {
+    useAuthStore.setState({ hasPermission: () => true });
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { ...osConcluida, status: 'EM_ANDAMENTO' },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    expect(screen.queryByRole('button', { name: /Faturar no Caixa/ })).not.toBeInTheDocument();
+  });
+
+  // Fecha a lacuna que existia antes do status FATURADO existir: sem um
+  // sinal real de "já faturada" na própria OS, a única defesa contra faturar
+  // de novo era o backend rejeitar com 4xx — agora o botão nem aparece.
+  it('hides "Faturar no Caixa" once the OS is already Faturada', () => {
+    useAuthStore.setState({ hasPermission: () => true });
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { ...osConcluida, status: 'FATURADO' },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    expect(screen.queryByRole('button', { name: /Faturar no Caixa/ })).not.toBeInTheDocument();
+  });
+
+  it('confirms the faturamento with the chosen payment method and toasts the result', async () => {
+    useAuthStore.setState({ hasPermission: () => true });
+    const mutateAsync = vi.fn().mockResolvedValue({ valor: 350, caixaSessaoIdentificador: 'CX-0001' });
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrdemServico).mockReturnValue({ data: osConcluida, isLoading: false } as never);
+    renderPage('9');
+
+    await userEvent.click(screen.getByRole('button', { name: /Faturar no Caixa/ }));
+    await userEvent.selectOptions(screen.getByLabelText('Forma de pagamento'), 'PIX');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar faturamento' }));
+
+    expect(mutateAsync).toHaveBeenCalledWith({ ordemServicoId: 9, payload: { formaPagamento: 'PIX' } });
+    expect(toast.success).toHaveBeenCalledWith(`OS faturada — ${formatCurrency(350)} lançados no caixa CX-0001.`);
+  });
+
+  it('toasts the backend error when there is no open caixa session to bill into', async () => {
+    useAuthStore.setState({ hasPermission: () => true });
+    const mutateAsync = vi.fn().mockRejectedValue(new Error('Nenhuma sessão de caixa aberta.'));
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrdemServico).mockReturnValue({ data: osConcluida, isLoading: false } as never);
+    renderPage('9');
+
+    await userEvent.click(screen.getByRole('button', { name: /Faturar no Caixa/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar faturamento' }));
+
+    expect(toast.error).toHaveBeenCalledWith('Nenhuma sessão de caixa aberta.');
+  });
+});
+
+describe('OrdemServicoFormPage — sequência Concluída → Faturado → Entregue', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ nome: 'Ana Consultora', perfil: 'Consultor Técnico', usuarioId: 1, hasPermission: () => true });
+    vi.mocked(useCreateOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useUpdateOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useAtualizarStatusOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useEnviarOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerStartOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerPauseOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useTimerResumeOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useClientes).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
+    vi.mocked(useVeiculosDoCliente).mockReturnValue({ data: [] } as never);
+    vi.mocked(useUsuarios).mockReturnValue({ data: mecanicos } as never);
+  });
+
+  // Regra de negócio: o veículo só é liberado pro cliente depois de pago — o
+  // backend já rejeita ENTREGUE vindo de qualquer status que não seja
+  // FATURADO, então o seletor não pode nem oferecer essa opção fora dali.
+  it('does not offer Entregue as a manual status option while the OS is only Concluída', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'CONCLUIDA', itens: [] },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    const select = screen.getByDisplayValue('Concluída') as HTMLSelectElement;
+    const opcoes = Array.from(select.options).map((o) => o.value);
+    expect(opcoes).not.toContain('ENTREGUE');
+  });
+
+  it('offers Entregue as a manual status option once the OS is Faturada', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'FATURADO', itens: [] },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    const select = screen.getByDisplayValue('Faturada') as HTMLSelectElement;
+    const opcoes = Array.from(select.options).map((o) => o.value);
+    expect(opcoes).toContain('ENTREGUE');
+  });
+
+  // Uma OS Entregue só existe porque já passou por Faturado antes — faturar
+  // de novo nunca é a ação certa a partir daqui.
+  it('hides "Faturar no Caixa" for an OS that is already Entregue', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'ENTREGUE', valorTotal: 350, itens: [] },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    expect(screen.queryByRole('button', { name: /Faturar no Caixa/ })).not.toBeInTheDocument();
   });
 });

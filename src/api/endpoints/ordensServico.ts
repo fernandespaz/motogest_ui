@@ -7,6 +7,10 @@ export type OrdensServicoListParams = PageParams & {
   status?: OrdemServicoStatus;
   numero?: string;
   usuarioResponsavelId?: number;
+  // Documento (CPF/CNPJ, só dígitos) do cliente — usado pelo Faturar no Caixa
+  // pra achar a OS concluída de um cliente sem precisar do número da OS de
+  // cabeça (ver FaturarOSModal).
+  clienteDocumento?: string;
 };
 
 const base = createCrudApi<OrdemServicoResponse, OrdemServicoRequest, OrdensServicoListParams>(

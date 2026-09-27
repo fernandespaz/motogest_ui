@@ -1,11 +1,16 @@
 import { useForm, FormProvider } from 'react-hook-form';
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useHoraTecnica } from '@/hooks/useHoraTecnica';
+import { useCategoriasHoraTecnica } from '@/hooks/useHoraTecnica';
 import { HoraTecnicaReferencia } from './HoraTecnicaReferencia';
 import type { ItemFormValue } from './ItemsEditor';
 
-vi.mock('@/hooks/useHoraTecnica', () => ({ useHoraTecnica: vi.fn() }));
+vi.mock('@/hooks/useHoraTecnica', () => ({ useCategoriasHoraTecnica: vi.fn() }));
+
+const CATEGORIAS = [
+  { categoria: 'A' as const, valorHora: 120, arredondamentoComercial: 5 },
+  { categoria: 'B' as const, valorHora: 150, arredondamentoComercial: 5 },
+];
 
 function Harness({ itens }: { itens: Partial<ItemFormValue>[] }) {
   const methods = useForm({ defaultValues: { itens } });
@@ -19,39 +24,44 @@ function Harness({ itens }: { itens: Partial<ItemFormValue>[] }) {
 describe('HoraTecnicaReferencia', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('shows only the final PHT and the labor it represents for the sold time', () => {
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: true, precoHoraTecnica: 120 } } as never);
-    render(<Harness itens={[{ tempoVendidoMinutos: 60 }, { tempoVendidoMinutos: 30 }]} />);
+  it('sums up the already-computed price of items priced by hora técnica, regardless of category mix', () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: CATEGORIAS } as never);
+    render(
+      <Harness
+        itens={[
+          { tipoItem: 'SERVICO', precificadoPorHT: true, tempoVendidoMinutos: 60, quantidade: 1, valorUnitario: 120 },
+          { tipoItem: 'SERVICO', precificadoPorHT: true, tempoVendidoMinutos: 30, quantidade: 1, valorUnitario: 75 },
+        ]}
+      />,
+    );
 
-    expect(screen.getByText('R$ 120,00/h')).toBeInTheDocument();
-    // 1h30 × R$ 120 = R$ 180
-    expect(screen.getByText('R$ 180,00')).toBeInTheDocument();
+    // 60min@A(120/h) = R$120 + 30min@B(150/h) = R$75 → R$195, mesmo com categorias diferentes.
+    expect(screen.getByText('R$ 195,00')).toBeInTheDocument();
     expect(screen.getByText(/01:30/)).toBeInTheDocument();
   });
 
-  it('never renders cost components, even if the payload somehow carried them', () => {
-    vi.mocked(useHoraTecnica).mockReturnValue({
-      data: { configurado: true, precoHoraTecnica: 120, composicao: { custosFixos: 9999, margemLucroPercentual: 30 } },
-    } as never);
-    render(<Harness itens={[]} />);
-
-    expect(screen.queryByText(/9\.999/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/margem/i)).not.toBeInTheDocument();
-  });
-
-  it('hides the labor line when no time was sold yet', () => {
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: true, precoHoraTecnica: 120 } } as never);
-    render(<Harness itens={[{ tempoVendidoMinutos: undefined }]} />);
-
+  it('ignores items priced manually (not by hora técnica) even with time sold', () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: CATEGORIAS } as never);
+    render(
+      <Harness
+        itens={[{ tipoItem: 'SERVICO', precificadoPorHT: false, tempoVendidoMinutos: 60, quantidade: 1, valorUnitario: 999 }]}
+      />,
+    );
     expect(screen.queryByText(/Mão de obra/)).not.toBeInTheDocument();
   });
 
-  it('renders nothing when the oficina has not configured the PHT (or the profile cannot read it)', () => {
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: { configurado: false } } as never);
+  it('hides the labor line when no item priced by hora técnica has time sold yet', () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: CATEGORIAS } as never);
+    render(<Harness itens={[{ tipoItem: 'SERVICO', precificadoPorHT: true, tempoVendidoMinutos: undefined }]} />);
+    expect(screen.queryByText(/Mão de obra/)).not.toBeInTheDocument();
+  });
+
+  it('renders nothing when no category is configured (or the profile cannot read it)', () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: [] } as never);
     const { container } = render(<Harness itens={[]} />);
     expect(container).toBeEmptyDOMElement();
 
-    vi.mocked(useHoraTecnica).mockReturnValue({ data: undefined } as never);
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: undefined } as never);
     const { container: semDados } = render(<Harness itens={[]} />);
     expect(semDados).toBeEmptyDOMElement();
   });
