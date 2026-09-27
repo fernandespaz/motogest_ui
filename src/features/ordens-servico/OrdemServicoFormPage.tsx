@@ -7,7 +7,7 @@ import { ArrowLeft, FileDown, Send, MessageCircle, Play, Pause, PlayCircle, Aler
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Textarea } from '@/components/ui/Field';
+import { Input, Select, Textarea, ReadOnlyField } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { Modal } from '@/components/ui/Modal';
 import { PageSpinner } from '@/components/ui/Spinner';
@@ -47,6 +47,7 @@ import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
+import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -173,7 +174,9 @@ export function OrdemServicoFormPage() {
     formState: { errors },
   } = methods;
   const clienteId = watch('clienteId');
+  const veiculoIdSelecionado = watch('veiculoId');
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
+  const veiculoSelecionado = veiculos?.find((v) => v.id === veiculoIdSelecionado);
 
   const readOnly = isEditing && STATUS_BLOQUEIA_EDICAO.includes(os?.status as OrdemServicoStatus);
   // "Enviar" só funciona a partir de ABERTA (o backend rejeita com 422 fora
@@ -289,17 +292,24 @@ export function OrdemServicoFormPage() {
     try {
       await enviarOS.mutateAsync(osId);
       toast.success('OS enviada — aguardando aprovação do cliente.');
-      if (os?.tokenAprovacao) compartilharWhatsApp();
+      if (os?.tokenAprovacao) await compartilharWhatsApp();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível enviar a OS.'));
     }
   }
 
-  function compartilharWhatsApp() {
+  async function compartilharWhatsApp() {
     if (!os?.tokenAprovacao) return;
+    // Abre a aba em branco já no clique (preserva a ativação do usuário) e só
+    // navega pra wa.me depois do await — do contrário o navegador bloqueia o
+    // popup, já que ele deixaria de contar como resposta direta ao clique.
+    const win = window.open('', '_blank');
+    const nomeFantasia = await resolverNomeFantasiaOficina();
     const link = `${window.location.origin}/ordens-servico/publico/${os.tokenAprovacao}`;
-    const texto = `Olá! Segue a Ordem de Serviço ${os.numero ?? `#${os.id}`}${os.clienteNome ? ` para ${os.clienteNome}` : ''}. Você pode conferir e aprovar por aqui: ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    const texto = `Olá! Aqui é da ${nomeFantasia}. Segue a Ordem de Serviço ${os.numero ?? `#${os.id}`}${os.clienteNome ? ` para ${os.clienteNome}` : ''}. Você pode conferir e aprovar por aqui: ${link}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank');
   }
 
   async function handleIniciar() {
@@ -547,6 +557,7 @@ export function OrdemServicoFormPage() {
                         />
                       )}
                     />
+                    {veiculoSelecionado && <ReadOnlyField label="Chassi" value={veiculoSelecionado.chassi || '—'} />}
                     <Controller
                       control={control}
                       name="usuarioResponsavelId"

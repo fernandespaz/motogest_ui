@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, UserPlus, Car, SearchX } from 'lucide-react';
+import { Plus, UserPlus, Car, SearchX } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useBuscaVeiculosPorPlaca, useClientes } from '@/hooks/useClientes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -153,26 +155,24 @@ export function VeiculosPage() {
               header: '',
               render: (row) => (
                 <div className="flex justify-end gap-1">
-                  <button
+                  <IconActionButton
+                    icon={PencilSimple}
+                    label="Editar"
+                    tone="brand"
                     onClick={(e) => {
                       e.stopPropagation();
                       setModalVeiculo(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                    aria-label="Editar"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
+                  />
+                  <IconActionButton
+                    icon={Trash}
+                    label="Remover"
+                    tone="danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleting(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                    aria-label="Remover"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               ),
             },

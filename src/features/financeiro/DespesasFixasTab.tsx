@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Coins, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Coins, Plus } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Input, Select } from '@/components/ui/Field';
 import { useAtualizarCustoFixo, useCriarCustoFixo, useCustosFixos, useExcluirCustoFixo } from '@/hooks/useHoraTecnica';
 import type { CategoriaCustoFixo, CustoFixoResponse } from '@/api/types';
@@ -182,22 +184,13 @@ export function DespesasFixasTab() {
             header: '',
             render: (c) => (
               <div className="flex justify-end gap-1">
-                <button
-                  type="button"
-                  aria-label={`Editar ${c.descricao}`}
-                  onClick={() => setEditando(c)}
-                  className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remover ${c.descricao}`}
+                <IconActionButton icon={PencilSimple} label={`Editar ${c.descricao}`} tone="brand" onClick={() => setEditando(c)} />
+                <IconActionButton
+                  icon={Trash}
+                  label={`Remover ${c.descricao}`}
+                  tone="danger"
                   onClick={() => setRemovendo(c)}
-                  className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
-                >
-                  <Trash2 size={16} />
-                </button>
+                />
               </div>
             ),
           },

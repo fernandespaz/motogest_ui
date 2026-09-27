@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useFieldArray, useForm, Controller, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Select, Input, Textarea } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Badge';
@@ -92,9 +94,7 @@ export function ChecklistTab({ ordemServicoId }: { ordemServicoId: number }) {
                     <Input label="Observação" {...register(`itens.${index}.observacao`)} />
                   </div>
                   <div className="flex justify-end sm:col-span-1">
-                    <button type="button" onClick={() => remove(index)} className="rounded-md p-2 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30">
-                      <Trash2 size={16} />
-                    </button>
+                    <IconActionButton icon={Trash} label="Remover item" tone="danger" onClick={() => remove(index)} />
                   </div>
                 </div>
               ))}

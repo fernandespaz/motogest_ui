@@ -72,6 +72,27 @@ export function getNomeFixadoParaLogin(): string | null {
   }
 }
 
+/**
+ * Nome fantasia da oficina pra conteúdo enviado pra fora (texto de
+ * compartilhamento no WhatsApp, por ex.) — chama GET /oficinas/atual direto
+ * (não usa useOficinaAtual/hasPermission) porque esse endpoint aceita
+ * OFICINA_READ, ORCAMENTO_READ ou ORDEM_SERVICO_READ (ver resolverOficinaParaPdf
+ * em features/shared/pdf/logo.ts, que usa o mesmo fallback pro cabeçalho do
+ * PDF), e um Consultor sem OFICINA_READ é justamente quem mais compartilha
+ * orçamento/OS por aqui. Nunca rejeita — cai pro nome fixado no login e por
+ * fim pro literal 'MotoGest', porque a mensagem tem que sair mesmo se essa
+ * chamada falhar.
+ */
+export async function resolverNomeFantasiaOficina(): Promise<string> {
+  try {
+    const oficina = await oficinasApi.atual();
+    fixarNomeParaLogin(oficina.nomeFantasia || oficina.razaoSocial);
+    return oficina.nomeFantasia || oficina.razaoSocial || 'MotoGest';
+  } catch {
+    return getNomeFixadoParaLogin() ?? 'MotoGest';
+  }
+}
+
 export function useOficinaAtual() {
   // Sidebar/Topbar chamam esse hook em toda tela pra mostrar o nome/logo da
   // oficina, mas perfis operacionais (Mecânico, Consultor Técnico) não têm

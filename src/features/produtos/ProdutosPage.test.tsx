@@ -111,7 +111,7 @@ describe('ProdutosPage', () => {
 
   it('opens the movimentação modal from its row action', async () => {
     render(<ProdutosPage />);
-    await userEvent.click(screen.getAllByLabelText('Movimentar')[0]);
+    await userEvent.click(screen.getAllByLabelText('Movimentar estoque')[0]);
     expect(screen.getByText('Movimentar estoque — Óleo Motor 10W30')).toBeInTheDocument();
   });
 
@@ -173,7 +173,7 @@ describe('ProdutosPage', () => {
       expect(screen.queryByRole('button', { name: /Novo produto/ })).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Editar')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Remover')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Movimentar')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Movimentar estoque')).not.toBeInTheDocument();
 
       await userEvent.click(screen.getByText('Óleo Motor 10W30'));
       expect(screen.queryByText('Editar produto')).not.toBeInTheDocument();

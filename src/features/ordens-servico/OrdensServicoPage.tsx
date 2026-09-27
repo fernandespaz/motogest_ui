@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileDown, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { FileArrowDown } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
@@ -202,16 +203,15 @@ export function OrdensServicoPage() {
             {
               header: '',
               render: (row) => (
-                <Button
-                  variant="secondary"
-                  size="sm"
+                <IconActionButton
+                  icon={FileArrowDown}
+                  label="PDF"
+                  tone="brand"
                   onClick={(e) => {
                     e.stopPropagation();
                     baixarPdf(row);
                   }}
-                >
-                  <FileDown size={14} /> PDF
-                </Button>
+                />
               ),
             },
           ]}

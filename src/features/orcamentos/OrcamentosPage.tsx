@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileDown, Send, Check, X, Wrench, Trash2, MessageCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { FileArrowDown, CheckCircle, XCircle, Wrench, Trash, ChatCircle } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
@@ -26,6 +28,7 @@ import { extractErrorMessage } from '@/api/client';
 import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
 import { useAuthStore } from '@/store/authStore';
 import { isConsultor } from '@/lib/perfil';
+import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 
 const TAMANHO_PAGINA = 20;
 
@@ -95,14 +98,21 @@ export function OrcamentosPage() {
     }
   }
 
-  function compartilharWhatsApp(row: OrcamentoResponse) {
+  async function compartilharWhatsApp(row: OrcamentoResponse) {
     if (!row.tokenAprovacao) {
       toast.error('Envie o orçamento ao cliente antes de compartilhar o link.');
       return;
     }
+    // Abre a aba em branco já no clique (preserva a ativação do usuário) e só
+    // navega pra wa.me depois do await — do contrário o navegador bloqueia o
+    // popup, já que ele deixaria de contar como resposta direta ao clique.
+    const win = window.open('', '_blank');
+    const nomeFantasia = await resolverNomeFantasiaOficina();
     const link = `${window.location.origin}/orcamentos/publico/${row.tokenAprovacao}`;
-    const texto = `Olá! Segue o orçamento nº ${row.id} da ${row.clienteNome ? `oficina para ${row.clienteNome}` : 'oficina'}, no valor de ${formatCurrency(row.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    const texto = `Olá! Aqui é da ${nomeFantasia}. Segue o orçamento nº ${row.id}${row.clienteNome ? ` para ${row.clienteNome}` : ''}, no valor de ${formatCurrency(row.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank');
   }
 
   async function handleConverter(row: OrcamentoResponse) {
@@ -132,9 +142,39 @@ export function OrcamentosPage() {
     try {
       const atualizado = await enviar.mutateAsync(row.id!);
       toast.success('Orçamento enviado — aguardando aprovação do cliente.');
-      compartilharWhatsApp(atualizado);
+      await compartilharWhatsApp(atualizado);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível enviar o orçamento.'));
+    }
+  }
+
+  // Todo orçamento nasce em RASCUNHO e o backend só aceita APROVAR a partir
+  // de ENVIADO (RASCUNHO -> ENVIADO -> APROVADO, ver openapi.json) — não existe
+  // uma transição direta. Regra de negócio: a maioria dos orçamentos é feita
+  // com o cliente já no balcão, então pedir aprovação por WhatsApp (que
+  // "Enviar" acima sempre abre) é inviável. Aqui o consultor aprova
+  // diretamente pelo cliente presencial: passa pelo ENVIADO só como transição
+  // de estado interna, sem abrir o compartilhamento.
+  async function handleAprovarNoBalcao(row: OrcamentoResponse) {
+    let enviado: OrcamentoResponse;
+    try {
+      enviado = await enviar.mutateAsync(row.id!);
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível aprovar o orçamento.'));
+      return;
+    }
+    // A partir daqui o orçamento já virou ENVIADO de verdade no backend (a
+    // invalidação da lista já dispara) — se o passo de aprovar falhar agora,
+    // dizer "não foi possível aprovar" sem mais contexto esconderia que a
+    // linha já mudou de status e ganhou os botões de Aprovar/Rejeitar do
+    // ENVIADO, deixando o consultor sem saber que só falta um segundo clique.
+    try {
+      await aprovar.mutateAsync(enviado.id!);
+      toast.success('Orçamento aprovado.');
+    } catch (error) {
+      toast.error(
+        extractErrorMessage(error, 'Orçamento enviado, mas não foi possível aprovar automaticamente. Aprove pela linha (agora como Enviado).'),
+      );
     }
   }
 
@@ -179,54 +219,48 @@ export function OrcamentosPage() {
             {
               header: '',
               render: (row) => (
+                // Ordem: decisão principal (Aprovar/Rejeitar) primeiro, depois
+                // ações secundárias (Enviar/Reenviar/Remover/Converter), PDF
+                // sempre por último — é a ação menos frequente do grupo, não
+                // faz sentido competir com o "próximo passo" pela atenção.
                 <div className="flex items-center justify-end gap-1.5">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      baixarPdf(row);
-                    }}
-                  >
-                    <FileDown size={14} /> PDF
-                  </Button>
                   {row.status === 'RASCUNHO' && (
                     <>
-                      <button
+                      <IconActionButton
+                        icon={CheckCircle}
+                        label="Aprovar (cliente no balcão)"
+                        tone="success"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAprovarNoBalcao(row);
+                        }}
+                      />
+                      <IconActionButton
+                        icon={ChatCircle}
+                        label="Enviar para aprovação (WhatsApp)"
+                        tone="brand"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEnviarECompartilhar(row);
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-green-50 hover:text-success dark:hover:bg-green-900/30"
-                        title="Enviar para aprovação (WhatsApp)"
-                      >
-                        <Send size={16} />
-                      </button>
-                      <button
+                      />
+                      <IconActionButton
+                        icon={Trash}
+                        label="Remover"
+                        tone="danger"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleting(row);
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
-                        title="Remover"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      />
                     </>
                   )}
                   {row.status === 'ENVIADO' && (
                     <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          compartilharWhatsApp(row);
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                        title="Reenviar link via WhatsApp"
-                      >
-                        <MessageCircle size={16} />
-                      </button>
-                      <button
+                      <IconActionButton
+                        icon={CheckCircle}
+                        label="Aprovar"
+                        tone="success"
                         onClick={async (e) => {
                           e.stopPropagation();
                           try {
@@ -236,12 +270,11 @@ export function OrcamentosPage() {
                             toast.error(extractErrorMessage(error));
                           }
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-green-50 hover:text-success dark:hover:bg-green-900/30"
-                        title="Aprovar"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
+                      />
+                      <IconActionButton
+                        icon={XCircle}
+                        label="Rejeitar"
+                        tone="danger"
                         onClick={async (e) => {
                           e.stopPropagation();
                           try {
@@ -251,25 +284,38 @@ export function OrcamentosPage() {
                             toast.error(extractErrorMessage(error));
                           }
                         }}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
-                        title="Rejeitar"
-                      >
-                        <X size={16} />
-                      </button>
+                      />
+                      <IconActionButton
+                        icon={ChatCircle}
+                        label="Reenviar link via WhatsApp"
+                        tone="brand"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          compartilharWhatsApp(row);
+                        }}
+                      />
                     </>
                   )}
                   {row.status === 'APROVADO' && (
-                    <button
+                    <IconActionButton
+                      icon={Wrench}
+                      label="Converter em Ordem de Serviço"
+                      tone="brand"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleConverter(row);
                       }}
-                      className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                      title="Converter em Ordem de Serviço"
-                    >
-                      <Wrench size={16} />
-                    </button>
+                    />
                   )}
+                  <IconActionButton
+                    icon={FileArrowDown}
+                    label="PDF"
+                    tone="brand"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      baixarPdf(row);
+                    }}
+                  />
                 </div>
               ),
             },

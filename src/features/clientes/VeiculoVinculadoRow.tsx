@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
-import { Pencil, Trash2, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { Input } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { ModeloVeiculoField, ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 
 /**
@@ -70,22 +72,8 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
           </div>
         </div>
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-            aria-label="Editar veículo"
-          >
-            <Pencil size={16} />
-          </button>
-          <button
-            type="button"
-            onClick={onRemover}
-            className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-            aria-label="Remover veículo"
-          >
-            <Trash2 size={16} />
-          </button>
+          <IconActionButton icon={PencilSimple} label="Editar veículo" tone="brand" onClick={() => setEditing(true)} />
+          <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={onRemover} />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs sm:grid-cols-4">

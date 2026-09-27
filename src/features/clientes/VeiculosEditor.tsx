@@ -1,6 +1,8 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Input } from '@/components/ui/Field';
 import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
 
@@ -41,14 +43,7 @@ export function VeiculosEditor({ name }: { name: string }) {
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Veículo {index + 1}
               </span>
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                aria-label="Remover veículo"
-              >
-                <Trash2 size={16} />
-              </button>
+              <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="col-span-2 sm:col-span-1">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -7,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { useServicos, useDeleteServico } from '@/hooks/useServicos';
 import type { ServicoResponse } from '@/api/types';
 import { formatCurrency } from '@/lib/formatters';
@@ -64,24 +66,24 @@ export function ServicosPage() {
               header: '',
               render: (row) => (
                 <div className="flex justify-end gap-1">
-                  <button
+                  <IconActionButton
+                    icon={PencilSimple}
+                    label="Editar"
+                    tone="brand"
                     onClick={(e) => {
                       e.stopPropagation();
                       setModalServico(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
+                  />
+                  <IconActionButton
+                    icon={Trash}
+                    label="Remover"
+                    tone="danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleting(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               ),
             },

@@ -273,6 +273,10 @@ export function MinhaOrdemServicoDetalhePage() {
                 </div>
               </div>
               <div>
+                <p className="text-xs text-ink-muted">Chassi</p>
+                <p className="font-medium text-ink">{veiculo?.chassi || '—'}</p>
+              </div>
+              <div>
                 <p className="text-xs text-ink-muted">Técnico resp.</p>
                 <p className="font-medium text-ink">{os.usuarioResponsavelNome ?? 'Não definido'}</p>
               </div>

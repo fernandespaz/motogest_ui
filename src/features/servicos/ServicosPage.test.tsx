@@ -55,7 +55,11 @@ describe('ServicosPage', () => {
     await userEvent.click(trashButton);
 
     expect(screen.getByText('Remover serviço')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    // "Remover" agora também é o nome acessível do ícone de ação da linha
+    // (IconActionButton) — o botão de confirmação do diálogo é o último a
+    // aparecer no DOM.
+    const confirmButtons = screen.getAllByRole('button', { name: 'Remover' });
+    await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(deleteMutateAsync).toHaveBeenCalledWith(1);
     expect(toast.success).toHaveBeenCalledWith('Serviço removido.');
@@ -82,7 +86,8 @@ describe('ServicosPage', () => {
     render(<ServicosPage />);
     const row = screen.getByText('Troca de Óleo').closest('tr')!;
     await userEvent.click(row.querySelectorAll('button')[1]);
-    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    const confirmButtons = screen.getAllByRole('button', { name: 'Remover' });
+    await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(toast.error).toHaveBeenCalledWith('em uso por uma OS');
     expect(screen.getByText('Remover serviço')).toBeInTheDocument();

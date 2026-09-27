@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Trash2, Percent, PackagePlus, Wrench, Package, X, Gauge } from 'lucide-react';
+import { Percent, PackagePlus, Wrench, Package, Gauge } from 'lucide-react';
+import { Trash, X } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { useHoraTecnica } from '@/hooks/useHoraTecnica';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Input } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
@@ -427,15 +429,14 @@ export function ItemsEditor({
           <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-ink">
             {formatCurrency(quantidade * valorUnitario)}
           </span>
-          <button
-            type="button"
+          <IconActionButton
+            icon={Trash}
+            label="Remover item"
+            tone="danger"
+            iconSize={15}
             disabled={disabled}
             onClick={() => remove(index)}
-            aria-label="Remover item"
-            className="shrink-0 rounded-md p-1 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <Trash2 size={15} />
-          </button>
+          />
         </div>
 
         {mostraLinhaExtra && (
@@ -519,14 +520,12 @@ export function ItemsEditor({
                 onQueryChange={setBuscaCatalogo}
               />
             </div>
-            <button
-              type="button"
+            <IconActionButton
+              icon={X}
+              label="Cancelar"
+              className="mt-2"
               onClick={() => setAdicionando(null)}
-              aria-label="Cancelar"
-              className="mt-2 shrink-0 rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-ink"
-            >
-              <X size={16} />
-            </button>
+            />
           </div>
         )}
 

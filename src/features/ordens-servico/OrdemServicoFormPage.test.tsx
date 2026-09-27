@@ -145,4 +145,30 @@ describe('OrdemServicoFormPage — rastreabilidade do consultor e trava do técn
       unmount();
     }
   });
+
+  // OrdemServicoResponse só devolve veiculoId+veiculoPlaca (sem chassi) — o
+  // chassi vem de cruzar com a lista de veículos do cliente (useVeiculosDoCliente,
+  // já carregada pro combobox de Veículo), a mesma fonte que o combobox usa.
+  it('shows the selected vehicle’s chassi once its data loads', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'APROVADA', clienteId: 5, veiculoId: 12, itens: [] },
+      isLoading: false,
+    } as never);
+    vi.mocked(useVeiculosDoCliente).mockReturnValue({
+      data: [{ id: 12, placa: 'MTG0001', chassi: '9BWZZZ377VT004251' }],
+    } as never);
+    renderPage('9');
+
+    expect(screen.getByText('9BWZZZ377VT004251')).toBeInTheDocument();
+  });
+
+  it('does not render the chassi field before a vehicle is selected', () => {
+    vi.mocked(useOrdemServico).mockReturnValue({
+      data: { id: 9, numero: 'OS-000009', status: 'ABERTA', itens: [] },
+      isLoading: false,
+    } as never);
+    renderPage('9');
+
+    expect(screen.queryByText('Chassi')).not.toBeInTheDocument();
+  });
 });
