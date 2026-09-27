@@ -43,12 +43,16 @@ export function ChecklistTab({ ordemServicoId }: { ordemServicoId: number }) {
   const { control, register, handleSubmit, reset, formState: { errors } } = methods;
   const { fields, append, remove } = useFieldArray({ control, name: 'itens' });
 
+  function fecharFormulario() {
+    reset({ tipo: 'ENTRADA', itens: [{ descricao: '', situacao: 'OK', observacao: '' }] });
+    setCreating(false);
+  }
+
   async function onSubmit(values: FormValues) {
     try {
       await criar.mutateAsync(values);
       toast.success('Checklist registrado.');
-      reset({ tipo: 'ENTRADA', itens: [{ descricao: '', situacao: 'OK', observacao: '' }] });
-      setCreating(false);
+      fecharFormulario();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível registrar o checklist.'));
     }
@@ -115,7 +119,7 @@ export function ChecklistTab({ ordemServicoId }: { ordemServicoId: number }) {
               <Textarea label="Observações gerais" {...register('observacoesGerais')} />
 
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="secondary" onClick={() => setCreating(false)}>
+                <Button type="button" variant="secondary" onClick={fecharFormulario}>
                   Cancelar
                 </Button>
                 <Button onClick={handleSubmit(onSubmit)} loading={criar.isPending}>

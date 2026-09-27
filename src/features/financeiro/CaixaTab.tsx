@@ -55,12 +55,16 @@ export function CaixaTab() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { tipo: 'ENTRADA', categoria: 'OUTRO' } });
 
+  function fecharModal() {
+    reset({ tipo: 'ENTRADA', categoria: 'OUTRO', valor: undefined, descricao: '' });
+    setModalOpen(false);
+  }
+
   async function onSubmit(values: FormValues) {
     try {
       await registrar.mutateAsync(values);
       toast.success('Lançamento registrado.');
-      reset({ tipo: 'ENTRADA', categoria: 'OUTRO', valor: undefined, descricao: '' });
-      setModalOpen(false);
+      fecharModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível registrar o lançamento.'));
     }
@@ -143,7 +147,7 @@ export function CaixaTab() {
         />
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Novo lançamento de caixa">
+      <Modal open={modalOpen} onClose={fecharModal} title="Novo lançamento de caixa">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <Select label="Tipo" {...register('tipo')}>
             <option value="ENTRADA">Entrada</option>
@@ -158,7 +162,7 @@ export function CaixaTab() {
           <Input label="Valor (R$)" type="number" step="0.01" required error={errors.valor?.message} {...register('valor')} />
           <Textarea label="Descrição" {...register('descricao')} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={fecharModal}>
               Cancelar
             </Button>
             <Button type="submit" loading={registrar.isPending}>

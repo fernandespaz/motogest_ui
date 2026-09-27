@@ -121,13 +121,17 @@ export function MinhasOrdensServicoPage() {
     }
   }
 
+  function fecharPausaModal() {
+    setPausando(null);
+    setMotivoPausa('');
+  }
+
   async function handleConfirmarPausa() {
     if (!pausando || !motivoPausa.trim()) return;
     try {
       await timerPause.mutateAsync({ id: pausando.id!, motivo: motivoPausa.trim() });
       toast.success(`OS ${pausando.numero} pausada.`);
-      setPausando(null);
-      setMotivoPausa('');
+      fecharPausaModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
     }
@@ -390,7 +394,7 @@ export function MinhasOrdensServicoPage() {
         numero={pausando?.numero}
         motivo={motivoPausa}
         onMotivoChange={setMotivoPausa}
-        onClose={() => setPausando(null)}
+        onClose={fecharPausaModal}
         onConfirm={handleConfirmarPausa}
         loading={timerPause.isPending}
       />

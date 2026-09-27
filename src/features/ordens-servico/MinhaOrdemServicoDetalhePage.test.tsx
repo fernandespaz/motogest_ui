@@ -125,4 +125,19 @@ describe('MinhaOrdemServicoDetalhePage', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /iniciar/i })).not.toBeInTheDocument();
   });
+
+  // Bug real: motivoPausa é estado do componente pai, não do PausarOSModal —
+  // cancelar sem confirmar só fechava o modal, sem limpar o texto já digitado,
+  // que reaparecia na próxima vez que o técnico abrisse "Pausar".
+  it('clears the motivo field when Pausar is cancelled, so reopening it starts blank', async () => {
+    vi.mocked(useOrdemServico).mockReturnValue({ data: { ...os, status: 'EM_ANDAMENTO' }, isLoading: false } as never);
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /pausar/i }));
+    await userEvent.type(screen.getByLabelText('Motivo da pausa', { exact: false }), 'Aguardando peça');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await userEvent.click(screen.getByRole('button', { name: /pausar/i }));
+    expect(screen.getByLabelText('Motivo da pausa', { exact: false })).toHaveValue('');
+  });
 });

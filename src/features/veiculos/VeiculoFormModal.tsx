@@ -62,6 +62,7 @@ export function VeiculoFormModal({
 
   useEffect(() => {
     if (open) {
+      setBusca('');
       reset(
         veiculo
           ? {

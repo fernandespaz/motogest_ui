@@ -33,13 +33,17 @@ export function DescontosPage() {
     }
   }
 
+  function fecharRejeicao() {
+    setRejeitando(null);
+    setMotivo('');
+  }
+
   async function confirmarRejeicao() {
     if (!rejeitando?.id || !motivo.trim()) return;
     try {
       await rejeitar.mutateAsync({ id: rejeitando.id, payload: { motivo: motivo.trim() } });
       toast.success('Desconto rejeitado.');
-      setRejeitando(null);
-      setMotivo('');
+      fecharRejeicao();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível rejeitar o desconto.'));
     }
@@ -122,12 +126,12 @@ export function DescontosPage() {
 
       <Modal
         open={!!rejeitando}
-        onClose={() => setRejeitando(null)}
+        onClose={fecharRejeicao}
         title="Rejeitar solicitação de desconto"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setRejeitando(null)} disabled={rejeitar.isPending}>
+            <Button variant="secondary" onClick={fecharRejeicao} disabled={rejeitar.isPending}>
               Cancelar
             </Button>
             <Button variant="danger" onClick={confirmarRejeicao} loading={rejeitar.isPending} disabled={!motivo.trim()}>

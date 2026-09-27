@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,11 +49,18 @@ export function NovaOficinaModal({
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  // Mesmo padrão dos demais formulários de criação do app: reseta sempre que
+  // o modal abre, não só depois de um cadastro bem-sucedido — sem isso, um
+  // Cancelar no meio do preenchimento deixava os campos preenchidos quando o
+  // modal reabria pra cadastrar a próxima oficina.
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
+
   async function onSubmit(values: FormValues) {
     try {
       await criar.mutateAsync(values);
       toast.success('Oficina cadastrada com sucesso.');
-      reset();
       onClose();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível cadastrar a oficina.'));

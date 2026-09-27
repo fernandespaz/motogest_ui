@@ -66,6 +66,21 @@ describe('VeiculoFormModal', () => {
     expect(vi.mocked(useClientes).mock.calls.at(-1)?.[0]).toEqual({ size: 50, nome: 'Carlos' });
   });
 
+  // Bug real: o modal nunca desmonta (só o prop `open` alterna), e a busca de
+  // cliente é estado local separado do react-hook-form — reset() do form não
+  // limpava esse campo. Fechar sem salvar e reabrir pra outro veículo deixava
+  // o termo da busca anterior parado ali.
+  it('clears the cliente search box on reopen, even after closing without saving', async () => {
+    const { rerender } = render(<VeiculoFormModal open onClose={vi.fn()} veiculo={null} />);
+    await userEvent.type(screen.getByPlaceholderText('Buscar cliente pelo nome...'), 'Carlos');
+    expect(screen.getByPlaceholderText('Buscar cliente pelo nome...')).toHaveValue('Carlos');
+
+    rerender(<VeiculoFormModal open={false} onClose={vi.fn()} veiculo={null} />);
+    rerender(<VeiculoFormModal open onClose={vi.fn()} veiculo={null} />);
+
+    expect(screen.getByPlaceholderText('Buscar cliente pelo nome...')).toHaveValue('');
+  });
+
   it('creates a new veículo with the filled fields', async () => {
     const onClose = vi.fn();
     render(<VeiculoFormModal open onClose={onClose} veiculo={null} />);

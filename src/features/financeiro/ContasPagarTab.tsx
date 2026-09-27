@@ -51,12 +51,16 @@ export function ContasPagarTab() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  function fecharModal() {
+    reset();
+    setModalOpen(false);
+  }
+
   async function onSubmit(values: FormValues) {
     try {
       await create.mutateAsync(values);
       toast.success('Conta a pagar cadastrada.');
-      reset();
-      setModalOpen(false);
+      fecharModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível cadastrar.'));
     }
@@ -123,14 +127,14 @@ export function ContasPagarTab() {
         )}
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova conta a pagar">
+      <Modal open={modalOpen} onClose={fecharModal} title="Nova conta a pagar">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <Input label="Descrição" required error={errors.descricao?.message} {...register('descricao')} />
           <Input label="Fornecedor" {...register('fornecedor')} />
           <Input label="Valor (R$)" type="number" step="0.01" required error={errors.valor?.message} {...register('valor')} />
           <Input label="Vencimento" type="date" required error={errors.dataVencimento?.message} {...register('dataVencimento')} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={fecharModal}>
               Cancelar
             </Button>
             <Button type="submit" loading={create.isPending}>

@@ -58,6 +58,7 @@ export function AgendamentoFormModal({
 
   useEffect(() => {
     if (open) {
+      setBuscaCliente('');
       reset(
         agendamento
           ? {

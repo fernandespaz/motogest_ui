@@ -322,13 +322,17 @@ export function OrdemServicoFormPage() {
     }
   }
 
+  function fecharPausaModal() {
+    setPausaModalAberto(false);
+    setMotivoPausa('');
+  }
+
   async function handleConfirmarPausa() {
     if (!osId || !motivoPausa.trim()) return;
     try {
       await timerPause.mutateAsync({ id: osId, motivo: motivoPausa.trim() });
       toast.success('OS pausada.');
-      setPausaModalAberto(false);
-      setMotivoPausa('');
+      fecharPausaModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
     }
@@ -636,11 +640,11 @@ export function OrdemServicoFormPage() {
 
       <Modal
         open={pausaModalAberto}
-        onClose={() => setPausaModalAberto(false)}
+        onClose={fecharPausaModal}
         title="Pausar Ordem de Serviço"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPausaModalAberto(false)}>
+            <Button variant="secondary" onClick={fecharPausaModal}>
               Cancelar
             </Button>
             <Button onClick={handleConfirmarPausa} loading={timerPause.isPending} disabled={!motivoPausa.trim()}>
