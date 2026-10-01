@@ -11,7 +11,8 @@ export function useObjectUrl(blob?: Blob | null): string | undefined {
       return;
     }
     const novaUrl = URL.createObjectURL(blob);
-    setUrl(novaUrl);
+    // Só aceita URL blob: gerada localmente — nunca um esquema arbitrário em <img src>.
+    setUrl(novaUrl.startsWith('blob:') ? novaUrl : undefined);
     return () => URL.revokeObjectURL(novaUrl);
   }, [blob]);
 

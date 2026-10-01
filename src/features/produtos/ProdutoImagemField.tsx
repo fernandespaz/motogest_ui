@@ -98,7 +98,7 @@ export function ProdutoImagemField({
         className="aspect-[2/1] w-full max-w-[16rem] shrink-0 overflow-hidden rounded-xl border border-border bg-surface-alt"
         data-testid="produto-imagem-preview"
       >
-        {previewUrl ? (
+        {previewUrl?.startsWith('blob:') ? (
           <img src={previewUrl} alt="Pré-visualização da foto do produto" className="h-full w-full object-cover" />
         ) : temFotoSalva ? (
           <ProdutoImagem

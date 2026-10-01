@@ -15,7 +15,10 @@ function reportQueryError(error: unknown, silent: boolean | undefined) {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
+      // Dados já carregados valem por 2 min ao navegar entre telas (o menu lateral
+      // remonta as páginas toda hora) — mutações invalidam as chaves que alteram,
+      // então o que muda continua atualizando na hora.
+      staleTime: 2 * 60_000,
       retry: 1,
       refetchOnWindowFocus: false,
     },

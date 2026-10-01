@@ -1,5 +1,4 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
@@ -23,11 +22,13 @@ export function AppShell() {
         <TrialBanner />
         <TrialExpiredDialog />
         <main className="flex-1 overflow-y-auto px-4 pb-24 pt-5 sm:px-6 lg:pb-6">
-          <AnimatePresence mode="wait">
-            <PageTransition key={location.pathname}>
-              <Outlet />
-            </PageTransition>
-          </AnimatePresence>
+          {/* Sem AnimatePresence mode="wait": com cliques rápidos no menu a página
+              que está saindo podia ficar presa na animação de saída e a nova nunca
+              entrava (conteúdo em branco, só o menu respondendo). O key remonta a
+              página a cada rota e ela só faz a animação de entrada. */}
+          <PageTransition key={location.pathname}>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
       <MobileNav />
