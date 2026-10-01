@@ -1990,6 +1990,7 @@ export interface components {
             nome: string;
             email: string;
             senha?: string;
+            confirmacaoSenha?: string;
             /** Format: int64 */
             perfilId: number;
             ativo?: boolean;
@@ -2012,6 +2013,7 @@ export interface components {
             categoria: "A" | "B" | "C";
             tempoMinHoras: number;
             tempoMaxHoras: number;
+            valorHoraPadrao?: number;
             ativo?: boolean;
         };
         ServicoResponse: {
@@ -2024,6 +2026,7 @@ export interface components {
             categoria?: "A" | "B" | "C";
             tempoMinHoras?: number;
             tempoMaxHoras?: number;
+            valorHoraPadrao?: number;
             precoMinSugerido?: number;
             precoMaxSugerido?: number;
             ativo?: boolean;
@@ -2815,6 +2818,7 @@ export interface components {
             adminNome: string;
             adminEmail: string;
             adminSenha: string;
+            adminConfirmacaoSenha?: string;
         };
         Pageable: {
             /** Format: int32 */
