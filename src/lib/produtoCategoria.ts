@@ -1,21 +1,21 @@
 import {
-  Droplet,
-  Filter,
+  Drop,
+  Funnel,
   Disc,
-  Disc3,
   Compass,
-  Cog,
-  Link2,
-  Settings2,
+  Engine,
+  LinkSimple,
+  GearSix,
   Thermometer,
-  Zap,
+  Lightning,
   BatteryCharging,
   Wind,
-  Flame,
+  Fire,
+  Tire,
   Car,
   Package,
-  type LucideIcon,
-} from 'lucide-react';
+  type Icon,
+} from '@phosphor-icons/react';
 import type { ProdutoCategoria } from '@/api/types';
 
 /** Rótulo de cada categoria de produto — ordem usada nos filtros e no formulário. */
@@ -37,31 +37,45 @@ export const PRODUTO_CATEGORIA_LABELS: Record<ProdutoCategoria, string> = {
   OUTROS: 'Outros',
 };
 
-/** Ícone de cada categoria — usado nos chips de filtro e no avatar da linha do produto. */
-export const PRODUTO_CATEGORIA_ICONS: Record<ProdutoCategoria, LucideIcon> = {
-  OLEO_LUBRIFICANTE: Droplet,
-  FILTROS: Filter,
+/** Ícone de cada categoria — usado nos filtros e como arte do cartão do produto. */
+export const PRODUTO_CATEGORIA_ICONS: Record<ProdutoCategoria, Icon> = {
+  OLEO_LUBRIFICANTE: Drop,
+  FILTROS: Funnel,
   FREIOS: Disc,
   SUSPENSAO_DIRECAO: Compass,
-  MOTOR: Cog,
-  CORREIAS_TENSORES: Link2,
-  TRANSMISSAO_EMBREAGEM: Settings2,
+  MOTOR: Engine,
+  CORREIAS_TENSORES: LinkSimple,
+  TRANSMISSAO_EMBREAGEM: GearSix,
   ARREFECIMENTO: Thermometer,
-  IGNICAO_INJECAO: Zap,
+  IGNICAO_INJECAO: Lightning,
   ELETRICA_BATERIA: BatteryCharging,
   AR_CONDICIONADO: Wind,
-  ESCAPAMENTO: Flame,
-  PNEUS_RODAS: Disc3,
+  ESCAPAMENTO: Fire,
+  PNEUS_RODAS: Tire,
   CARROCERIA_ACESSORIOS: Car,
   OUTROS: Package,
 };
 
-export function produtoCategoriaIcon(categoria?: string | null): LucideIcon {
+export function produtoCategoriaIcon(categoria?: string | null): Icon {
   if (!categoria) return Package;
   return PRODUTO_CATEGORIA_ICONS[categoria as ProdutoCategoria] ?? Package;
 }
 
 export const PRODUTO_CATEGORIAS = Object.keys(PRODUTO_CATEGORIA_LABELS) as ProdutoCategoria[];
+
+/** Categorias em destaque nos filtros da tela de produtos — as de maior giro na oficina. */
+export const PRODUTO_CATEGORIAS_PRINCIPAIS: ProdutoCategoria[] = [
+  'OLEO_LUBRIFICANTE',
+  'FILTROS',
+  'SUSPENSAO_DIRECAO',
+  'ESCAPAMENTO',
+  'IGNICAO_INJECAO',
+  'ELETRICA_BATERIA',
+  'AR_CONDICIONADO',
+];
+
+/** O restante (inclusive `OUTROS`) fica recolhido atrás do filtro "Outros". */
+export const PRODUTO_CATEGORIAS_SECUNDARIAS = PRODUTO_CATEGORIAS.filter((c) => !PRODUTO_CATEGORIAS_PRINCIPAIS.includes(c));
 
 export function produtoCategoriaLabel(categoria?: string | null): string {
   if (!categoria) return '—';

@@ -80,6 +80,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/produtos/{id}/imagem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixa a foto (miniatura JPEG) do produto
+         * @description Exige o JWT no header Authorization — no front, busque via fetch e use um blob URL. Responde com Cache-Control imutavel e ETag (304 quando o navegador ja tem).
+         */
+        get: operations["buscarImagem"];
+        /**
+         * Envia (ou substitui) a foto do produto
+         * @description Campo multipart 'arquivo' (PNG ou JPEG, ate 5MB). O backend recorta no centro em 2:1, reduz para no maximo 480x240 e recomprime em JPEG. Uma foto por produto. Retorna a imagemUrl nova.
+         */
+        put: operations["enviarImagem"];
+        post?: never;
+        /** Remove a foto do produto (o card volta a mostrar o icone da categoria) */
+        delete: operations["removerImagem"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/perfis/{id}": {
         parameters: {
             query?: never;
@@ -2060,6 +2085,7 @@ export interface components {
             ativo?: boolean;
             /** @enum {string} */
             categoria?: "OLEO_LUBRIFICANTE" | "FILTROS" | "FREIOS" | "SUSPENSAO_DIRECAO" | "MOTOR" | "CORREIAS_TENSORES" | "TRANSMISSAO_EMBREAGEM" | "ARREFECIMENTO" | "IGNICAO_INJECAO" | "ELETRICA_BATERIA" | "AR_CONDICIONADO" | "ESCAPAMENTO" | "PNEUS_RODAS" | "CARROCERIA_ACESSORIOS" | "OUTROS";
+            imagemUrl?: string;
             reservasAtivas?: components["schemas"]["ReservaEstoqueResponse"][];
         };
         ReservaEstoqueResponse: {
@@ -2085,6 +2111,9 @@ export interface components {
             liberadaEm?: string;
             /** @enum {string} */
             tipoLiberacao?: "MANUAL" | "EXPIRACAO";
+        };
+        ProdutoImagemResponse: {
+            imagemUrl?: string;
         };
         PerfilRequest: {
             nome: string;
@@ -3546,6 +3575,77 @@ export interface operations {
         };
     };
     excluir_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    buscarImagem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    enviarImagem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    arquivo: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ProdutoImagemResponse"];
+                };
+            };
+        };
+    };
+    removerImagem: {
         parameters: {
             query?: never;
             header?: never;

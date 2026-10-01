@@ -1,14 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, Checkbox, Select } from '@/components/ui/Field';
-import { useCreateProduto, useUpdateProduto } from '@/hooks/useProdutos';
+import { useCreateProduto, useUpdateProduto, useEnviarImagemProduto, useRemoverImagemProduto } from '@/hooks/useProdutos';
 import type { ProdutoRequest, ProdutoResponse } from '@/api/types';
 import { PRODUTO_CATEGORIAS, PRODUTO_CATEGORIA_LABELS } from '@/lib/produtoCategoria';
 import { PRODUTO_UNIDADES, PRODUTO_UNIDADE_LABELS } from '@/lib/produtoUnidade';
+import { ProdutoImagemField } from './ProdutoImagemField';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -51,6 +52,11 @@ export function ProdutoFormModal({
   const isEditing = !!produto;
   const createMutation = useCreateProduto();
   const updateMutation = useUpdateProduto();
+  const enviarImagem = useEnviarImagemProduto();
+  const removerImagem = useRemoverImagemProduto();
+  // A foto só é aplicada ao salvar (ver ProdutoImagemField) — guarda a escolha aqui.
+  const [imagemArquivo, setImagemArquivo] = useState<File | null>(null);
+  const [imagemRemover, setImagemRemover] = useState(false);
 
   const {
     register,
@@ -72,6 +78,8 @@ export function ProdutoFormModal({
 
   useEffect(() => {
     if (open) {
+      setImagemArquivo(null);
+      setImagemRemover(false);
       skipProximoRecalculo.current = true;
       reset(
         produto
@@ -116,21 +124,37 @@ export function ProdutoFormModal({
     // margemLucro é só um auxiliar de UI para calcular precoVenda — não existe no backend.
     const { margemLucro: _margemLucro, ...rest } = values;
     const payload = { ...rest, categoria: values.categoria || undefined } as ProdutoRequest;
+    let salvo: ProdutoResponse;
     try {
       if (isEditing && produto?.id != null) {
-        await updateMutation.mutateAsync({ id: produto.id, payload });
+        salvo = await updateMutation.mutateAsync({ id: produto.id, payload });
         toast.success('Produto atualizado.');
       } else {
-        await createMutation.mutateAsync(payload);
+        salvo = await createMutation.mutateAsync(payload);
         toast.success('Produto cadastrado.');
       }
-      onClose();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível salvar o produto.'));
+      return;
     }
+
+    // A foto vai numa chamada separada (PUT/DELETE /produtos/{id}/imagem), depois
+    // do produto salvo — se ela falhar o cadastro já existe, então avisa e fecha
+    // em vez de manter o modal aberto e arriscar um segundo cadastro duplicado.
+    const id = produto?.id ?? salvo?.id;
+    try {
+      if (id != null && imagemArquivo) {
+        await enviarImagem.mutateAsync({ id, arquivo: imagemArquivo });
+      } else if (id != null && imagemRemover && produto?.imagemUrl) {
+        await removerImagem.mutateAsync(id);
+      }
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'O produto foi salvo, mas não foi possível atualizar a foto.'));
+    }
+    onClose();
   }
 
-  const saving = createMutation.isPending || updateMutation.isPending;
+  const saving = createMutation.isPending || updateMutation.isPending || enviarImagem.isPending || removerImagem.isPending;
   // Produtos cadastrados antes do dropdown podem ter uma unidade fora da lista
   // curada — mantém o valor original como opção extra em vez de escondê-lo.
   const unidadeLegada =
@@ -195,6 +219,14 @@ export function ProdutoFormModal({
             ))}
           </Select>
         </div>
+        <ProdutoImagemField
+          produto={produto}
+          arquivo={imagemArquivo}
+          remover={imagemRemover}
+          onArquivoChange={setImagemArquivo}
+          onRemoverChange={setImagemRemover}
+          disabled={saving}
+        />
         <Textarea label="Descrição" {...register('descricao')} />
         {isEditing && <Checkbox label="Produto ativo" {...register('ativo')} />}
       </form>

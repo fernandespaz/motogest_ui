@@ -12,6 +12,9 @@ vi.mock('@/hooks/useProdutos', () => ({
   useDeleteProduto: vi.fn(),
   useCreateProduto: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateProduto: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useEnviarImagemProduto: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useRemoverImagemProduto: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useProdutoImagemBlob: vi.fn(() => ({ data: undefined })),
 }));
 vi.mock('@/hooks/useEstoque', () => ({ useRegistrarMovimentacao: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })) }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -63,27 +66,54 @@ describe('ProdutosPage', () => {
     expect(screen.getByText('R$ 32,00')).toBeInTheDocument();
     expect(screen.getByText('Abaixo do mínimo')).toBeInTheDocument();
     expect(screen.getByText('OK')).toBeInTheDocument();
-    const table = within(screen.getByRole('table'));
-    expect(table.getByText('Óleo e lubrificante')).toBeInTheDocument();
-    expect(table.getByText('Freios')).toBeInTheDocument();
+    const cards = screen.getAllByTestId('produto-card');
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0]).getByText('Óleo e lubrificante')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('Freios')).toBeInTheDocument();
   });
 
   it('shows accurate stat cards for total produtos and low-stock count', () => {
     render(<ProdutosPage />);
-    expect(screen.getByText('Produtos cadastrados')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Abaixo do estoque mínimo')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    const totalCard = screen.getByText('Produtos cadastrados').parentElement!;
+    expect(within(totalCard).getByText('2')).toBeInTheDocument();
+    const minimoCard = screen.getByText('Abaixo do estoque mínimo', { selector: 'p' }).parentElement!;
+    expect(within(minimoCard).getByText('1')).toBeInTheDocument();
   });
 
-  it('filters by categoria chip and resets to the first page', async () => {
+  it('highlights disponível and total stock on each card', () => {
     render(<ProdutosPage />);
-    await userEvent.click(screen.getByRole('button', { name: 'Freios' }));
+    const [oleo, freio] = screen.getAllByTestId('produto-card');
+    expect(within(oleo).getByText('40')).toBeInTheDocument();
+    expect(within(oleo).getByText('45 em estoque')).toBeInTheDocument();
+    expect(within(freio).getByText('1')).toBeInTheDocument();
+    expect(within(freio).getByText('1 em estoque')).toBeInTheDocument();
+  });
+
+  it('toggles a categoria filter on and off, resetting to the first page', async () => {
+    render(<ProdutosPage />);
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
 
     expect(useProdutos).toHaveBeenLastCalledWith(
-      expect.objectContaining({ page: 0, categoria: 'FREIOS' }),
+      expect.objectContaining({ page: 0, categoria: 'FILTROS' }),
     );
-    expect(useProdutosAbaixoDoMinimo).toHaveBeenLastCalledWith({ categoria: 'FREIOS' });
+    expect(useProdutosAbaixoDoMinimo).toHaveBeenLastCalledWith({ categoria: 'FILTROS' });
+    expect(screen.getByRole('button', { name: 'Filtros' })).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Filtros' }));
+    expect(useProdutos).toHaveBeenLastCalledWith(expect.objectContaining({ categoria: undefined }));
+  });
+
+  it('shows 7 featured categorias plus Outros, hiding the rest until Outros is opened', async () => {
+    render(<ProdutosPage />);
+    const grupo = within(screen.getByRole('group', { name: 'Filtrar por categoria' }));
+    expect(grupo.getAllByRole('button')).toHaveLength(8);
+    expect(screen.queryByRole('button', { name: 'Freios' })).not.toBeInTheDocument();
+
+    await userEvent.click(grupo.getByRole('button', { name: 'Outros' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Freios' }));
+
+    expect(useProdutos).toHaveBeenLastCalledWith(expect.objectContaining({ page: 0, categoria: 'FREIOS' }));
+    expect(grupo.getByRole('button', { name: 'Outros' })).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('filters by busca (nome/código)', async () => {

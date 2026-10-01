@@ -50,6 +50,7 @@ export const API_ROUTES = {
   produtos: {
     base: '/api/v1/produtos',
     abaixoDoMinimo: '/api/v1/produtos/abaixo-do-minimo',
+    imagem: (id: number) => `/api/v1/produtos/${id}/imagem`,
   },
   estoque: {
     base: '/api/v1/movimentacoes-estoque',
