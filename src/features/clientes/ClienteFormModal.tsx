@@ -10,7 +10,7 @@ import { useCreateCliente, useUpdateCliente, clientesKeys } from '@/hooks/useCli
 import { useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useCepLookup } from '@/hooks/useCepLookup';
 import { veiculosApi } from '@/api/endpoints/veiculos';
-import type { ClienteResponse } from '@/api/types';
+import type { ClienteResponse, VeiculoRequest } from '@/api/types';
 import { formatCep, formatCnpj, formatCpf, formatPhone, onlyDigits } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -22,6 +22,16 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 const FORM_ID = 'cliente-form';
 const CURRENT_YEAR = new Date().getFullYear();
 
+// Veículo novo: select sem placeholder, sempre parte de "A" selecionado se
+// intocado (mesmo padrão já usado pra Servico.categoria) — não há dado legado
+// pra proteger aqui, é sempre uma criação.
+const categoriaNovaSchema = z.enum(['A', 'B', 'C'], { errorMap: () => ({ message: 'Selecione a categoria' }) });
+// Veículo existente: string solta (não enum) de propósito — precisa aceitar
+// o valor vazio do placeholder do <select> pra que um veículo legado sem
+// categoria (todo veículo cadastrado antes desta feature) force uma escolha
+// explícita em vez de submeter silenciosamente com "A" pré-selecionado.
+const categoriaExistenteSchema = z.string().min(1, 'Categoria obrigatória');
+
 const veiculoNovoSchema = z.object({
   placa: z.string().min(1, 'Informe a placa'),
   marca: z.string().optional(),
@@ -32,13 +42,19 @@ const veiculoNovoSchema = z.object({
   kmAtual: z.coerce.number().optional(),
   chassi: z.string().optional(),
   observacoes: z.string().optional(),
+  // Igual ao Serviço, a categoria decide a hora técnica aplicada — a API
+  // recusa (400) um veículo sem ela (ver doc de Precificação por Categoria).
+  categoria: categoriaNovaSchema,
 });
 
-// Deliberately lenient (only id + placa required): this row edits a vehicle
-// that may already exist with incomplete legacy data, and saving the client
-// must never be blocked by a field the user isn't even looking at — the
-// dedicated Veículo form (features/veiculos) is what enforces full data
-// quality when someone is actually focused on that vehicle.
+// Deliberately lenient (only id + placa required) for every field EXCEPT
+// categoria: this row edits a vehicle that may already exist with incomplete
+// legacy data, and saving the client must never be blocked by a field the
+// user isn't even looking at — the dedicated Veículo form
+// (features/veiculos) is what enforces full data quality when someone is
+// actually focused on that vehicle. categoria is the one exception: it's
+// mandatory on the backend now, so a legacy vehicle without one must be
+// classified before this row's edit can be saved (see VeiculoVinculadoRow).
 const veiculoExistenteSchema = z.object({
   id: z.number(),
   placa: z.string().min(1, 'Informe a placa'),
@@ -53,6 +69,7 @@ const veiculoExistenteSchema = z.object({
   kmAtual: z.coerce.number().optional(),
   chassi: z.string().optional(),
   observacoes: z.string().optional(),
+  categoria: categoriaExistenteSchema,
 });
 
 const schema = z.object({
@@ -152,6 +169,10 @@ export function ClienteFormModal({
                 kmAtual: v.kmAtual ?? undefined,
                 chassi: v.chassi ?? '',
                 observacoes: v.observacoes ?? '',
+                // '' (sem categoria ainda, veículo legado) deixa o
+                // placeholder selecionado — força uma escolha explícita em
+                // vez de herdar um "A" que ninguém decidiu.
+                categoria: v.categoria ?? '',
               })),
               veiculosNovos: [],
             }
@@ -173,7 +194,10 @@ export function ClienteFormModal({
         // de um cliente existente, vão pelo endpoint de veículo avulso, que já
         // funciona hoje.
         for (const v of veiculosExistentes ?? []) {
-          await veiculosApi.update(v.id, { ...v, clienteId: cliente.id });
+          // categoria só chega aqui validada como 'A'|'B'|'C' (zod.min(1)
+          // barra o placeholder vazio) — o cast reflete isso pro tipo gerado
+          // do backend.
+          await veiculosApi.update(v.id, { ...v, clienteId: cliente.id, categoria: v.categoria as VeiculoRequest['categoria'] });
         }
         for (const v of veiculosNovos ?? []) {
           await veiculosApi.create({ ...v, clienteId: cliente.id });

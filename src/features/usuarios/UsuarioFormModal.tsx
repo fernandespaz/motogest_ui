@@ -11,6 +11,7 @@ import { useCreateUsuario, useUpdateUsuario } from '@/hooks/useUsuarios';
 import { usePerfis } from '@/hooks/usePerfis';
 import type { UsuarioResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
+import { isSenhaForte, SENHA_FRACA_MSG, SENHA_HINT, SENHA_NAO_CONFERE_MSG } from '@/lib/senha';
 import { extractErrorMessage, getBusinessErrorCode, mensagemSeguraParaUsuario } from '@/api/client';
 
 const FORM_ID = 'usuario-form';
@@ -22,8 +23,25 @@ const baseSchema = {
   ativo: z.boolean().optional(),
 };
 
-const createSchema = z.object({ ...baseSchema, senha: z.string().min(6, 'A senha deve ter ao menos 6 caracteres') });
-const editSchema = z.object({ ...baseSchema, senha: z.string().optional() });
+// Na criação a senha é obrigatória e forte; na edição é opcional, mas quando
+// preenchida segue a mesma regra e precisa bater com a confirmação.
+const confirmacaoConfere = (v: { senha?: string; confirmacaoSenha?: string }) =>
+  !v.senha || v.senha === v.confirmacaoSenha;
+
+const createSchema = z
+  .object({
+    ...baseSchema,
+    senha: z.string().min(1, 'Informe a senha').refine(isSenhaForte, SENHA_FRACA_MSG),
+    confirmacaoSenha: z.string().optional(),
+  })
+  .refine(confirmacaoConfere, { message: SENHA_NAO_CONFERE_MSG, path: ['confirmacaoSenha'] });
+const editSchema = z
+  .object({
+    ...baseSchema,
+    senha: z.string().optional().refine((v) => !v || isSenhaForte(v), SENHA_FRACA_MSG),
+    confirmacaoSenha: z.string().optional(),
+  })
+  .refine(confirmacaoConfere, { message: SENHA_NAO_CONFERE_MSG, path: ['confirmacaoSenha'] });
 
 export function UsuarioFormModal({
   open,
@@ -62,6 +80,7 @@ export function UsuarioFormModal({
               perfilId: usuario.perfilId ?? 0,
               ativo: usuario.ativo ?? true,
               senha: '',
+              confirmacaoSenha: '',
             }
           : { ativo: true },
       );
@@ -70,7 +89,7 @@ export function UsuarioFormModal({
 
   async function onSubmit(values: z.infer<typeof createSchema>) {
     try {
-      const payload = values.senha ? values : { ...values, senha: undefined };
+      const payload = values.senha ? values : { ...values, senha: undefined, confirmacaoSenha: undefined };
       if (isEditing && usuario?.id != null) {
         await updateMutation.mutateAsync({ id: usuario.id, payload });
         toast.success('Usuário atualizado.');
@@ -143,10 +162,17 @@ export function UsuarioFormModal({
           <Input
             label={isEditing ? 'Nova senha' : 'Senha'}
             type="password"
-            hint={isEditing ? 'Deixe em branco para manter a senha atual' : 'Mínimo de 6 caracteres'}
+            hint={isEditing ? 'Deixe em branco para manter a senha atual' : SENHA_HINT}
             error={errors.senha?.message}
             required={!isEditing}
             {...register('senha')}
+          />
+          <Input
+            label={isEditing ? 'Confirmar nova senha' : 'Confirmar senha'}
+            type="password"
+            error={errors.confirmacaoSenha?.message}
+            required={!isEditing}
+            {...register('confirmacaoSenha')}
           />
           {isEditing && <Checkbox label="Usuário ativo" {...register('ativo')} />}
         </form>

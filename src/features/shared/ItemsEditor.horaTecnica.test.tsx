@@ -27,23 +27,40 @@ vi.mock('@/hooks/useDescontos', () => ({ useDescontosPorOrigem: vi.fn() }));
 vi.mock('@/hooks/useHoraTecnica', () => ({ useCategoriasHoraTecnica: vi.fn() }));
 
 const VALOR_HORA_A = 102.98;
+const VALOR_HORA_B = 200;
 const ARREDONDAMENTO = 5;
 
-// "Revisão Completa" da categoria A: tempo mínimo 1h30, faixa sugerida R$200-300.
+// "Revisão Completa" é categoria A no catálogo — só referência/sugestão de
+// preço (precoMinSugerido/Max), sem efeito no cálculo real (ver Atualização
+// 29/09 da doc de Precificação por Categoria): quem decide o valorHora
+// aplicado é a categoria do VEÍCULO do orçamento/OS, passada via prop.
 const servicos = {
   content: [{ id: 1, nome: 'Revisão Completa', categoria: 'A', tempoMinHoras: 1.5, tempoMaxHoras: 2, precoMinSugerido: 200, precoMaxSugerido: 300 }],
 };
-const categoriasHT = [{ categoria: 'A' as const, valorHora: VALOR_HORA_A, arredondamentoComercial: ARREDONDAMENTO }];
+const categoriasHT = [
+  { categoria: 'A' as const, valorHora: VALOR_HORA_A, arredondamentoComercial: ARREDONDAMENTO },
+  { categoria: 'B' as const, valorHora: VALOR_HORA_B, arredondamentoComercial: ARREDONDAMENTO },
+];
 
 let valoresAtuais: () => { itens: ItemFormValue[] };
 
-function Harness({ defaultItens = [] }: { defaultItens?: ItemFormValue[] }) {
+// Sem valor default pro prop: um teste precisa conseguir passar
+// `categoriaVeiculo={undefined}` de propósito (nenhum veículo selecionado
+// ainda) sem cair de volta num default — todo outro chamador passa a
+// categoria explicitamente.
+function Harness({
+  defaultItens = [],
+  categoriaVeiculo,
+}: {
+  defaultItens?: ItemFormValue[];
+  categoriaVeiculo: 'A' | 'B' | 'C' | undefined;
+}) {
   const methods = useForm<{ itens: ItemFormValue[] }>({ defaultValues: { itens: defaultItens } });
   valoresAtuais = methods.getValues;
   return (
     <QueryClientProvider client={createTestQueryClient()}>
       <FormProvider {...methods}>
-        <ItemsEditor name="itens" mostrarTempoVendido />
+        <ItemsEditor name="itens" mostrarTempoVendido categoriaVeiculo={categoriaVeiculo} />
       </FormProvider>
     </QueryClientProvider>
   );
@@ -65,19 +82,64 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
     vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: categoriasHT } as never);
   });
 
-  it('prices a new service as valorHora(categoria) × tempo mínimo, rounded up, never a fixed catalog price', async () => {
-    render(<Harness />);
+  it('prices a new service as valorHora(categoria do veículo) × tempo mínimo, rounded up, never a fixed catalog price', async () => {
+    render(<Harness categoriaVeiculo="A" />);
     await adicionarServico();
 
     const linha = screen.getByTestId('item-row-0');
     // 1h30 × R$ 102,98 = R$ 154,47 → arredonda pra cima em múltiplos de 5 → R$ 155.
     expect(within(linha).getByLabelText('Valor unitário')).toHaveValue(155);
-    expect(within(linha).getByText('Hora técnica R$ 102,98/h (cat. A)')).toBeInTheDocument();
+    expect(within(linha).getByText('Hora técnica R$ 102,98/h (cat. A do veículo)')).toBeInTheDocument();
     expect(valoresAtuais().itens[0]).toMatchObject({ tempoVendidoMinutos: 90, precificadoPorHT: true });
   });
 
+  it('prices by the VEHICLE category, not the catalog category of the chosen service', async () => {
+    // "Revisão Completa" é categoria A no catálogo (só referência) — o
+    // veículo deste orçamento/OS é categoria B, então o preço deve sair de
+    // valorHora(B) = R$200, não de valorHora(A) = R$102,98.
+    render(<Harness categoriaVeiculo="B" />);
+    await adicionarServico();
+
+    const linha = screen.getByTestId('item-row-0');
+    // 1h30 × R$ 200 = R$ 300, já múltiplo exato de 5.
+    expect(within(linha).getByLabelText('Valor unitário')).toHaveValue(300);
+    expect(within(linha).getByText('Hora técnica R$ 200,00/h (cat. B do veículo)')).toBeInTheDocument();
+  });
+
+  it('reprices HT items when the vehicle changes to another category', async () => {
+    const { rerender } = render(<Harness categoriaVeiculo="A" />);
+    await adicionarServico();
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(155);
+
+    // Harness remonta o form ao trocar de props? Não — mesmo componente, só a prop muda.
+    rerender(<Harness categoriaVeiculo="B" />);
+    await waitFor(() => expect(screen.getByLabelText('Valor unitário')).toHaveValue(300));
+  });
+
+  it('treats a category with valorHora 0 as not configured (manual price)', async () => {
+    vi.mocked(useCategoriasHoraTecnica).mockReturnValue({
+      data: [{ categoria: 'A' as const, valorHora: 0, arredondamentoComercial: ARREDONDAMENTO }],
+    } as never);
+    render(<Harness categoriaVeiculo="A" />);
+    await adicionarServico();
+
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(200);
+    expect(valoresAtuais().itens[0].precificadoPorHT).toBe(false);
+  });
+
+  it('falls back to manual pricing while no vehicle (and therefore no categoria) is selected yet', async () => {
+    render(<Harness categoriaVeiculo={undefined} />);
+    await adicionarServico();
+
+    // Sem categoria de veículo pra resolver o valorHora: usa a faixa sugerida
+    // mínima do catálogo como ponto de partida manual, igual a uma categoria
+    // sem hora técnica configurada.
+    expect(screen.getByLabelText('Valor unitário')).toHaveValue(200);
+    expect(valoresAtuais().itens[0].precificadoPorHT).toBe(false);
+  });
+
   it('recalculates the price whenever the sold time changes', async () => {
-    render(<Harness />);
+    render(<Harness categoriaVeiculo="A" />);
     await adicionarServico();
     await userEvent.click(screen.getByRole('button', { name: '+1:00' }));
 
@@ -89,7 +151,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
     vi.mocked(useServicos).mockReturnValue({
       data: { content: [{ id: 1, nome: 'Revisão Completa', categoria: 'A' }] },
     } as never);
-    render(<Harness />);
+    render(<Harness categoriaVeiculo="A" />);
     await adicionarServico();
 
     expect(screen.getByText('Informe o tempo vendido')).toBeInTheDocument();
@@ -98,7 +160,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
 
   it('requires manual pricing when the categoria has no hora técnica configured', async () => {
     vi.mocked(useCategoriasHoraTecnica).mockReturnValue({ data: [] } as never);
-    render(<Harness />);
+    render(<Harness categoriaVeiculo="A" />);
     await adicionarServico();
 
     // Sem valorHora pra categoria A: usa a faixa sugerida mínima como ponto de partida manual.
@@ -109,6 +171,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
   it('keeps a saved service linked to hora técnica when its stored value matches valorHora(categoria) × tempo', async () => {
     render(
       <Harness
+        categoriaVeiculo="A"
         defaultItens={[
           { id: 7, tipoItem: 'SERVICO', servicoId: 1, descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 155, tempoVendidoMinutos: 90 },
         ]}
@@ -123,6 +186,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
   it('preserves a saved price that differs from valorHora(categoria) × tempo (approved discount or older valorHora)', async () => {
     render(
       <Harness
+        categoriaVeiculo="A"
         defaultItens={[
           { id: 7, tipoItem: 'SERVICO', servicoId: 1, descricao: 'Revisão Completa', quantidade: 1, valorUnitario: 130, tempoVendidoMinutos: 90 },
         ]}
@@ -137,7 +201,7 @@ describe('ItemsEditor — serviço cobrado pela hora técnica por categoria', ()
 
   it('an admin typing a price detaches the item from hora técnica', async () => {
     useAuthStore.setState({ permissoes: ['SERVICO_READ', 'DESCONTO_APROVAR'] });
-    render(<Harness />);
+    render(<Harness categoriaVeiculo="A" />);
     await adicionarServico();
 
     const valor = screen.getByLabelText('Valor unitário');

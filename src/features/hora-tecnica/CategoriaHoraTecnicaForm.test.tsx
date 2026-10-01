@@ -40,6 +40,26 @@ describe('CategoriaHoraTecnicaForm', () => {
     expect(screen.getByLabelText('Arredondamento comercial (R$)', { exact: false })).toHaveValue(10);
   });
 
+  it('treats 0 as valid and labels it "Não utilizada"', async () => {
+    render(<CategoriaHoraTecnicaForm categorias={[]} />);
+    expect(screen.getAllByText('Não utilizada')).toHaveLength(3);
+
+    await userEvent.type(screen.getByLabelText('Categoria A (R$/h)', { exact: false }), '80');
+    await userEvent.click(screen.getByRole('button', { name: /Salvar hora técnica/ }));
+
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          categorias: [
+            { categoria: 'A', valorHora: 80 },
+            { categoria: 'B', valorHora: 0 },
+            { categoria: 'C', valorHora: 0 },
+          ],
+        }),
+      ),
+    );
+  });
+
   it('submits all 3 categories plus the arredondamento in one PUT', async () => {
     render(<CategoriaHoraTecnicaForm categorias={[]} />);
 

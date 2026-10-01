@@ -5,6 +5,7 @@ import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -16,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import type { VeiculoResponse } from '@/api/types';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { VeiculoFormModal } from './VeiculoFormModal';
 import { ModeloVeiculoThumb } from '@/features/shared/ModeloVeiculoField';
 import { toast } from '@/store/toastStore';
@@ -150,6 +152,12 @@ export function VeiculosPage() {
               ),
             },
             { header: 'Cliente', render: (row) => row.clienteNome ?? '—', hideBelow: 'sm' },
+            {
+              header: 'Categoria',
+              render: (row) =>
+                row.categoria ? <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[row.categoria]}>{row.categoria}</Badge> : '—',
+              hideBelow: 'sm',
+            },
             { header: 'KM atual', render: (row) => (row.kmAtual != null ? row.kmAtual.toLocaleString('pt-BR') : '—'), hideBelow: 'md' },
             {
               header: '',

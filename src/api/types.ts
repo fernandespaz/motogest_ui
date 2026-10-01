@@ -234,7 +234,10 @@ export type PerfilRequest = Schemas['PerfilRequest'];
 export type PerfilResponse = Schemas['PerfilResponse'];
 export type PermissaoResponse = Schemas['PermissaoResponse'];
 
-export type UsuarioRequest = Schemas['UsuarioRequest'];
+// `confirmacaoSenha` / `adminConfirmacaoSenha` existem no backend (motogest_api),
+// mas o /v3/api-docs rodando ainda não os expõe; remover os intersections
+// após o próximo `gen:api` que os inclua.
+export type UsuarioRequest = Schemas['UsuarioRequest'] & { confirmacaoSenha?: string };
 export type UsuarioResponse = Schemas['UsuarioResponse'];
 
 // ATENÇÃO — mesma divergência temporária citada acima: o backend também
@@ -242,7 +245,9 @@ export type UsuarioResponse = Schemas['UsuarioResponse'];
 // Ver features/shared/pdf/logo.ts e hooks/useOficina.ts, que dependem dele
 // pra logo externa (URL, não upload).
 export type OficinaResponse = Schemas['OficinaResponse'] & { logoUrl?: string };
-export type OficinaRegistrationRequest = Schemas['OficinaRegistrationRequest'];
+export type OficinaRegistrationRequest = Schemas['OficinaRegistrationRequest'] & {
+  adminConfirmacaoSenha?: string;
+};
 export type OficinaUpdateRequest = Schemas['OficinaUpdateRequest'];
 export type AdminOficinaResponse = Schemas['AdminOficinaResponse'];
 
@@ -263,6 +268,11 @@ export type ResumoContasResponse = Schemas['ResumoContasResponse'];
 // Precificação por categoria de serviço (27/09/2026) — substituiu por
 // completo o modelo antigo de PHT único calculado a partir de custos fixos.
 export type CategoriaServico = Schemas['ServicoRequest']['categoria'];
+// Atualização 29/09: a categoria que decide o preço passou a viver no
+// Veículo, não mais no Serviço (que agora só carrega uma categoria de
+// referência/sugestão) — ver Schemas['VeiculoRequest']['categoria']. Mesma
+// escala "A"|"B"|"C" nos dois, por isso um tipo único em vez de duplicar.
+export type CategoriaComplexidade = NonNullable<Schemas['VeiculoRequest']['categoria']>;
 export type CategoriaHoraTecnicaItemRequest = Schemas['CategoriaHoraTecnicaItemRequest'];
 export type CategoriaHoraTecnicaRequest = Schemas['CategoriaHoraTecnicaRequest'];
 export type CategoriaHoraTecnicaResponse = Schemas['CategoriaHoraTecnicaResponse'];

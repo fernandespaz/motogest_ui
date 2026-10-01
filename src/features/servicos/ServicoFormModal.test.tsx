@@ -82,6 +82,20 @@ describe('ServicoFormModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('sends valorHoraPadrao when filled and omits it when blank', async () => {
+    render(<ServicoFormModal open onClose={vi.fn()} servico={null} />);
+    await userEvent.type(screen.getByLabelText('Nome', { exact: false }), 'Alinhamento');
+    await preencherTempos();
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+    expect(createMutateAsync.mock.calls[0][0].valorHoraPadrao).toBeUndefined();
+
+    await userEvent.type(screen.getByLabelText('Hora técnica própria', { exact: false }), '120');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalledTimes(2));
+    expect(createMutateAsync.mock.calls[1][0].valorHoraPadrao).toBe(120);
+  });
+
   it('updates an existing serviço by id', async () => {
     const onClose = vi.fn();
     render(

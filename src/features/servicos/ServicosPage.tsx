@@ -13,11 +13,10 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { useTodosServicos, useDeleteServico } from '@/hooks/useServicos';
 import type { ServicoResponse } from '@/api/types';
 import { formatCurrency } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { ServicoFormModal } from './ServicoFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
-
-const TOM_CATEGORIA = { A: 'success', B: 'brand', C: 'warning' } as const;
 
 function formatFaixaHoras(min: number | undefined, max: number | undefined): string {
   if (min == null && max == null) return '—';
@@ -102,7 +101,7 @@ export function ServicosPage() {
             { header: 'Nome', render: (row) => <span className="font-medium text-ink">{row.nome}</span> },
             {
               header: 'Categoria',
-              render: (row) => (row.categoria ? <Badge tone={TOM_CATEGORIA[row.categoria]}>{row.categoria}</Badge> : '—'),
+              render: (row) => (row.categoria ? <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[row.categoria]}>{row.categoria}</Badge> : '—'),
             },
             { header: 'Tempo', render: (row) => formatFaixaHoras(row.tempoMinHoras, row.tempoMaxHoras), hideBelow: 'sm' },
             {

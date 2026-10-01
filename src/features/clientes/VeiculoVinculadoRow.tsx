@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Check } from 'lucide-react';
 import { PencilSimple, Trash } from '@phosphor-icons/react';
-import { Input } from '@/components/ui/Field';
+import { Input, Select } from '@/components/ui/Field';
+import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
 import { ModeloVeiculoField, ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
+import { CATEGORIAS_COMPLEXIDADE, TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 
 /**
  * A row in the client's "Veículos vinculados" list. Purely presentational —
@@ -51,6 +53,19 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
           <Input label="Ano modelo" type="number" {...register(`veiculosExistentes.${index}.anoModelo`)} />
           <Input label="KM atual" type="number" {...register(`veiculosExistentes.${index}.kmAtual`)} />
           <Input label="Chassi" error={rowErrors?.chassi?.message} {...register(`veiculosExistentes.${index}.chassi`)} />
+          <Select
+            label="Categoria"
+            required
+            error={rowErrors?.categoria?.message}
+            {...register(`veiculosExistentes.${index}.categoria`)}
+          >
+            <option value="">Selecione a categoria</option>
+            {CATEGORIAS_COMPLEXIDADE.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
         </div>
         <div className="mt-2 flex justify-end">
           <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(false)}>
@@ -67,7 +82,19 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
         <div className="flex items-center gap-2.5">
           <ModeloVeiculoThumb base64={imagemResumo} />
           <div>
-            <p className="text-sm font-semibold text-ink">{veiculo.placa}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-ink">{veiculo.placa}</p>
+              {veiculo.categoria ? (
+                <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[veiculo.categoria as 'A' | 'B' | 'C']}>{veiculo.categoria}</Badge>
+              ) : (
+                // Veículo cadastrado antes desta feature (categoria virou
+                // obrigatória no backend) — precisa ser classificado antes de
+                // salvar; sem esse aviso no resumo, um "Salvar" bloqueado por
+                // essa linha (colapsada, sem erro visível) parecia não fazer
+                // nada.
+                <Badge tone="warning">Sem categoria</Badge>
+              )}
+            </div>
             <p className="text-xs text-ink-muted">{`${veiculo.marca ?? ''} ${veiculo.modelo ?? ''}`.trim() || '—'}</p>
           </div>
         </div>

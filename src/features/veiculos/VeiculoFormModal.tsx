@@ -8,7 +8,8 @@ import { Input, Select, Textarea } from '@/components/ui/Field';
 import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
-import type { ClienteResponse, VeiculoResponse } from '@/api/types';
+import type { ClienteResponse, VeiculoRequest, VeiculoResponse } from '@/api/types';
+import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -29,6 +30,15 @@ const schema = z.object({
   kmAtual: z.coerce.number().optional(),
   chassi: z.string().min(1, 'Informe o chassi'),
   observacoes: z.string().optional(),
+  // É a categoria do veículo, não a do serviço escolhido, que decide a hora
+  // técnica aplicada num Orçamento/OS pra ele (ver doc de Precificação por
+  // Categoria, atualização 29/09) — por isso obrigatória, igual ao backend.
+  // z.string() solta (não z.enum) de propósito: precisa aceitar o valor
+  // vazio do placeholder do <select> pra que um veículo legado sem categoria
+  // (todo veículo cadastrado antes desta feature) force uma escolha
+  // explícita em vez de submeter silenciosamente com "A" pré-selecionado —
+  // só o Select's próprias opções (A/B/C) chegam aqui de verdade.
+  categoria: z.string().min(1, 'Categoria obrigatória'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -76,19 +86,26 @@ export function VeiculoFormModal({
               kmAtual: veiculo.kmAtual ?? undefined,
               chassi: veiculo.chassi ?? '',
               observacoes: veiculo.observacoes ?? '',
+              // '' (sem categoria ainda, veículo legado) deixa o placeholder
+              // selecionado — o usuário precisa escolher de propósito, não
+              // herdar um "A" que ninguém decidiu.
+              categoria: veiculo.categoria ?? '',
             }
-          : { clienteId: defaultClienteId ?? 0 },
+          : { clienteId: defaultClienteId ?? 0, categoria: 'A' },
       );
     }
   }, [open, veiculo, defaultClienteId, reset]);
 
   async function onSubmit(values: FormValues) {
     try {
+      // categoria só chega aqui validada como 'A'|'B'|'C' (zod.min(1) barra o
+      // placeholder vazio) — o cast reflete isso pro tipo gerado do backend.
+      const payload = { ...values, categoria: values.categoria as VeiculoRequest['categoria'] };
       if (isEditing && veiculo?.id != null) {
-        await updateMutation.mutateAsync({ id: veiculo.id, payload: values });
+        await updateMutation.mutateAsync({ id: veiculo.id, payload });
         toast.success('Veículo atualizado com sucesso.');
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(payload);
         toast.success('Veículo cadastrado com sucesso.');
       }
       onClose();
@@ -158,6 +175,20 @@ export function VeiculoFormModal({
           <Input label="Ano do modelo" type="number" {...register('anoModelo')} />
           <Input label="KM atual" type="number" {...register('kmAtual')} />
           <Input label="Chassi" required error={errors.chassi?.message} {...register('chassi')} />
+          <Select
+            label="Categoria"
+            required
+            hint="Define a hora técnica aplicada aos serviços deste veículo"
+            error={errors.categoria?.message}
+            {...register('categoria')}
+          >
+            <option value="">Selecione a categoria</option>
+            {CATEGORIAS_COMPLEXIDADE.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
         </div>
         <Textarea label="Observações" {...register('observacoes')} />
       </form>

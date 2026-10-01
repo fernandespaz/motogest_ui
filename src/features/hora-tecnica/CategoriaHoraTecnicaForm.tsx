@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save } from 'lucide-react';
@@ -35,8 +35,13 @@ export function CategoriaHoraTecnicaForm({ categorias }: { categorias: Categoria
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: PADRAO });
+
+  const [vA, vB, vC] = useWatch({ control, name: ['valorHoraA', 'valorHoraB', 'valorHoraC'] });
+  // 0 é válido de propósito: a oficina marca "não uso essa categoria".
+  const dicaZero = (v: unknown) => (v !== '' && v != null && Number(v) === 0 ? 'Não utilizada' : undefined);
 
   // Dependências são só os valores primitivos salvos, não o array `categorias`
   // (nova referência a cada refetch) — evita apagar o que o admin está
@@ -88,6 +93,7 @@ export function CategoriaHoraTecnicaForm({ categorias }: { categorias: Categoria
               type="number"
               step="0.01"
               required
+              hint={dicaZero(vA)}
               error={errors.valorHoraA?.message}
               {...register('valorHoraA')}
             />
@@ -96,6 +102,7 @@ export function CategoriaHoraTecnicaForm({ categorias }: { categorias: Categoria
               type="number"
               step="0.01"
               required
+              hint={dicaZero(vB)}
               error={errors.valorHoraB?.message}
               {...register('valorHoraB')}
             />
@@ -104,6 +111,7 @@ export function CategoriaHoraTecnicaForm({ categorias }: { categorias: Categoria
               type="number"
               step="0.01"
               required
+              hint={dicaZero(vC)}
               error={errors.valorHoraC?.message}
               {...register('valorHoraC')}
             />

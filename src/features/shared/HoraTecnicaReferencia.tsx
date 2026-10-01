@@ -6,11 +6,11 @@ import { somarTempoVendidoMinutos, type ItemFormValue } from './ItemsEditor';
 
 /**
  * Mão de obra pela hora técnica dos itens já lançados, pra quem monta o
- * Orçamento/OS. Cada item já carrega o preço calculado pela categoria do seu
- * serviço (valorHora × tempo, ver ItemsEditor) — aqui só soma o que já está
- * na tela, sem recalcular nada, então funciona igual com itens de categorias
- * diferentes misturados. A composição (custos, margem) nunca chega a quem
- * não gerencia, o backend já a redige.
+ * Orçamento/OS. Cada item já carrega o preço calculado pela categoria do
+ * VEÍCULO do orçamento/OS (valorHora × tempo, ver ItemsEditor — não mais pela
+ * categoria do serviço escolhido) — aqui só soma o que já está na tela, sem
+ * recalcular nada. A composição (custos, margem) nunca chega a quem não
+ * gerencia, o backend já a redige.
  *
  * Puramente informativo: não altera preço de item nenhum (preço só muda via
  * fluxo de desconto — ver ItemsEditor). Sem nenhuma categoria configurada, ou

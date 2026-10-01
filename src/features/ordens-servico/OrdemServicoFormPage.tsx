@@ -44,6 +44,7 @@ import { FotosTab } from './FotosTab';
 import type { ClienteResponse, FormaPagamento, OrdemServicoStatus } from '@/api/types';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toDateTimeLocalValue, formatMinutosParaHoras, formatDateTime, formatCurrency } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
@@ -585,6 +586,8 @@ export function OrdemServicoFormPage() {
                           onChange={(value) => {
                             field.onChange(value);
                             setValue('veiculoId', 0);
+                            // Os itens foram precificados pela categoria do veículo anterior.
+                            if (value !== field.value) setValue('itens', []);
                             setBuscaVeiculo('');
                           }}
                           options={clienteOptions}
@@ -615,6 +618,14 @@ export function OrdemServicoFormPage() {
                       )}
                     />
                     {veiculoSelecionado && <ReadOnlyField label="Chassi" value={veiculoSelecionado.chassi || '—'} />}
+                    {veiculoSelecionado?.categoria && (
+                      <div>
+                        <p className="text-xs font-medium text-ink-muted">Categoria</p>
+                        <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[veiculoSelecionado.categoria]}>
+                          {veiculoSelecionado.categoria} · hora técnica deste veículo
+                        </Badge>
+                      </div>
+                    )}
                     <Controller
                       control={control}
                       name="usuarioResponsavelId"
@@ -647,6 +658,7 @@ export function OrdemServicoFormPage() {
                     <ItemsEditor
                       name="itens"
                       mostrarTempoVendido
+                      categoriaVeiculo={veiculoSelecionado?.categoria}
                       disabled={readOnly}
                       limitarQuantidadeAoEstoque
                       origem={osId ? { tipo: 'ORDEM_SERVICO', id: osId } : undefined}

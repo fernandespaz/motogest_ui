@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { useLicencaAtual } from '@/hooks/useOficina';
@@ -51,14 +51,22 @@ describe('TrialExpiredDialog', () => {
   it('opens for an EXPIRADA licença', () => {
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'EXPIRADA' } } as never);
     renderDialog();
-    expect(screen.getByText('Seu período de teste terminou')).toBeInTheDocument();
+    expect(screen.getByText('Sua assinatura expirou')).toBeInTheDocument();
   });
 
   it('navigates to the licença upgrade page when choosing a plan', async () => {
     const { default: userEvent } = await import('@testing-library/user-event');
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'EXPIRADA' } } as never);
     renderDialog();
-    await userEvent.click(screen.getByRole('button', { name: 'Escolher plano' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ir para pagamento' }));
+    expect(navigateMock).toHaveBeenCalledWith('/oficina/licenca');
+  });
+
+  it('para uma assinatura EXPIRADA mostra a mensagem de expiração e leva ao pagamento', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'EXPIRADA' } } as never);
+    renderDialog();
+    expect(screen.getByText('Sua assinatura expirou')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Ir para pagamento' }));
     expect(navigateMock).toHaveBeenCalledWith('/oficina/licenca');
   });
 });

@@ -14,6 +14,7 @@ import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
 import { formatDocumento, formatPhone, getInitials } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { ClienteFormModal } from './ClienteFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -110,8 +111,9 @@ export function ClientesPage() {
                 row.veiculos && row.veiculos.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {row.veiculos.map((v) => (
-                      <Badge key={v.id}>
+                      <Badge key={v.id} tone={v.categoria ? TOM_CATEGORIA_COMPLEXIDADE[v.categoria] : 'neutral'}>
                         <span className="font-mono">{v.placa}</span>
+                        {v.categoria && <span className="font-semibold">· {v.categoria}</span>}
                       </Badge>
                     ))}
                   </div>
