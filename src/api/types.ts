@@ -60,6 +60,7 @@ export type PausarOrdemServicoRequest = Schemas['PausarOrdemServicoRequest'];
 
 export type ProdutoRequest = Schemas['ProdutoRequest'];
 export type ProdutoResponse = Schemas['ProdutoResponse'];
+export type ProdutoImagemResponse = Schemas['ProdutoImagemResponse'];
 export type ProdutoCategoria = NonNullable<ProdutoRequest['categoria']>;
 
 export type ServicoRequest = Schemas['ServicoRequest'];

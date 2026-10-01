@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Plus, AlertTriangle, Package, X, type LucideIcon } from 'lucide-react';
-import { PencilSimple, Trash, ArrowsLeftRight } from '@phosphor-icons/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, AlertTriangle, Package } from 'lucide-react';
+import { PencilSimple, Trash, ArrowsLeftRight, Warning, SquaresFour, DotsThreeCircle, type Icon } from '@phosphor-icons/react';
+import { motion } from 'framer-motion';
+import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { DataTable, type Column } from '@/components/ui/DataTable';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconActionButton } from '@/components/ui/IconActionButton';
@@ -16,28 +16,169 @@ import { useProdutos, useDeleteProduto, useProdutosAbaixoDoMinimo } from '@/hook
 import { useAuthStore } from '@/store/authStore';
 import type { ProdutoCategoria, ProdutoResponse } from '@/api/types';
 import { formatCurrency } from '@/lib/formatters';
-import { PRODUTO_CATEGORIAS, produtoCategoriaLabel, produtoCategoriaIcon } from '@/lib/produtoCategoria';
+import {
+  PRODUTO_CATEGORIAS_PRINCIPAIS,
+  PRODUTO_CATEGORIAS_SECUNDARIAS,
+  produtoCategoriaLabel,
+  produtoCategoriaIcon,
+} from '@/lib/produtoCategoria';
+import { ProdutoImagem } from './ProdutoImagem';
 import { ProdutoFormModal } from './ProdutoFormModal';
 import { MovimentacaoModal } from './MovimentacaoModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
-/** Ladrilho de categoria — grade de navegação inicial (nenhuma categoria escolhida ainda). */
-function CategoriaTile({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+/** Filtro de categoria — sempre visível; clicar na categoria ativa limpa o filtro. */
+function CategoriaFilterButton({
+  icon: CategoriaIcon,
+  label,
+  active,
+  expanded,
+  onClick,
+}: {
+  icon: Icon;
+  label: string;
+  active: boolean;
+  /** Só para o botão "Outros", que abre um painel em vez de filtrar direto. */
+  expanded?: boolean;
+  onClick: () => void;
+}) {
   return (
     <motion.button
       type="button"
+      aria-pressed={expanded === undefined ? active : undefined}
+      aria-expanded={expanded}
       onClick={onClick}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.96 }}
-      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-surface p-3 text-center transition-colors hover:border-brand-300 hover:bg-surface-alt"
+      whileTap={{ scale: 0.97 }}
+      className={clsx(
+        'flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors',
+        active
+          ? 'border-brand-600 bg-brand-600 text-white shadow-card'
+          : 'border-border bg-surface text-ink hover:border-brand-300 hover:bg-surface-alt',
+      )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
-        <Icon size={18} />
+      <span
+        className={clsx(
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+          active ? 'bg-white/20 text-white' : 'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300',
+        )}
+      >
+        <CategoriaIcon size={18} weight="fill" />
       </span>
-      <span className="text-[11px] font-medium leading-tight text-ink-muted">{label}</span>
+      <span className="min-w-0 truncate">{label}</span>
     </motion.button>
   );
+}
+
+interface ProdutoCardProps {
+  produto: ProdutoResponse;
+  podeEditar: boolean;
+  onOpen: () => void;
+  onMovimentar: () => void;
+  onRemover: () => void;
+}
+
+/**
+ * Cartão do produto. A arte do topo é a foto enviada (2:1, mostrada inteira numa faixa baixa) ou, enquanto o produto não tem foto, o ícone da categoria.
+ */
+function ProdutoCard({ produto, podeEditar, onOpen, onMovimentar, onRemover }: ProdutoCardProps) {
+  const CategoriaIcon = produtoCategoriaIcon(produto.categoria);
+  const abaixo = !!produto.abaixoDoMinimo;
+
+  return (
+    <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+      <Card
+        data-testid="produto-card"
+        onClick={podeEditar ? onOpen : undefined}
+        className={clsx(
+          'flex h-full flex-col overflow-hidden transition-shadow',
+          podeEditar && 'cursor-pointer hover:shadow-md',
+        )}
+      >
+        <div className="relative flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-brand-50 to-surface-alt text-brand-600 dark:from-brand-900/40 dark:to-surface-alt dark:text-brand-300">
+          <ProdutoImagem
+            produtoId={produto.id}
+            imagemUrl={produto.imagemUrl}
+            alt={`Foto de ${produto.nome}`}
+            fallback={<CategoriaIcon size={64} weight="duotone" aria-hidden />}
+          />
+          <span className="absolute right-3 top-3 rounded-md bg-black/60 px-2 py-0.5 text-xs font-medium text-white shadow-sm backdrop-blur-sm">
+            {produtoCategoriaLabel(produto.categoria)}
+          </span>
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2 p-3">
+          <div className="min-w-0">
+            <p className="line-clamp-2 font-semibold leading-snug text-ink">{produto.nome}</p>
+            <p className="mt-0.5 text-sm text-ink-muted">{produto.codigo}</p>
+          </div>
+
+          {/* Preço e ações na mesma linha — evita uma faixa só de botões no rodapé do cartão. */}
+          <div className="mt-auto flex items-center justify-between gap-2">
+            <p className="text-lg font-bold text-ink">{formatCurrency(produto.precoVenda)}</p>
+            {podeEditar && (
+              <div className="flex shrink-0 gap-1">
+                <IconActionButton
+                  icon={ArrowsLeftRight}
+                  label="Movimentar estoque"
+                  tone="brand"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMovimentar();
+                  }}
+                />
+                <IconActionButton
+                  icon={PencilSimple}
+                  label="Editar"
+                  tone="brand"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpen();
+                  }}
+                />
+                <IconActionButton
+                  icon={Trash}
+                  label="Remover"
+                  tone="danger"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemover();
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Estoque é o dado que o balconista mais consulta: número grande e
+              colorido pelo status, com o total físico (inclui reservado) ao lado. */}
+          <div
+            className={clsx(
+              'flex items-center justify-between gap-3 rounded-lg px-3 py-1.5',
+              abaixo ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20',
+            )}
+          >
+            <div className="flex items-baseline gap-2">
+              <span className={clsx('text-2xl font-bold leading-none', abaixo ? 'text-danger' : 'text-success')}>
+                {produto.quantidadeDisponivel ?? 0}
+              </span>
+              <span className="text-sm font-medium text-ink">disponível</span>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-ink">{produto.quantidadeEstoque ?? 0} em estoque</p>
+              <p className={clsx('text-xs font-semibold', abaixo ? 'text-danger' : 'text-success')}>
+                {abaixo ? 'Abaixo do mínimo' : 'OK'}
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
+function ProdutoCardSkeleton() {
+  return <div className="h-72 animate-pulse rounded-2xl border border-border bg-surface-alt" />;
 }
 
 export function ProdutosPage() {
@@ -48,6 +189,8 @@ export function ProdutosPage() {
   const [movProduto, setMovProduto] = useState<ProdutoResponse | null>(null);
   const [deleting, setDeleting] = useState<ProdutoResponse | null>(null);
   const [somenteAbaixoDoMinimo, setSomenteAbaixoDoMinimo] = useState(false);
+  const [outrosAberto, setOutrosAberto] = useState(false);
+  const categoriaSecundariaAtiva = categoria !== '' && PRODUTO_CATEGORIAS_SECUNDARIAS.includes(categoria);
 
   // Ver a lista é ESTOQUE_READ (já exigido pra abrir esta rota — ver nav.ts);
   // criar/editar/remover/movimentar é ESTOQUE_WRITE no backend, e o Consultor
@@ -62,12 +205,10 @@ export function ProdutosPage() {
 
   const rows = somenteAbaixoDoMinimo ? abaixoDoMinimo ?? [] : data?.content ?? [];
 
-  function selecionarCategoria(novaCategoria: ProdutoCategoria | '') {
-    setCategoria(novaCategoria);
+  function selecionarCategoria(novaCategoria: ProdutoCategoria) {
+    setCategoria((atual) => (atual === novaCategoria ? '' : novaCategoria));
     setPage(0);
   }
-
-  const IconCategoriaAtiva = categoria ? produtoCategoriaIcon(categoria) : null;
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -118,140 +259,93 @@ export function ProdutosPage() {
           className="w-full max-w-xs"
         />
 
-        {/* Navegar por categoria é o caminho principal (grade de ladrilhos,
-            clicável); depois de escolher uma, a grade some e dá lugar a um
-            único indicador compacto — mostrar as 15 categorias inteiras o
-            tempo todo (grade ou chips) polui a tela sem necessidade quando o
-            filtro já está decidido. */}
-        <AnimatePresence mode="wait" initial={false}>
-          {categoria === '' ? (
-            <motion.div
-              key="grade"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
-            >
-              {PRODUTO_CATEGORIAS.map((c) => (
-                <CategoriaTile
+        {/* As 7 categorias de maior giro ficam em destaque; "Outros" abre as demais
+            (o backend filtra por uma categoria só, então não dá pra agrupá-las
+            numa consulta — por isso o painel lista cada uma). */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Filtrar por categoria">
+          {PRODUTO_CATEGORIAS_PRINCIPAIS.map((c) => (
+            <CategoriaFilterButton
+              key={c}
+              icon={produtoCategoriaIcon(c)}
+              label={produtoCategoriaLabel(c)}
+              active={categoria === c}
+              onClick={() => selecionarCategoria(c)}
+            />
+          ))}
+          <CategoriaFilterButton
+            icon={DotsThreeCircle}
+            label="Outros"
+            active={outrosAberto || categoriaSecundariaAtiva}
+            expanded={outrosAberto}
+            onClick={() => setOutrosAberto((v) => !v)}
+          />
+        </div>
+
+        {outrosAberto && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Outras categorias">
+            {PRODUTO_CATEGORIAS_SECUNDARIAS.map((c) => {
+              const CategoriaIcon = produtoCategoriaIcon(c);
+              return (
+                <button
                   key={c}
-                  icon={produtoCategoriaIcon(c)}
-                  label={produtoCategoriaLabel(c)}
+                  type="button"
+                  aria-pressed={categoria === c}
                   onClick={() => selecionarCategoria(c)}
-                />
-              ))}
-            </motion.div>
-          ) : (
-            <motion.button
-              key="ativa"
-              type="button"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              onClick={() => selecionarCategoria('')}
-              className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-600 bg-brand-600 py-2 pl-3.5 pr-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
-            >
-              {IconCategoriaAtiva && <IconCategoriaAtiva size={16} />}
-              {produtoCategoriaLabel(categoria)}
-              <span className="ml-0.5 flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs">
-                <X size={12} /> trocar
-              </span>
-            </motion.button>
-          )}
-        </AnimatePresence>
+                  className={clsx(
+                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                    categoria === c
+                      ? 'border-brand-600 bg-brand-600 text-white'
+                      : 'border-border bg-surface text-ink-muted hover:border-brand-300 hover:text-ink',
+                  )}
+                >
+                  <CategoriaIcon size={14} weight="fill" />
+                  {produtoCategoriaLabel(c)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <Card>
-        <DataTable<ProdutoResponse>
-          loading={isLoading}
-          rows={rows}
-          rowKey={(row) => row.id!}
-          emptyTitle="Nenhum produto cadastrado"
-          columns={[
-            {
-              header: 'Produto',
-              render: (row) => {
-                const Icon = produtoCategoriaIcon(row.categoria);
-                return (
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
-                      <Icon size={17} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-ink">{row.nome}</p>
-                      <p className="text-xs text-ink-muted">{row.codigo}</p>
-                    </div>
-                  </div>
-                );
-              },
-            },
-            {
-              header: 'Categoria',
-              render: (row) => <Badge tone="neutral">{produtoCategoriaLabel(row.categoria)}</Badge>,
-              hideBelow: 'md',
-            },
-            { header: 'Preço venda', render: (row) => formatCurrency(row.precoVenda) },
-            {
-              header: 'Estoque',
-              render: (row) => (
-                <span className={row.abaixoDoMinimo ? 'font-medium text-danger' : ''}>
-                  {row.quantidadeDisponivel ?? 0} disp. / {row.quantidadeEstoque ?? 0} total
-                </span>
-              ),
-              hideBelow: 'sm',
-            },
-            {
-              header: 'Status',
-              render: (row) => (row.abaixoDoMinimo ? <Badge tone="danger">Abaixo do mínimo</Badge> : <Badge tone="success">OK</Badge>),
-              hideBelow: 'md',
-            },
-            ...(podeEditar
-              ? ([
-                  {
-                    header: '',
-                    render: (row) => (
-                      <div className="flex justify-end gap-1">
-                        <IconActionButton
-                          icon={ArrowsLeftRight}
-                          label="Movimentar estoque"
-                          tone="brand"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMovProduto(row);
-                          }}
-                        />
-                        <IconActionButton
-                          icon={PencilSimple}
-                          label="Editar"
-                          tone="brand"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setModalProduto(row);
-                          }}
-                        />
-                        <IconActionButton
-                          icon={Trash}
-                          label="Remover"
-                          tone="danger"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleting(row);
-                          }}
-                        />
-                      </div>
-                    ),
-                  },
-                ] satisfies Column<ProdutoResponse>[])
-              : []),
-          ]}
-          onRowClick={podeEditar ? (row) => setModalProduto(row) : undefined}
-        />
-        {!somenteAbaixoDoMinimo && data && (
-          <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
+      <div className="mb-3 flex items-center gap-2 text-ink">
+        {somenteAbaixoDoMinimo ? (
+          <Warning size={20} weight="fill" className="text-danger" />
+        ) : (
+          <SquaresFour size={20} weight="fill" className="text-brand-600" />
         )}
-      </Card>
+        <h2 className="text-base font-semibold">{somenteAbaixoDoMinimo ? 'Abaixo do estoque mínimo' : 'Todos os produtos'}</h2>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }, (_, i) => (
+            <ProdutoCardSkeleton key={i} />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <Card>
+          <EmptyState icon={Package} title="Nenhum produto cadastrado" />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {rows.map((row) => (
+            <ProdutoCard
+              key={row.id}
+              produto={row}
+              podeEditar={podeEditar}
+              onOpen={() => setModalProduto(row)}
+              onMovimentar={() => setMovProduto(row)}
+              onRemover={() => setDeleting(row)}
+            />
+          ))}
+        </div>
+      )}
+
+      {!somenteAbaixoDoMinimo && data && (
+        <Card className="mt-4">
+          <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
+        </Card>
+      )}
 
       {podeEditar && (
         <>
