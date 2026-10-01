@@ -45,3 +45,33 @@ describe('buildOrdemServicoPdfBlob — mapeamento consultor vs técnico', () => 
     );
   });
 });
+
+describe('buildOrdemServicoPdfBlob — opções de recibo (Faturar no Caixa)', () => {
+  it('defaults to "Ordem de Serviço" and no selo de pagamento when opções is omitted', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+
+    await buildOrdemServicoPdfBlob(os);
+
+    expect(renderOSDocumentPdf).toHaveBeenCalledWith(
+      expect.objectContaining({ tipoDocumento: 'Ordem de Serviço', pagamento: undefined }),
+    );
+  });
+
+  it('passes tipoDocumento and pagamento through when the caller prints a paid receipt', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+
+    await buildOrdemServicoPdfBlob(os, {
+      tipoDocumento: 'Recibo de Pagamento',
+      pagamento: { formaPagamento: 'Pix', dataPagamento: '27/09/2026 10:00', caixaSessaoIdentificador: 'CX-0001' },
+    });
+
+    expect(renderOSDocumentPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tipoDocumento: 'Recibo de Pagamento',
+        pagamento: { formaPagamento: 'Pix', dataPagamento: '27/09/2026 10:00', caixaSessaoIdentificador: 'CX-0001' },
+      }),
+    );
+  });
+});

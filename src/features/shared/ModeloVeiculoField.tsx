@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import clsx from 'clsx';
-import { Car, ImagePlus, Plus, Search, Upload, X } from 'lucide-react';
+import { Car, ImagePlus, Plus, Search, Upload } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Input } from '@/components/ui/Field';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -269,18 +271,16 @@ function ModeloVeiculoCatalogModal({
                 <Upload size={14} /> Enviar imagem
               </Button>
               {preview && (
-                <button
-                  type="button"
+                <IconActionButton
+                  icon={X}
+                  label="Remover imagem selecionada"
+                  tone="danger"
                   onClick={() => {
                     URL.revokeObjectURL(preview);
                     setPreview(null);
                     setArquivo(null);
                   }}
-                  aria-label="Remover imagem selecionada"
-                  className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30"
-                >
-                  <X size={16} />
-                </button>
+                />
               )}
             </div>
             <p className="mt-1.5 text-xs text-ink-muted">Opcional — PNG ou JPEG, até 5MB.</p>

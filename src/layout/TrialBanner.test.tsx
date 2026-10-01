@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { useLicencaAtual } from '@/hooks/useOficina';
+import { useAuthStore } from '@/store/authStore';
 import { TrialBanner } from './TrialBanner';
 
 vi.mock('@/hooks/useOficina', () => ({
@@ -89,5 +90,25 @@ describe('TrialBanner', () => {
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'TRIAL', diasRestantes: 6 } } as never);
     renderBanner();
     expect(screen.getByRole('link', { name: 'Ver planos' })).toHaveAttribute('href', '/oficina/licenca');
+  });
+
+  describe('carência', () => {
+    const carencia = { status: 'ATIVA', diasRestantes: 3, emCarencia: true, dataExpiracao: '2026-10-05T12:00:00Z' };
+
+    it('mostra o aviso de pagamento pendente e o link para regularizar com OFICINA_WRITE', () => {
+      useAuthStore.setState({ hasPermission: (c: string) => c === 'OFICINA_WRITE' } as never);
+      vi.mocked(useLicencaAtual).mockReturnValue({ data: carencia } as never);
+      renderBanner();
+      expect(screen.getByText(/Pagamento pendente, regularize até/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Regularizar agora' })).toHaveAttribute('href', '/oficina/licenca');
+    });
+
+    it('sem OFICINA_WRITE mostra só o aviso, sem link de pagamento', () => {
+      useAuthStore.setState({ hasPermission: () => false } as never);
+      vi.mocked(useLicencaAtual).mockReturnValue({ data: carencia } as never);
+      renderBanner();
+      expect(screen.getByText(/Pagamento pendente/)).toBeInTheDocument();
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    });
   });
 });

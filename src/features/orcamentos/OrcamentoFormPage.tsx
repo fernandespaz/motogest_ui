@@ -10,6 +10,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea, ReadOnlyField } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
+import { Badge } from '@/components/ui/Badge';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
@@ -29,9 +30,11 @@ import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDateTime, formatDocumento, toDateTimeLocalValue } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { useAuthStore } from '@/store/authStore';
 import { isMecanico, isConsultor } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
+import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -283,11 +286,18 @@ function OrcamentoFormContent() {
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
-  function compartilharWhatsApp() {
+  async function compartilharWhatsApp() {
     if (!orcamento?.tokenAprovacao) return;
+    // Abre a aba em branco já no clique (preserva a ativação do usuário) e só
+    // navega pra wa.me depois do await — do contrário o navegador bloqueia o
+    // popup, já que ele deixaria de contar como resposta direta ao clique.
+    const win = window.open('', '_blank');
+    const nomeFantasia = await resolverNomeFantasiaOficina();
     const link = `${window.location.origin}/orcamentos/publico/${orcamento.tokenAprovacao}`;
-    const texto = `Olá! Segue o orçamento nº ${orcamento.id}${orcamento.clienteNome ? ` para ${orcamento.clienteNome}` : ''}, no valor de ${formatCurrency(orcamento.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    const texto = `Olá! Aqui é da ${nomeFantasia}. Segue o orçamento nº ${orcamento.id}${orcamento.clienteNome ? ` para ${orcamento.clienteNome}` : ''}, no valor de ${formatCurrency(orcamento.valorTotal)}. Você pode conferir e aprovar por aqui: ${link}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank');
   }
 
   return (
@@ -340,6 +350,8 @@ function OrcamentoFormContent() {
                           // A vehicle belongs to one client — a stale selection
                           // from whoever was picked before must not survive this.
                           setValue('veiculoId', 0);
+                          // Os itens foram precificados pela categoria do veículo anterior.
+                          if (value !== field.value) setValue('itens', []);
                           setBuscaVeiculo('');
                         }}
                         options={clienteOptions}
@@ -412,6 +424,16 @@ function OrcamentoFormContent() {
                           />
                           <ReadOnlyField label="Cor" value={selectedVeiculo.cor || '—'} />
                           <ReadOnlyField label="Chassi" value={selectedVeiculo.chassi || '—'} />
+                          <div>
+                            <p className="text-xs font-medium text-ink-muted">Categoria</p>
+                            {selectedVeiculo.categoria ? (
+                              <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[selectedVeiculo.categoria]}>
+                                {selectedVeiculo.categoria} · hora técnica deste veículo
+                              </Badge>
+                            ) : (
+                              <p className="text-sm font-semibold text-ink">—</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -422,6 +444,7 @@ function OrcamentoFormContent() {
                   <ItemsEditor
                     name="itens"
                     mostrarTempoVendido
+                    categoriaVeiculo={selectedVeiculo?.categoria}
                     disabled={readOnly}
                     origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
                     onGarantirOrigem={garantirOrigem}

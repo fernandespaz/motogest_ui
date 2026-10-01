@@ -58,6 +58,55 @@ the same concept is the signal to extract.
   already in place — trust the type system and the established data flow;
   validate only at real boundaries (user input, API responses).
 
+## Ícones de ação (Editar, Remover, Enviar, Aprovar, ...)
+
+Toda ação de linha — numa linha de tabela, num cartão, num formulário de
+itens — usa `components/ui/IconActionButton.tsx`, nunca um `<button
+className="...">` cru nem um `Button` rotulado. Isso existe porque ~17 telas
+do app chegaram a reimplementar a mesma combinação de classes cada uma à sua
+maneira, ligeiramente diferente, e sem nome acessível em vários casos; e
+porque uma rodada anterior tentou usar `Button` com rótulo visível pra
+Aprovar/Rejeitar/Pagar/Receber "se destacarem" — decisão revertida: nessas
+telas (Orçamentos, OS, Descontos, Financeiro) toda ação de linha é ícone,
+sem exceção. `Button` fica reservado pra ações definitivas de página/
+formulário — Salvar, Concluir, Cancelar, confirmar/cancelar dentro de um
+Modal — nunca pra uma ação dentro de uma linha de tabela.
+
+- **Toda ação de linha é ícone** (Editar, Remover, Enviar/Reenviar, Converter,
+  Movimentar, Cancelar, **e também** Aprovar/Rejeitar/Pagar/Receber): use
+  `IconActionButton`. Props: `icon` (componente do `@phosphor-icons/react`),
+  `label` (vira `title` + `aria-label` — obrigatório, uma ação só com ícone
+  não tem nome acessível sem isso) e `tone`.
+- **Ícones vêm de `@phosphor-icons/react`, não lucide-react**, pra essas ações
+  — `IconActionButton` já passa `weight="fill"` internamente. lucide-react
+  continua a lib padrão pra ícones decorativos/de status (`EmptyState`,
+  `StatCard`, badges, ícone de um `Input`) — só a ação de linha migrou.
+- **Chip sólido, não ícone fantasma**: o fundo de `IconActionButton` já vem
+  colorido pelo tom (`bg-success`/`bg-danger`/`bg-brand-600`/`bg-surface-alt`,
+  ícone branco) *em repouso*, não só no hover — um ícone cinza que só ganha
+  cor ao passar o mouse lia como apagado/sem vida numa lista inteira de
+  ações. Não reintroduza um estilo "hover-only" pra uma ação nova.
+- **Tom por semântica**, não por preferência da tela — mesmo vocabulário do
+  `Badge` (`components/ui/Badge.tsx`): `brand` (ação neutra/navegacional —
+  Editar, Enviar, Converter, PDF), `danger` (Remover, Rejeitar, Cancelar),
+  `success` (Aprovar, Receber, Pagar), `neutral` (Cancelar uma ação em
+  andamento, sem carga positiva/negativa). Não introduza uma variação de cor
+  nova sem necessidade real — reaproveite as quatro já definidas.
+- **Ícone por conceito, não por tela**: o mesmo conceito de ação usa o mesmo
+  ícone Phosphor em todo o app — `CheckCircle` para aprovar/confirmar,
+  `XCircle` para rejeitar/cancelar uma decisão, `Trash` para remover,
+  `PencilSimple` para editar, `ChatCircle` para compartilhar via WhatsApp,
+  `FileArrowDown` para PDF. Não troque de ícone entre uma tela e outra para a
+  mesma ação (isso já aconteceu — ícones genéricos numa tela, outros
+  equivalentes noutra, pra mesma decisão de aprovar/rejeitar).
+- **Ordem dentro do grupo de ações**: decisão principal primeiro (Aprovar/
+  Rejeitar), depois ações secundárias (Enviar, Remover, Converter), utilidade
+  menos frequente por último (PDF, exportar) — não deixe a ação menos usada
+  competir pela atenção na posição mais visível.
+- Antes de adicionar uma ação de ícone nova, grep por `IconActionButton` para
+  ver os usos existentes — é bem provável que a combinação ícone+tom que você
+  precisa já exista em outra tela.
+
 ## Testing & coverage
 
 - Run `npm run test` (vitest) before considering any change done; run

@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Trash2, Percent, PackagePlus, Wrench, Package, X, Gauge } from 'lucide-react';
+import { Percent, PackagePlus, Wrench, Package, Gauge } from 'lucide-react';
+import { Trash, X } from '@phosphor-icons/react';
 import clsx from 'clsx';
-import { useHoraTecnica } from '@/hooks/useHoraTecnica';
+import { useCategoriasHoraTecnica } from '@/hooks/useHoraTecnica';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Input } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
@@ -16,7 +18,7 @@ import { SolicitarDescontoModal } from './SolicitarDescontoModal';
 import { ReservarEstoqueModal } from './ReservarEstoqueModal';
 import { formatCurrency, formatMinutosParaHoras, parseHorasParaMinutos, maskHorasInput } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
-import type { OrigemDesconto, ProdutoResponse, ServicoResponse } from '@/api/types';
+import type { CategoriaComplexidade, CategoriaHoraTecnicaResponse, OrigemDesconto, ProdutoResponse, ServicoResponse } from '@/api/types';
 
 // Incrementam o tempo já digitado em vez de substituí-lo — clicar "+1:00" duas
 // vezes soma 2h, não trava em 1h — por isso o rótulo tem o "+" explícito.
@@ -98,11 +100,14 @@ export interface ItemFormValue {
   tempoVendidoMinutos?: number;
   /**
    * Só do form, nunca vai pro backend como campo. `true` = serviço cobrado
-   * pela hora técnica (PHT × tempo vendido): o preço acompanha o tempo e vai
-   * no payload SEM valorUnitario, pro backend calcular (ver itemParaPayload).
-   * `false` = preço fixo (manual, desconto aprovado, ou gravado com um PHT
-   * antigo). `undefined` = item carregado ainda não classificado — o editor
-   * decide assim que o PHT chega.
+   * pela hora técnica da categoria do VEÍCULO do orçamento/OS (valorHora ×
+   * tempo vendido, não da categoria do serviço escolhido — essa é só
+   * referência de catálogo): o preço acompanha o tempo e vai no payload SEM
+   * valorUnitario, pro backend calcular (ver itemParaPayload). `false` =
+   * preço fixo (manual, desconto aprovado, categoria sem hora técnica
+   * configurada, ou gravado com um valorHora antigo). `undefined` = item
+   * carregado ainda não classificado — o editor decide assim que a hora
+   * técnica chega.
    */
   precificadoPorHT?: boolean;
 }
@@ -113,17 +118,44 @@ export function somarTempoVendidoMinutos(items: Pick<ItemFormValue, 'tempoVendid
 }
 
 /**
- * PHT × horas, arredondado em 2 casas — espelha HoraTecnicaService.resolverValorUnitario
- * (BigDecimal, HALF_UP). Conta em centavos inteiros: em ponto flutuante,
- * ~3% das combinações PHT × minutos caem em x,xx5 e arredondam diferente do
- * backend — o que exibiria 1 centavo errado e, pior, faria o item recarregado
- * deixar de ser reconhecido como "pela hora técnica" (comparação exata).
+ * Valor da hora de uma categoria (A/B/C), ou undefined se a oficina não
+ * configurou essa categoria ainda. Quem decide o preço de um item de
+ * Orçamento/OS é a categoria do VEÍCULO, não a do Serviço escolhido no
+ * catálogo (que virou só referência/sugestão — ver doc de Precificação por
+ * Categoria, atualização 29/09) — por isso a assinatura recebe a categoria
+ * já resolvida pelo chamador, em vez de um ServicoResponse.
  */
-export function valorPorHoraTecnica(pht: number, minutos: number): number {
-  const centavosPorHora = Math.round(pht * 100);
-  const numerador = centavosPorHora * Math.round(minutos);
-  // HALF_UP de numerador/60 só com inteiros: floor((2n + 60) / 120).
-  return Math.floor((2 * numerador + 60) / 120) / 100;
+export function valorHoraDaCategoria(
+  categorias: CategoriaHoraTecnicaResponse[] | undefined,
+  categoria: CategoriaComplexidade | undefined,
+): number | undefined {
+  if (!categoria) return undefined;
+  const valor = categorias?.find((c) => c.categoria === categoria)?.valorHora;
+  // 0 = oficina marcou a categoria como "não utilizada" — sem hora técnica.
+  return valor != null && valor > 0 ? valor : undefined;
+}
+
+/**
+ * Único, comum às 3 categorias — vem em cada item de `/financeiro/hora-tecnica`
+ * (ver CategoriaHoraTecnicaRequest). Procura o primeiro item com o campo
+ * preenchido em vez de assumir a posição 0: nada garante a ordem do array (só
+ * o payload de escrita, CategoriaHoraTecnicaRequest, é que impõe um valor só
+ * pras 3 categorias).
+ */
+export function arredondamentoComercial(categorias: CategoriaHoraTecnicaResponse[] | undefined): number | undefined {
+  return categorias?.find((c) => c.arredondamentoComercial != null)?.arredondamentoComercial;
+}
+
+/**
+ * valorHora × horas, arredondado pra CIMA em múltiplos do arredondamento
+ * comercial — espelha a regra do backend (ver doc de Precificação por
+ * Categoria de Serviço). O `- 1e-9` evita que um valor já exato no múltiplo
+ * suba um degrau por erro de ponto flutuante (ex.: 100.00000000001).
+ */
+export function valorPorCategoria(valorHora: number, minutos: number, arredondamento: number): number {
+  const bruto = valorHora * (minutos / 60);
+  if (arredondamento <= 0) return bruto;
+  return Math.ceil(bruto / arredondamento - 1e-9) * arredondamento;
 }
 
 /** Serviços cobrados pela hora técnica que ainda estão sem tempo vendido — o backend recusaria o item. */
@@ -170,6 +202,7 @@ const inputInline =
 export function ItemsEditor({
   name,
   mostrarTempoVendido,
+  categoriaVeiculo,
   disabled,
   limitarQuantidadeAoEstoque,
   origem,
@@ -177,6 +210,12 @@ export function ItemsEditor({
 }: {
   name: string;
   mostrarTempoVendido?: boolean;
+  // Categoria do veículo do Orçamento/OS em edição — é ela, não a categoria
+  // do Serviço escolhido, que decide o valorHora aplicado (ver
+  // valorHoraDaCategoria). undefined enquanto nenhum veículo foi selecionado
+  // ainda: cai pro preço manual, igual a uma categoria sem hora técnica
+  // configurada.
+  categoriaVeiculo?: CategoriaComplexidade;
   disabled?: boolean;
   // Trava a quantidade de um item PRODUTO no estoque disponível — faz sentido
   // pra Ordem de Serviço (que consome estoque de verdade), mas não pra
@@ -231,32 +270,61 @@ export function ItemsEditor({
   const total = items.reduce((sum, item) => sum + (Number(item.quantidade) || 0) * (Number(item.valorUnitario) || 0), 0);
   const tempoTotalMinutos = somarTempoVendidoMinutos(items);
 
-  // Preço da hora técnica: com ele configurado, serviço é cobrado por tempo
-  // (PHT × horas) e não pelo preço de catálogo. Só vale onde o tempo vendido
-  // aparece pra ser editado. Falha na consulta = segue com preço de catálogo,
-  // sem toast (referência opcional, ver prohibited-actions #10).
-  const { data: horaTecnica } = useHoraTecnica({ silentError: true });
-  const pht = mostrarTempoVendido && horaTecnica?.configurado ? horaTecnica.precoHoraTecnica : undefined;
+  // Valor da hora por categoria (A/B/C): com a categoria do VEÍCULO
+  // conhecida, o serviço é cobrado por tempo (valorHora × horas) e não por um
+  // preço fixo de catálogo (que nem existe mais — ver ServicoResponse). Só
+  // vale onde o tempo vendido aparece pra ser editado. Falha na consulta =
+  // segue com preço manual, sem toast (referência opcional, ver
+  // prohibited-actions #10).
+  const { data: categoriasHT } = useCategoriasHoraTecnica({ silentError: true });
+  const arredondamento = mostrarTempoVendido ? arredondamentoComercial(categoriasHT) : undefined;
 
   // Itens carregados de um registro salvo chegam sem classificação. Um
-  // serviço cujo valor gravado bate com PHT × tempo continua atrelado à hora
-  // técnica (o preço acompanha se o tempo mudar); qualquer outro valor —
-  // desconto aprovado, preço manual, PHT que mudou depois — é preservado.
+  // serviço cujo valor gravado bate com valorHora(categoria) × tempo continua
+  // atrelado à hora técnica (o preço acompanha se o tempo mudar); qualquer
+  // outro valor — desconto aprovado, preço manual, categoria sem hora técnica
+  // configurada, valor que mudou depois — é preservado.
   useEffect(() => {
-    if (pht == null) return;
+    if (arredondamento == null) return;
     items.forEach((item, index) => {
       if (item.precificadoPorHT !== undefined) return;
+      if (item.tipoItem !== 'SERVICO') return;
       const minutos = Number(item.tempoVendidoMinutos) || 0;
+      const valorHora = valorHoraDaCategoria(categoriasHT, categoriaVeiculo);
       const porHT =
-        item.tipoItem === 'SERVICO' && minutos > 0 && Number(item.valorUnitario) === valorPorHoraTecnica(pht, minutos);
+        minutos > 0 && valorHora != null && Number(item.valorUnitario) === valorPorCategoria(valorHora, minutos, arredondamento);
       setValue(`${name}.${index}.precificadoPorHT`, porHT, { shouldDirty: false });
     });
-  }, [items, pht, name, setValue]);
+  }, [items, categoriasHT, categoriaVeiculo, arredondamento, name, setValue]);
+
+  // Trocar o veículo por outro de categoria diferente reprecifica os itens
+  // cobrados por hora técnica — senão ficam com o valor da categoria anterior.
+  // Só reage a troca entre duas categorias conhecidas: o carregamento inicial
+  // (undefined → categoria) não pode sobrescrever preço gravado/com desconto.
+  const categoriaAnterior = useRef(categoriaVeiculo);
+  useEffect(() => {
+    const anterior = categoriaAnterior.current;
+    categoriaAnterior.current = categoriaVeiculo;
+    if (!anterior || !categoriaVeiculo || anterior === categoriaVeiculo || arredondamento == null) return;
+    const valorHora = valorHoraDaCategoria(categoriasHT, categoriaVeiculo);
+    const atuais: ItemFormValue[] = getValues(name) ?? [];
+    atuais.forEach((item, index) => {
+      if (item.tipoItem !== 'SERVICO' || !item.precificadoPorHT) return;
+      const minutos = Number(item.tempoVendidoMinutos) || 0;
+      if (valorHora != null) {
+        setValue(`${name}.${index}.valorUnitario`, valorPorCategoria(valorHora, minutos, arredondamento));
+      } else {
+        setValue(`${name}.${index}.precificadoPorHT`, false);
+      }
+    });
+  }, [categoriaVeiculo, categoriasHT, arredondamento, name, getValues, setValue]);
 
   function alterarTempoVendido(index: number, minutos: number | undefined) {
     setValue(`${name}.${index}.tempoVendidoMinutos`, minutos);
-    if (pht != null && getValues(`${name}.${index}.precificadoPorHT`)) {
-      setValue(`${name}.${index}.valorUnitario`, valorPorHoraTecnica(pht, minutos ?? 0));
+    if (arredondamento == null || !getValues(`${name}.${index}.precificadoPorHT`)) return;
+    const valorHora = valorHoraDaCategoria(categoriasHT, categoriaVeiculo);
+    if (valorHora != null) {
+      setValue(`${name}.${index}.valorUnitario`, valorPorCategoria(valorHora, minutos ?? 0, arredondamento));
     }
   }
 
@@ -269,26 +337,31 @@ export function ItemsEditor({
   function confirmarAdicao(id: number) {
     if (adicionando === 'SERVICO') {
       const s = servicos?.content?.find((x: ServicoResponse) => x.id === id);
-      if (pht != null) {
-        // Com hora técnica, o catálogo só sugere o tempo (duração padrão); o
-        // preço sai de PHT × tempo, nunca do preço de catálogo.
-        const minutos = s?.duracaoMinutos || undefined;
+      const valorHora = valorHoraDaCategoria(categoriasHT, categoriaVeiculo);
+      if (arredondamento != null && valorHora != null) {
+        // Com a categoria do veículo configurada, o catálogo só sugere o
+        // tempo (tempo mínimo do serviço); o preço sai de valorHora(categoria
+        // do veículo) × tempo, nunca de um preço fixo de catálogo (que nem
+        // existe mais) nem da categoria do próprio serviço.
+        const minutos = s?.tempoMinHoras != null ? Math.round(s.tempoMinHoras * 60) : undefined;
         append({
           tipoItem: 'SERVICO',
           servicoId: id,
           descricao: s?.nome ?? '',
           quantidade: 1,
           tempoVendidoMinutos: minutos,
-          valorUnitario: valorPorHoraTecnica(pht, minutos ?? 0),
+          valorUnitario: valorPorCategoria(valorHora, minutos ?? 0, arredondamento),
           precificadoPorHT: true,
         } as ItemFormValue);
       } else {
+        // Categoria sem hora técnica configurada (ou item avulso/free-text):
+        // preço sempre manual — a faixa sugerida do catálogo é só referência.
         append({
           tipoItem: 'SERVICO',
           servicoId: id,
           descricao: s?.nome ?? '',
           quantidade: 1,
-          valorUnitario: s?.preco ?? 0,
+          valorUnitario: s?.precoMinSugerido ?? 0,
           precificadoPorHT: false,
         } as ItemFormValue);
       }
@@ -355,6 +428,10 @@ export function ItemsEditor({
     const valorUnitario = Number(watch(`${name}.${index}.valorUnitario`)) || 0;
     const porHT = tipoItem === 'SERVICO' && !!watch(`${name}.${index}.precificadoPorHT`);
     const tempoItem = Number(watch(`${name}.${index}.tempoVendidoMinutos`)) || 0;
+    const servicoIdSelecionado = watch(`${name}.${index}.servicoId`);
+    const servicoSelecionado =
+      tipoItem === 'SERVICO' ? servicos?.content?.find((s: ServicoResponse) => s.id === servicoIdSelecionado) : undefined;
+    const valorHoraItem = valorHoraDaCategoria(categoriasHT, categoriaVeiculo);
     const produtoIdSelecionado = watch(`${name}.${index}.produtoId`);
     const produtoSelecionado =
       tipoItem === 'PRODUTO' ? produtos?.content?.find((p: ProdutoResponse) => p.id === produtoIdSelecionado) : undefined;
@@ -364,10 +441,13 @@ export function ItemsEditor({
     // no backend (id real) dentro de um registro salvo.
     const podeAgirNoItem = !!origem || !!onGarantirOrigem;
     const pendente = descontoPendente(itemId);
+    const temFaixaSugerida =
+      !porHT && servicoSelecionado && (servicoSelecionado.precoMinSugerido != null || servicoSelecionado.precoMaxSugerido != null);
     const mostraLinhaExtra =
       (mostrarTempoVendido && tipoItem === 'SERVICO') ||
       (!podeEditarValor && podeAgirNoItem) ||
-      (tipoItem === 'PRODUTO' && !!produtoSelecionado);
+      (tipoItem === 'PRODUTO' && !!produtoSelecionado) ||
+      !!temFaixaSugerida;
 
     const Icon = tipoItem === 'SERVICO' ? Wrench : Package;
 
@@ -427,15 +507,14 @@ export function ItemsEditor({
           <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums text-ink">
             {formatCurrency(quantidade * valorUnitario)}
           </span>
-          <button
-            type="button"
+          <IconActionButton
+            icon={Trash}
+            label="Remover item"
+            tone="danger"
+            iconSize={15}
             disabled={disabled}
             onClick={() => remove(index)}
-            aria-label="Remover item"
-            className="shrink-0 rounded-md p-1 text-ink-muted hover:bg-red-50 hover:text-danger dark:hover:bg-red-900/30 disabled:pointer-events-none disabled:opacity-40"
-          >
-            <Trash2 size={15} />
-          </button>
+          />
         </div>
 
         {mostraLinhaExtra && (
@@ -448,7 +527,7 @@ export function ItemsEditor({
               />
             )}
 
-            {porHT && pht != null && (
+            {porHT && valorHoraItem != null && (
               <span
                 className={clsx(
                   'inline-flex items-center gap-1 font-medium',
@@ -456,7 +535,16 @@ export function ItemsEditor({
                 )}
               >
                 <Gauge size={12} />
-                {tempoItem > 0 ? `Hora técnica ${formatCurrency(pht)}/h` : 'Informe o tempo vendido'}
+                {tempoItem > 0
+                  ? `Hora técnica ${formatCurrency(valorHoraItem)}/h (cat. ${categoriaVeiculo} do veículo)`
+                  : 'Informe o tempo vendido'}
+              </span>
+            )}
+
+            {temFaixaSugerida && (
+              <span className="inline-flex items-center gap-1">
+                Sugerido: {formatCurrency(servicoSelecionado?.precoMinSugerido ?? 0)} –{' '}
+                {formatCurrency(servicoSelecionado?.precoMaxSugerido ?? 0)}
               </span>
             )}
 
@@ -519,14 +607,12 @@ export function ItemsEditor({
                 onQueryChange={setBuscaCatalogo}
               />
             </div>
-            <button
-              type="button"
+            <IconActionButton
+              icon={X}
+              label="Cancelar"
+              className="mt-2"
               onClick={() => setAdicionando(null)}
-              aria-label="Cancelar"
-              className="mt-2 shrink-0 rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-ink"
-            >
-              <X size={16} />
-            </button>
+            />
           </div>
         )}
 

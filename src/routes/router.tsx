@@ -23,9 +23,15 @@ import { UsuariosPage } from '@/features/usuarios/UsuariosPage';
 import { PerfisPage } from '@/features/perfis/PerfisPage';
 import { OficinaPage } from '@/features/oficina/OficinaPage';
 import { DescontosPage } from '@/features/descontos/DescontosPage';
+import { MeuCaixaPage } from '@/features/caixa/MeuCaixaPage';
 import { RequirePermission } from '@/auth/RequirePermission';
 import { PERMISSAO_GERENCIAR_HORA_TECNICA } from '@/hooks/useHoraTecnica';
 import { HoraTecnicaPage, HoraTecnicaSemAcesso } from '@/features/hora-tecnica/HoraTecnicaPage';
+import { PERMISSAO_GERENCIAR_CAPACIDADE_PRODUTIVA } from '@/hooks/useCapacidadeProdutiva';
+import {
+  CapacidadeProdutivaPage,
+  CapacidadeProdutivaSemAcesso,
+} from '@/features/capacidade-produtiva/CapacidadeProdutivaPage';
 import { ProdutividadeConsultoresPage } from '@/features/produtividade/ProdutividadeConsultoresPage';
 import { ConsultorDetalhePage } from '@/features/produtividade/ConsultorDetalhePage';
 import { ProdutividadeMecanicosPage } from '@/features/produtividade/ProdutividadeMecanicosPage';
@@ -68,6 +74,16 @@ export const router = createBrowserRouter([
           { path: '/produtos', element: <ProdutosPage /> },
           { path: '/servicos', element: <ServicosPage /> },
           { path: '/financeiro', element: <FinanceiroPage /> },
+          // Tela pessoal do operador de caixa — gate na rota (não só no menu)
+          // pra nenhuma query de sessão/turno disparar sem CAIXA_OPERAR.
+          {
+            path: '/caixa',
+            element: (
+              <RequirePermission codigo="CAIXA_OPERAR">
+                <MeuCaixaPage />
+              </RequirePermission>
+            ),
+          },
           // Gate na rota: sem a permissão a página nem monta, então nenhuma
           // query dispara pra estourar 403 (o backend continua sendo a trava real).
           {
@@ -75,6 +91,17 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission codigo={PERMISSAO_GERENCIAR_HORA_TECNICA} fallback={<HoraTecnicaSemAcesso />}>
                 <HoraTecnicaPage />
+              </RequirePermission>
+            ),
+          },
+          {
+            path: '/capacidade-produtiva',
+            element: (
+              <RequirePermission
+                codigo={PERMISSAO_GERENCIAR_CAPACIDADE_PRODUTIVA}
+                fallback={<CapacidadeProdutivaSemAcesso />}
+              >
+                <CapacidadeProdutivaPage />
               </RequirePermission>
             ),
           },

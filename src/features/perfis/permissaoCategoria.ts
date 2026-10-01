@@ -19,7 +19,18 @@ export const PERMISSAO_CATEGORIA_ORDEM: PermissaoCategoria[] = ['GERENCIAL', 'CO
 const RECURSOS_POR_CATEGORIA: Record<Exclude<PermissaoCategoria, 'OUTROS'>, string[]> = {
   // Administração da oficina em si — não do atendimento ao cliente nem da
   // execução do serviço.
-  GERENCIAL: ['OFICINA', 'USUARIO', 'PERFIL', 'FINANCEIRO', 'HORA_TECNICA', 'PRODUTIVIDADE', 'DESCONTO', 'DASHBOARD'],
+  GERENCIAL: [
+    'OFICINA',
+    'USUARIO',
+    'PERFIL',
+    'FINANCEIRO',
+    'CAIXA',
+    'HORA_TECNICA',
+    'CAPACIDADE_PRODUTIVA',
+    'PRODUTIVIDADE',
+    'DESCONTO',
+    'DASHBOARD',
+  ],
   // Atendimento/relacionamento com o cliente e o que é vendido a ele.
   COMERCIAL: ['CLIENTE', 'VEICULO', 'AGENDA', 'ORCAMENTO', 'SERVICO'],
   // Execução do serviço dentro da oficina.
@@ -34,7 +45,7 @@ for (const [categoria, recursos] of Object.entries(RECURSOS_POR_CATEGORIA) as [
   for (const recurso of recursos) CATEGORIA_POR_RECURSO.set(recurso, categoria);
 }
 
-const SUFIXOS_ACAO = ['_READ', '_WRITE', '_GERENCIAR', '_APROVAR', '_RESERVAR'];
+const SUFIXOS_ACAO = ['_READ', '_WRITE', '_GERENCIAR', '_APROVAR', '_RESERVAR', '_OPERAR'];
 
 /** "ORDEM_SERVICO_WRITE" → "ORDEM_SERVICO"; sem sufixo de ação reconhecido, devolve o código inteiro. */
 function recursoDoCodigo(codigo: string): string {

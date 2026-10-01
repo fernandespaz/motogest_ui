@@ -32,21 +32,25 @@ async function blobParaLogoPdf(blob: Blob): Promise<OSDocumentLogo | null> {
  * Resolve a logo da oficina pra um PNG base64 pronto pro jsPDF (addImage não
  * aceita blob:/https: diretamente). Cosmético — qualquer falha (sem logo,
  * CORS numa URL externa, etc.) retorna null em vez de quebrar a geração do PDF.
+ *
+ * Prioriza `logoUrl` (logo externa) quando presente; caso contrário, tenta
+ * sempre GET /oficinas/atual/logo — não depende de `logoImagemDisponivel` vir
+ * preenchido em `oficina`, porque a versão resumida de GET /oficinas/atual
+ * (devolvida pra quem só tem ORCAMENTO_READ/ORDEM_SERVICO_READ, ex.:
+ * Consultor) nem sempre traz esse campo, mesmo a oficina tendo logo — e o
+ * endpoint de logo em si é documentado como acessível a qualquer perfil
+ * autenticado, então não custa tentar (um 404 sem logo vira null aqui dentro).
  */
 export async function carregarLogoParaPdf(oficina: OficinaResponse): Promise<OSDocumentLogo | null> {
-  try {
-    let blob: Blob | null = null;
-    if (oficina.logoImagemDisponivel) {
-      blob = await oficinasApi.buscarLogoBlob();
-    } else if (oficina.logoUrl) {
+  if (oficina.logoUrl) {
+    try {
       const resposta = await fetch(oficina.logoUrl);
-      if (resposta.ok) blob = await resposta.blob();
+      if (resposta.ok) return await blobParaLogoPdf(await resposta.blob());
+    } catch {
+      // segue pro fallback abaixo em vez de desistir
     }
-    if (!blob) return null;
-    return await blobParaLogoPdf(blob);
-  } catch {
-    return null;
   }
+  return logoDoEndpointParaPdf();
 }
 
 /**

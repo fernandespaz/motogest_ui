@@ -90,7 +90,23 @@ describe('useOficina hooks', () => {
       expect(oficinasApi.buscarLogoBlob).toHaveBeenCalled();
     });
 
-    it('falls back to the plain logoUrl when there is no uploaded logo image', async () => {
+    // GET /oficinas/atual devolve uma versão resumida pra quem não tem
+    // OFICINA_READ (Consultor, Caixa) — nada garante que `logoImagemDisponivel`
+    // venha certo nela, mesmo a oficina tendo logo de verdade. A rota de logo
+    // em si é documentada como acessível a qualquer perfil autenticado, então
+    // a busca não pode depender só desse campo (mesma causa raiz corrigida em
+    // features/shared/pdf/logo.ts).
+    it('still fetches the blob when logoImagemDisponivel is false/missing but there is no logoUrl either', async () => {
+      vi.mocked(oficinasApi.atual).mockResolvedValueOnce({ id: 1, logoImagemDisponivel: false } as never);
+      vi.mocked(oficinasApi.buscarLogoBlob).mockResolvedValueOnce(new Blob(['fake-image']));
+
+      const { result } = renderHook(() => useOficinaLogoSrc(), { wrapper: wrapWithQueryClient() });
+
+      await waitFor(() => expect(result.current).toBe('blob:mock-url'));
+      expect(oficinasApi.buscarLogoBlob).toHaveBeenCalled();
+    });
+
+    it('falls back to the plain logoUrl when there is one, without ever calling the authenticated blob route', async () => {
       vi.mocked(oficinasApi.atual).mockResolvedValueOnce({
         id: 1,
         logoImagemDisponivel: false,
@@ -103,9 +119,10 @@ describe('useOficina hooks', () => {
       expect(oficinasApi.buscarLogoBlob).not.toHaveBeenCalled();
     });
 
-    it('falls back to the browser-pinned logo when nothing else is available', async () => {
+    it('falls back to the browser-pinned logo when there really is no logo anywhere (blob route 404s)', async () => {
       localStorage.setItem('motogest:login-logo', 'data:image/png;base64,pinned');
       vi.mocked(oficinasApi.atual).mockResolvedValueOnce({ id: 1, logoImagemDisponivel: false } as never);
+      vi.mocked(oficinasApi.buscarLogoBlob).mockRejectedValueOnce(new Error('404'));
 
       const { result } = renderHook(() => useOficinaLogoSrc(), { wrapper: wrapWithQueryClient() });
 

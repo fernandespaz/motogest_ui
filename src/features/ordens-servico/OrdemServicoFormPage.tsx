@@ -3,11 +3,11 @@ import { FormProvider, useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, FileDown, Send, MessageCircle, Play, Pause, PlayCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, FileDown, Send, MessageCircle, Play, Pause, PlayCircle, AlertTriangle, Clock, DollarSign } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Textarea } from '@/components/ui/Field';
+import { Input, Select, Textarea, ReadOnlyField } from '@/components/ui/Field';
 import { Combobox, type ComboboxOption } from '@/components/ui/Combobox';
 import { Modal } from '@/components/ui/Modal';
 import { PageSpinner } from '@/components/ui/Spinner';
@@ -37,16 +37,20 @@ import {
 } from '@/features/shared/ItemsEditor';
 import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
+import { useFaturarOrdemServico } from '@/hooks/useFinanceiro';
+import { FORMAS_PAGAMENTO } from '@/lib/formaPagamento';
 import { ChecklistTab } from './ChecklistTab';
 import { FotosTab } from './FotosTab';
-import type { ClienteResponse, OrdemServicoStatus } from '@/api/types';
+import type { ClienteResponse, FormaPagamento, OrdemServicoStatus } from '@/api/types';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
-import { toDateTimeLocalValue, formatMinutosParaHoras, formatDateTime } from '@/lib/formatters';
+import { toDateTimeLocalValue, formatMinutosParaHoras, formatDateTime, formatCurrency } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
+import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -82,6 +86,7 @@ const STATUS_BLOQUEIA_EDICAO: OrdemServicoStatus[] = [
   'AGUARDANDO_PECA',
   'PAUSADA',
   'CONCLUIDA',
+  'FATURADO',
   'CANCELADA',
   'ENTREGUE',
 ];
@@ -96,11 +101,24 @@ const statusOptionsPara = (statusAtual?: OrdemServicoStatus): OrdemServicoStatus
     'APROVADA',
     'AGUARDANDO_PECA',
     'CONCLUIDA',
+    // FATURADO normalmente é atingido pelo botão "Faturar no Caixa" (que além
+    // do status também gera a Conta a Receber e o lançamento no caixa) — fica
+    // selecionável aqui também porque o backend aceita como destino de PATCH
+    // /status sem restrição documentada, mesmo padrão de todo outro status
+    // terminal desta lista (o backend é quem valida a transição de verdade).
+    'FATURADO',
     'CANCELADA',
-    'ENTREGUE',
   ];
+  // Regra de negócio: um veículo só é liberado pro cliente depois de pago —
+  // ENTREGUE só é destino válido vindo de FATURADO (o backend já rejeita
+  // qualquer outra origem com 4xx). Não oferecer aqui evita o usuário tentar
+  // pular o faturamento e esbarrar num erro confuso.
   const opcoes: OrdemServicoStatus[] =
-    statusAtual === 'AGUARDANDO_PECA' ? [...base, 'EM_ANDAMENTO', 'PAUSADA'] : [...base];
+    statusAtual === 'AGUARDANDO_PECA'
+      ? [...base, 'EM_ANDAMENTO', 'PAUSADA']
+      : statusAtual === 'FATURADO'
+        ? [...base, 'ENTREGUE']
+        : [...base];
   // Em Andamento/Pausada normalmente só aparecem como opção partindo de
   // Aguardando Peça — mas o <select> precisa ter o status atual na lista pra
   // exibi-lo corretamente, senão ele cai pro primeiro item por padrão mesmo
@@ -117,10 +135,13 @@ export function OrdemServicoFormPage() {
   const [tab, setTab] = useState('dados');
   const [pausaModalAberto, setPausaModalAberto] = useState(false);
   const [motivoPausa, setMotivoPausa] = useState('');
+  const [faturarModalAberto, setFaturarModalAberto] = useState(false);
+  const [formaPagamentoFaturar, setFormaPagamentoFaturar] = useState<FormaPagamento>('DINHEIRO');
 
   const { data: os, isLoading } = useOrdemServico(osId);
   const usuarioLogadoId = useAuthStore((s) => s.usuarioId);
   const perfil = useAuthStore((s) => s.perfil);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   // Atalho de UX, não trava de segurança (ver lib/perfil.ts): quem chega aqui
   // digitando a URL como Mecânico é redirecionado pra tela própria dele
   // (/minhas-os/:id, só leitura pros dados da OS) em vez de ver o formulário
@@ -137,6 +158,7 @@ export function OrdemServicoFormPage() {
   const timerStart = useTimerStartOS();
   const timerPause = useTimerPauseOS();
   const timerResume = useTimerResumeOS();
+  const faturarOS = useFaturarOrdemServico();
 
   const [buscaClienteInput, setBuscaClienteInput] = useState('');
   const [buscaVeiculo, setBuscaVeiculo] = useState('');
@@ -173,7 +195,9 @@ export function OrdemServicoFormPage() {
     formState: { errors },
   } = methods;
   const clienteId = watch('clienteId');
+  const veiculoIdSelecionado = watch('veiculoId');
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
+  const veiculoSelecionado = veiculos?.find((v) => v.id === veiculoIdSelecionado);
 
   const readOnly = isEditing && STATUS_BLOQUEIA_EDICAO.includes(os?.status as OrdemServicoStatus);
   // "Enviar" só funciona a partir de ABERTA (o backend rejeita com 422 fora
@@ -194,6 +218,13 @@ export function OrdemServicoFormPage() {
   const podePausar = isEditing && os?.status === 'EM_ANDAMENTO';
   const podeRetomar = isEditing && os?.status === 'PAUSADA';
   const podeCompartilhar = isEditing && !!os?.tokenAprovacao && os?.status !== 'ABERTA';
+  // Regra de negócio: o veículo só é liberado pro cliente depois de pago, então
+  // ENTREGUE só existe vindo de FATURADO (ver statusOptionsPara) — uma OS
+  // Entregue já é, por definição, sempre Faturada antes. Por isso Faturar só
+  // faz sentido a partir de CONCLUIDA; uma vez faturada, o status muda pra
+  // FATURADO e o botão some sozinho, sem depender só do backend rejeitar uma
+  // segunda tentativa.
+  const podeFaturar = isEditing && os?.status === 'CONCLUIDA' && hasPermission('CAIXA_OPERAR');
 
   useEffect(() => {
     if (os) {
@@ -289,17 +320,24 @@ export function OrdemServicoFormPage() {
     try {
       await enviarOS.mutateAsync(osId);
       toast.success('OS enviada — aguardando aprovação do cliente.');
-      if (os?.tokenAprovacao) compartilharWhatsApp();
+      if (os?.tokenAprovacao) await compartilharWhatsApp();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível enviar a OS.'));
     }
   }
 
-  function compartilharWhatsApp() {
+  async function compartilharWhatsApp() {
     if (!os?.tokenAprovacao) return;
+    // Abre a aba em branco já no clique (preserva a ativação do usuário) e só
+    // navega pra wa.me depois do await — do contrário o navegador bloqueia o
+    // popup, já que ele deixaria de contar como resposta direta ao clique.
+    const win = window.open('', '_blank');
+    const nomeFantasia = await resolverNomeFantasiaOficina();
     const link = `${window.location.origin}/ordens-servico/publico/${os.tokenAprovacao}`;
-    const texto = `Olá! Segue a Ordem de Serviço ${os.numero ?? `#${os.id}`}${os.clienteNome ? ` para ${os.clienteNome}` : ''}. Você pode conferir e aprovar por aqui: ${link}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+    const texto = `Olá! Aqui é da ${nomeFantasia}. Segue a Ordem de Serviço ${os.numero ?? `#${os.id}`}${os.clienteNome ? ` para ${os.clienteNome}` : ''}. Você pode conferir e aprovar por aqui: ${link}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    if (win) win.location.href = url;
+    else window.open(url, '_blank');
   }
 
   async function handleIniciar() {
@@ -312,13 +350,38 @@ export function OrdemServicoFormPage() {
     }
   }
 
+  function fecharPausaModal() {
+    setPausaModalAberto(false);
+    setMotivoPausa('');
+  }
+
+  function fecharFaturarModal() {
+    setFaturarModalAberto(false);
+    setFormaPagamentoFaturar('DINHEIRO');
+  }
+
+  async function handleConfirmarFaturamento() {
+    if (!osId) return;
+    try {
+      const resultado = await faturarOS.mutateAsync({
+        ordemServicoId: osId,
+        payload: { formaPagamento: formaPagamentoFaturar },
+      });
+      toast.success(
+        `OS faturada — ${formatCurrency(resultado.valor)} lançados no caixa ${resultado.caixaSessaoIdentificador ?? ''}.`,
+      );
+      fecharFaturarModal();
+    } catch (error) {
+      toast.error(extractErrorMessage(error, 'Não foi possível faturar a OS no caixa.'));
+    }
+  }
+
   async function handleConfirmarPausa() {
     if (!osId || !motivoPausa.trim()) return;
     try {
       await timerPause.mutateAsync({ id: osId, motivo: motivoPausa.trim() });
       toast.success('OS pausada.');
-      setPausaModalAberto(false);
-      setMotivoPausa('');
+      fecharPausaModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
     }
@@ -372,6 +435,11 @@ export function OrdemServicoFormPage() {
                       Atribuída a {os.usuarioResponsavelNome} — só ele pode iniciar
                     </span>
                   )}
+                {podeFaturar && (
+                  <Button variant="success" size="sm" onClick={() => setFaturarModalAberto(true)}>
+                    <DollarSign size={16} /> Faturar no Caixa
+                  </Button>
+                )}
                 {podeEnviar && (
                   <Button variant="secondary" size="sm" onClick={handleEnviar} loading={enviarOS.isPending}>
                     <Send size={16} /> Enviar para aprovação
@@ -518,6 +586,8 @@ export function OrdemServicoFormPage() {
                           onChange={(value) => {
                             field.onChange(value);
                             setValue('veiculoId', 0);
+                            // Os itens foram precificados pela categoria do veículo anterior.
+                            if (value !== field.value) setValue('itens', []);
                             setBuscaVeiculo('');
                           }}
                           options={clienteOptions}
@@ -547,6 +617,15 @@ export function OrdemServicoFormPage() {
                         />
                       )}
                     />
+                    {veiculoSelecionado && <ReadOnlyField label="Chassi" value={veiculoSelecionado.chassi || '—'} />}
+                    {veiculoSelecionado?.categoria && (
+                      <div>
+                        <p className="text-xs font-medium text-ink-muted">Categoria</p>
+                        <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[veiculoSelecionado.categoria]}>
+                          {veiculoSelecionado.categoria} · hora técnica deste veículo
+                        </Badge>
+                      </div>
+                    )}
                     <Controller
                       control={control}
                       name="usuarioResponsavelId"
@@ -579,6 +658,7 @@ export function OrdemServicoFormPage() {
                     <ItemsEditor
                       name="itens"
                       mostrarTempoVendido
+                      categoriaVeiculo={veiculoSelecionado?.categoria}
                       disabled={readOnly}
                       limitarQuantidadeAoEstoque
                       origem={osId ? { tipo: 'ORDEM_SERVICO', id: osId } : undefined}
@@ -625,11 +705,11 @@ export function OrdemServicoFormPage() {
 
       <Modal
         open={pausaModalAberto}
-        onClose={() => setPausaModalAberto(false)}
+        onClose={fecharPausaModal}
         title="Pausar Ordem de Serviço"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPausaModalAberto(false)}>
+            <Button variant="secondary" onClick={fecharPausaModal}>
               Cancelar
             </Button>
             <Button onClick={handleConfirmarPausa} loading={timerPause.isPending} disabled={!motivoPausa.trim()}>
@@ -645,6 +725,40 @@ export function OrdemServicoFormPage() {
           value={motivoPausa}
           onChange={(e) => setMotivoPausa(e.target.value)}
         />
+      </Modal>
+
+      <Modal
+        open={faturarModalAberto}
+        onClose={fecharFaturarModal}
+        title="Faturar no Caixa"
+        footer={
+          <>
+            <Button variant="secondary" onClick={fecharFaturarModal} disabled={faturarOS.isPending}>
+              Cancelar
+            </Button>
+            <Button variant="success" onClick={handleConfirmarFaturamento} loading={faturarOS.isPending}>
+              Confirmar faturamento
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink-muted">
+            Lança o valor total desta OS ({formatCurrency(os?.valorTotal)}) como entrada no turno de caixa aberto no
+            momento.
+          </p>
+          <Select
+            label="Forma de pagamento"
+            value={formaPagamentoFaturar}
+            onChange={(e) => setFormaPagamentoFaturar(e.target.value as FormaPagamento)}
+          >
+            {FORMAS_PAGAMENTO.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
       </Modal>
     </div>
   );

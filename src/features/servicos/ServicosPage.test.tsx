@@ -1,39 +1,56 @@
 import { render, screen, waitForElementToBeRemoved } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useServicos, useDeleteServico } from '@/hooks/useServicos';
+import { useTodosServicos, useDeleteServico } from '@/hooks/useServicos';
 import { toast } from '@/store/toastStore';
 import { ServicosPage } from './ServicosPage';
 
 vi.mock('@/hooks/useServicos', () => ({
-  useServicos: vi.fn(),
+  useTodosServicos: vi.fn(),
   useDeleteServico: vi.fn(),
   useCreateServico: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateServico: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
-const servicos = {
-  content: [{ id: 1, nome: 'Troca de Óleo', preco: 120, duracaoMinutos: 30, ativo: true }],
-  pageNumber: 0,
-  totalPages: 1,
-  totalElements: 1,
-};
+const servicos = [
+  {
+    id: 1,
+    nome: 'Troca de Óleo',
+    categoria: 'A' as const,
+    tempoMinHoras: 0.5,
+    tempoMaxHoras: 1,
+    precoMinSugerido: 100,
+    precoMaxSugerido: 150,
+    ativo: true,
+  },
+];
 
 describe('ServicosPage', () => {
   let deleteMutateAsync: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    vi.mocked(useServicos).mockReturnValue({ data: servicos, isLoading: false } as never);
+    vi.mocked(useTodosServicos).mockReturnValue({ data: servicos, isLoading: false } as never);
     deleteMutateAsync = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useDeleteServico).mockReturnValue({ mutateAsync: deleteMutateAsync, isPending: false } as never);
   });
 
-  it('lists servicos with their formatted price and status', () => {
+  it('lists servicos with their categoria, tempo, suggested price range and status', () => {
     render(<ServicosPage />);
     expect(screen.getByText('Troca de Óleo')).toBeInTheDocument();
-    expect(screen.getByText('R$ 120,00')).toBeInTheDocument();
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('0,5–1 h')).toBeInTheDocument();
+    expect(screen.getByText('R$ 100,00 – R$ 150,00')).toBeInTheDocument();
     expect(screen.getByText('Ativo')).toBeInTheDocument();
+  });
+
+  it('shows an explanatory placeholder when the categoria has no suggested price range yet', () => {
+    vi.mocked(useTodosServicos).mockReturnValue({
+      data: [{ id: 2, nome: 'Serviço Novo', categoria: 'B' as const, tempoMinHoras: 1, tempoMaxHoras: 1, ativo: true }],
+      isLoading: false,
+    } as never);
+    render(<ServicosPage />);
+    expect(screen.getByText('Sem sugestão (categoria sem hora técnica configurada)')).toBeInTheDocument();
   });
 
   it('opens the create modal from "Novo serviço"', async () => {
@@ -55,14 +72,18 @@ describe('ServicosPage', () => {
     await userEvent.click(trashButton);
 
     expect(screen.getByText('Remover serviço')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    // "Remover" agora também é o nome acessível do ícone de ação da linha
+    // (IconActionButton) — o botão de confirmação do diálogo é o último a
+    // aparecer no DOM.
+    const confirmButtons = screen.getAllByRole('button', { name: 'Remover' });
+    await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(deleteMutateAsync).toHaveBeenCalledWith(1);
     expect(toast.success).toHaveBeenCalledWith('Serviço removido.');
   });
 
   it('shows the empty state when there are no servicos', () => {
-    vi.mocked(useServicos).mockReturnValue({ data: { content: [] }, isLoading: false } as never);
+    vi.mocked(useTodosServicos).mockReturnValue({ data: [], isLoading: false } as never);
     render(<ServicosPage />);
     expect(screen.getByText('Nenhum serviço cadastrado')).toBeInTheDocument();
   });
@@ -82,7 +103,8 @@ describe('ServicosPage', () => {
     render(<ServicosPage />);
     const row = screen.getByText('Troca de Óleo').closest('tr')!;
     await userEvent.click(row.querySelectorAll('button')[1]);
-    await userEvent.click(screen.getByRole('button', { name: 'Remover' }));
+    const confirmButtons = screen.getAllByRole('button', { name: 'Remover' });
+    await userEvent.click(confirmButtons[confirmButtons.length - 1]);
 
     expect(toast.error).toHaveBeenCalledWith('em uso por uma OS');
     expect(screen.getByText('Remover serviço')).toBeInTheDocument();
@@ -107,15 +129,40 @@ describe('ServicosPage', () => {
     await waitForElementToBeRemoved(() => screen.queryByText('Remover serviço'));
   });
 
-  it('paginates when there is more than one page of servicos', async () => {
-    vi.mocked(useServicos).mockReturnValue({
-      data: { ...servicos, totalPages: 2, totalElements: 21 },
-      isLoading: false,
-    } as never);
+  // GET /servicos não tem filtro de busca no backend (só pageable) — a busca
+  // e a paginação abaixo são inteiramente locais, sobre o catálogo inteiro já
+  // carregado por useTodosServicos (ver comentário na própria página).
+  it('paginates a full 21-item catalog fetched all at once', async () => {
+    const muitos = Array.from({ length: 21 }, (_, i) => ({
+      id: i + 1,
+      nome: `Serviço ${i + 1}`,
+      categoria: 'A' as const,
+      tempoMinHoras: 1,
+      tempoMaxHoras: 1,
+      precoMinSugerido: 100,
+      precoMaxSugerido: 100,
+      ativo: true,
+    }));
+    vi.mocked(useTodosServicos).mockReturnValue({ data: muitos, isLoading: false } as never);
     render(<ServicosPage />);
 
     expect(screen.getByText('21 registros')).toBeInTheDocument();
+    expect(screen.getAllByText(/^Serviço \d+$/)).toHaveLength(20);
     await userEvent.click(screen.getByRole('button', { name: 'Próxima página' }));
-    expect(useServicos).toHaveBeenLastCalledWith({ page: 1, size: 20 });
+    expect(screen.getByText('Serviço 21')).toBeInTheDocument();
+  });
+
+  it('filters by nome and resets to the first page', async () => {
+    const varios = [
+      { id: 1, nome: 'Troca de Óleo', categoria: 'A' as const, tempoMinHoras: 0.5, tempoMaxHoras: 1, ativo: true },
+      { id: 2, nome: 'Alinhamento', categoria: 'B' as const, tempoMinHoras: 0.5, tempoMaxHoras: 1, ativo: true },
+    ];
+    vi.mocked(useTodosServicos).mockReturnValue({ data: varios, isLoading: false } as never);
+    render(<ServicosPage />);
+
+    await userEvent.type(screen.getByPlaceholderText('Buscar serviço por nome...'), 'óleo');
+
+    expect(screen.getByText('Troca de Óleo')).toBeInTheDocument();
+    expect(screen.queryByText('Alinhamento')).not.toBeInTheDocument();
   });
 });

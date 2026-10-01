@@ -104,13 +104,17 @@ export function MinhaOrdemServicoDetalhePage() {
     }
   }
 
+  function fecharPausaModal() {
+    setPausando(false);
+    setMotivoPausa('');
+  }
+
   async function handleConfirmarPausa() {
     if (!osId || !motivoPausa.trim()) return;
     try {
       await timerPause.mutateAsync({ id: osId, motivo: motivoPausa.trim() });
       toast.success('OS pausada.');
-      setPausando(false);
-      setMotivoPausa('');
+      fecharPausaModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
     }
@@ -273,6 +277,10 @@ export function MinhaOrdemServicoDetalhePage() {
                 </div>
               </div>
               <div>
+                <p className="text-xs text-ink-muted">Chassi</p>
+                <p className="font-medium text-ink">{veiculo?.chassi || '—'}</p>
+              </div>
+              <div>
                 <p className="text-xs text-ink-muted">Técnico resp.</p>
                 <p className="font-medium text-ink">{os.usuarioResponsavelNome ?? 'Não definido'}</p>
               </div>
@@ -315,7 +323,7 @@ export function MinhaOrdemServicoDetalhePage() {
         numero={os.numero}
         motivo={motivoPausa}
         onMotivoChange={setMotivoPausa}
-        onClose={() => setPausando(false)}
+        onClose={fecharPausaModal}
         onConfirm={handleConfirmarPausa}
         loading={timerPause.isPending}
       />

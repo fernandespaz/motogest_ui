@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, UserPlus, Car, SearchX } from 'lucide-react';
+import { Plus, UserPlus, Car, SearchX } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { useVeiculos, useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useBuscaVeiculosPorPlaca, useClientes } from '@/hooks/useClientes';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
@@ -14,6 +17,7 @@ import { useAuthStore } from '@/store/authStore';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import type { VeiculoResponse } from '@/api/types';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { VeiculoFormModal } from './VeiculoFormModal';
 import { ModeloVeiculoThumb } from '@/features/shared/ModeloVeiculoField';
 import { toast } from '@/store/toastStore';
@@ -148,31 +152,35 @@ export function VeiculosPage() {
               ),
             },
             { header: 'Cliente', render: (row) => row.clienteNome ?? '—', hideBelow: 'sm' },
+            {
+              header: 'Categoria',
+              render: (row) =>
+                row.categoria ? <Badge tone={TOM_CATEGORIA_COMPLEXIDADE[row.categoria]}>{row.categoria}</Badge> : '—',
+              hideBelow: 'sm',
+            },
             { header: 'KM atual', render: (row) => (row.kmAtual != null ? row.kmAtual.toLocaleString('pt-BR') : '—'), hideBelow: 'md' },
             {
               header: '',
               render: (row) => (
                 <div className="flex justify-end gap-1">
-                  <button
+                  <IconActionButton
+                    icon={PencilSimple}
+                    label="Editar"
+                    tone="brand"
                     onClick={(e) => {
                       e.stopPropagation();
                       setModalVeiculo(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                    aria-label="Editar"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
+                  />
+                  <IconActionButton
+                    icon={Trash}
+                    label="Remover"
+                    tone="danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleting(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                    aria-label="Remover"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               ),
             },

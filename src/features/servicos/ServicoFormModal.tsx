@@ -4,21 +4,34 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input, Textarea, Checkbox } from '@/components/ui/Field';
+import { Input, Textarea, Select, Checkbox } from '@/components/ui/Field';
 import { useCreateServico, useUpdateServico } from '@/hooks/useServicos';
 import type { ServicoResponse } from '@/api/types';
+import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
 const FORM_ID = 'servico-form';
 
-const schema = z.object({
-  nome: z.string().min(1, 'Informe o nome'),
-  descricao: z.string().optional(),
-  preco: z.coerce.number({ invalid_type_error: 'Informe o preço' }).min(0, 'Preço inválido'),
-  duracaoMinutos: z.coerce.number().optional(),
-  ativo: z.boolean().optional(),
-});
+const schema = z
+  .object({
+    nome: z.string().min(1, 'Informe o nome'),
+    descricao: z.string().optional(),
+    categoria: z.enum(['A', 'B', 'C'], { errorMap: () => ({ message: 'Selecione a categoria' }) }),
+    tempoMinHoras: z.coerce.number({ invalid_type_error: 'Informe o tempo mínimo' }).gt(0, 'Deve ser maior que zero'),
+    tempoMaxHoras: z.coerce.number({ invalid_type_error: 'Informe o tempo máximo' }).gt(0, 'Deve ser maior que zero'),
+    // Opcional: hora técnica própria do serviço, fallback quando a categoria
+    // do veículo está zerada ("não uso essa categoria"). Vazio = não informado.
+    valorHoraPadrao: z.preprocess(
+      (v) => (v === '' || v == null || (typeof v === 'number' && Number.isNaN(v)) ? undefined : v),
+      z.coerce.number({ invalid_type_error: 'Informe um valor válido' }).min(0, 'Mínimo 0').optional(),
+    ),
+    ativo: z.boolean().optional(),
+  })
+  .refine((v) => v.tempoMaxHoras >= v.tempoMinHoras, {
+    message: 'O tempo máximo precisa ser maior ou igual ao mínimo',
+    path: ['tempoMaxHoras'],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -49,8 +62,10 @@ export function ServicoFormModal({
           ? {
               nome: servico.nome ?? '',
               descricao: servico.descricao ?? '',
-              preco: servico.preco ?? 0,
-              duracaoMinutos: servico.duracaoMinutos ?? undefined,
+              categoria: servico.categoria ?? 'A',
+              tempoMinHoras: servico.tempoMinHoras ?? undefined,
+              tempoMaxHoras: servico.tempoMaxHoras ?? undefined,
+              valorHoraPadrao: servico.valorHoraPadrao ?? undefined,
               ativo: servico.ativo ?? true,
             }
           : { ativo: true },
@@ -94,10 +109,39 @@ export function ServicoFormModal({
       <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
         <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
         <Textarea label="Descrição" {...register('descricao')} />
-        <div className="grid grid-cols-2 gap-4">
-          <Input label="Preço (R$)" type="number" step="0.01" required error={errors.preco?.message} {...register('preco')} />
-          <Input label="Duração (min)" type="number" {...register('duracaoMinutos')} />
+        <div className="grid grid-cols-3 gap-4">
+          <Select label="Categoria" required error={errors.categoria?.message} {...register('categoria')}>
+            {CATEGORIAS_COMPLEXIDADE.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+          <Input
+            label="Tempo mín. (h)"
+            type="number"
+            step="0.1"
+            required
+            error={errors.tempoMinHoras?.message}
+            {...register('tempoMinHoras')}
+          />
+          <Input
+            label="Tempo máx. (h)"
+            type="number"
+            step="0.1"
+            required
+            error={errors.tempoMaxHoras?.message}
+            {...register('tempoMaxHoras')}
+          />
         </div>
+        <Input
+          label="Hora técnica própria (R$/h)"
+          type="number"
+          step="0.01"
+          hint="Opcional. Usada quando a categoria do veículo está marcada como não utilizada"
+          error={errors.valorHoraPadrao?.message}
+          {...register('valorHoraPadrao')}
+        />
         {isEditing && <Checkbox label="Serviço ativo" {...register('ativo')} />}
       </form>
     </Modal>

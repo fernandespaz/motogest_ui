@@ -1,8 +1,12 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Field';
+import { IconActionButton } from '@/components/ui/IconActionButton';
+import { Input, Select } from '@/components/ui/Field';
 import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
+import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
+import type { CategoriaComplexidade } from '@/api/types';
 
 /** New vehicles to create alongside the client — matches VeiculoDoClienteRequest (no id: these are always creations, never edits of an existing vehicle). */
 export interface VeiculoNovoFormValue {
@@ -15,6 +19,7 @@ export interface VeiculoNovoFormValue {
   kmAtual?: number;
   chassi?: string;
   observacoes?: string;
+  categoria: CategoriaComplexidade;
 }
 
 export function VeiculosEditor({ name }: { name: string }) {
@@ -41,14 +46,7 @@ export function VeiculosEditor({ name }: { name: string }) {
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Veículo {index + 1}
               </span>
-              <button
-                type="button"
-                onClick={() => remove(index)}
-                className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                aria-label="Remover veículo"
-              >
-                <Trash2 size={16} />
-              </button>
+              <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="col-span-2 sm:col-span-1">
@@ -69,6 +67,13 @@ export function VeiculosEditor({ name }: { name: string }) {
               <Input label="Ano modelo" type="number" {...register(`${name}.${index}.anoModelo`)} />
               <Input label="KM atual" type="number" {...register(`${name}.${index}.kmAtual`)} />
               <Input label="Chassi" {...register(`${name}.${index}.chassi`)} />
+              <Select label="Categoria" required {...register(`${name}.${index}.categoria`)}>
+                {CATEGORIAS_COMPLEXIDADE.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
             </div>
           </div>
         ))}

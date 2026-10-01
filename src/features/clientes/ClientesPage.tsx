@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Car } from 'lucide-react';
+import { Plus, Car } from 'lucide-react';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,10 +9,12 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
 import { formatDocumento, formatPhone, getInitials } from '@/lib/formatters';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { ClienteFormModal } from './ClienteFormModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -108,8 +111,9 @@ export function ClientesPage() {
                 row.veiculos && row.veiculos.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {row.veiculos.map((v) => (
-                      <Badge key={v.id}>
+                      <Badge key={v.id} tone={v.categoria ? TOM_CATEGORIA_COMPLEXIDADE[v.categoria] : 'neutral'}>
                         <span className="font-mono">{v.placa}</span>
+                        {v.categoria && <span className="font-semibold">· {v.categoria}</span>}
                       </Badge>
                     ))}
                   </div>
@@ -129,26 +133,24 @@ export function ClientesPage() {
               header: '',
               render: (row) => (
                 <div className="flex justify-end gap-1">
-                  <button
+                  <IconActionButton
+                    icon={PencilSimple}
+                    label="Editar"
+                    tone="brand"
                     onClick={(e) => {
                       e.stopPropagation();
                       setModalCliente(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                    aria-label="Editar"
-                  >
-                    <Pencil size={16} />
-                  </button>
-                  <button
+                  />
+                  <IconActionButton
+                    icon={Trash}
+                    label="Remover"
+                    tone="danger"
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleting(row);
                     }}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                    aria-label="Remover"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  />
                 </div>
               ),
             },

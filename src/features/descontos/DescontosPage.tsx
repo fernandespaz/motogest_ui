@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Percent } from 'lucide-react';
+import { Percent } from 'lucide-react';
+import { CheckCircle, XCircle } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Textarea } from '@/components/ui/Field';
 import { useSolicitacoesDescontoPendentes, useAprovarDesconto, useRejeitarDesconto } from '@/hooks/useDescontos';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
@@ -31,13 +33,17 @@ export function DescontosPage() {
     }
   }
 
+  function fecharRejeicao() {
+    setRejeitando(null);
+    setMotivo('');
+  }
+
   async function confirmarRejeicao() {
     if (!rejeitando?.id || !motivo.trim()) return;
     try {
       await rejeitar.mutateAsync({ id: rejeitando.id, payload: { motivo: motivo.trim() } });
       toast.success('Desconto rejeitado.');
-      setRejeitando(null);
-      setMotivo('');
+      fecharRejeicao();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível rejeitar o desconto.'));
     }
@@ -102,24 +108,15 @@ export function DescontosPage() {
             {
               header: '',
               render: (row) => (
-                <div className="flex justify-end gap-1">
-                  <button
+                <div className="flex items-center justify-end gap-1.5">
+                  <IconActionButton
+                    icon={CheckCircle}
+                    label="Aprovar"
+                    tone="success"
                     onClick={() => handleAprovar(row.id!)}
                     disabled={aprovar.isPending}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success disabled:pointer-events-none disabled:opacity-40"
-                    aria-label="Aprovar"
-                    title="Aprovar"
-                  >
-                    <Check size={16} />
-                  </button>
-                  <button
-                    onClick={() => setRejeitando(row)}
-                    className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                    aria-label="Rejeitar"
-                    title="Rejeitar"
-                  >
-                    <X size={16} />
-                  </button>
+                  />
+                  <IconActionButton icon={XCircle} label="Rejeitar" tone="danger" onClick={() => setRejeitando(row)} />
                 </div>
               ),
             },
@@ -129,12 +126,12 @@ export function DescontosPage() {
 
       <Modal
         open={!!rejeitando}
-        onClose={() => setRejeitando(null)}
+        onClose={fecharRejeicao}
         title="Rejeitar solicitação de desconto"
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setRejeitando(null)} disabled={rejeitar.isPending}>
+            <Button variant="secondary" onClick={fecharRejeicao} disabled={rejeitar.isPending}>
               Cancelar
             </Button>
             <Button variant="danger" onClick={confirmarRejeicao} loading={rejeitar.isPending} disabled={!motivo.trim()}>

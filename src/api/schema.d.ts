@@ -182,16 +182,17 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/parametros": {
+    "/api/v1/financeiro/hora-tecnica": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Define numero de mecanicos, horas/dia, dias uteis, eficiencia, impostos e margem (auditado) */
-        put: operations["atualizarParametros"];
+        /** Lista a hora tecnica configurada para cada categoria (A/B/C) */
+        get: operations["consultar"];
+        /** Define o valor da hora tecnica das 3 categorias (A/B/C) e o arredondamento comercial (auditado) */
+        put: operations["atualizar_8"];
         post?: never;
         delete?: never;
         options?: never;
@@ -199,19 +200,19 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/custos-fixos/{id}": {
+    "/api/v1/financeiro/capacidade-produtiva": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Atualiza um custo fixo mensal (auditado) */
-        put: operations["atualizarCustoFixo"];
+        /** Capacidade produtiva atual da oficina e HP calculado */
+        get: operations["consultar_1"];
+        /** Define numero de mecanicos, horas/dia, dias uteis e eficiencia (auditado) */
+        put: operations["atualizar_9"];
         post?: never;
-        /** Remove um custo fixo mensal (auditado) */
-        delete: operations["excluirCustoFixo"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -227,7 +228,7 @@ export interface paths {
         /** Busca uma conta a receber pelo id */
         get: operations["buscarPorId_9"];
         /** Atualiza uma conta a receber pendente */
-        put: operations["atualizar_8"];
+        put: operations["atualizar_10"];
         post?: never;
         delete?: never;
         options?: never;
@@ -245,7 +246,7 @@ export interface paths {
         /** Busca uma conta a pagar pelo id */
         get: operations["buscarPorId_10"];
         /** Atualiza uma conta a pagar pendente */
-        put: operations["atualizar_9"];
+        put: operations["atualizar_11"];
         post?: never;
         delete?: never;
         options?: never;
@@ -263,7 +264,7 @@ export interface paths {
         /** Busca um cliente pelo id */
         get: operations["buscarPorId_11"];
         /** Atualiza um cliente existente */
-        put: operations["atualizar_10"];
+        put: operations["atualizar_12"];
         post?: never;
         /** Remove um cliente */
         delete: operations["excluir_8"];
@@ -280,9 +281,9 @@ export interface paths {
             cookie?: never;
         };
         /** Busca um agendamento pelo id */
-        get: operations["buscarPorId_12"];
+        get: operations["buscarPorId_13"];
         /** Atualiza um agendamento existente */
-        put: operations["atualizar_11"];
+        put: operations["atualizar_13"];
         post?: never;
         /** Remove um agendamento */
         delete: operations["excluir_9"];
@@ -342,6 +343,23 @@ export interface paths {
         put?: never;
         /** Cadastra um novo servico no catalogo */
         post: operations["criar_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/servicos/importar-catalogo-padrao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cadastra o catalogo padrao de mao de obra na oficina (idempotente por nome) */
+        post: operations["importarCatalogoPadrao"];
         delete?: never;
         options?: never;
         head?: never;
@@ -607,7 +625,7 @@ export interface paths {
         };
         /**
          * Lista as Ordens de Servico da oficina corrente
-         * @description Filtros opcionais combinaveis: status, numero (contains) e tecnico responsavel (usuarioResponsavelId)
+         * @description Filtros opcionais combinaveis: status, numero (contains), tecnico responsavel (usuarioResponsavelId) e cliente pelo CPF/CNPJ exato (clienteDocumento) — usado pela tela de caixa para localizar as OS de um cliente antes de faturar
          */
         get: operations["listar_6"];
         put?: never;
@@ -858,24 +876,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/custos-fixos": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Lista os custos fixos mensais da oficina */
-        get: operations["listarCustosFixos"];
-        put?: never;
-        /** Cadastra um custo fixo mensal (auditado) */
-        post: operations["criarCustoFixo"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -1062,6 +1062,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caixa/sessoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista sessoes de caixa
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR ve apenas as proprias sessoes; CAIXA_GERENCIAR ve todas as sessoes da oficina
+         */
+        get: operations["listar_16"];
+        put?: never;
+        /**
+         * Abre uma nova sessao de caixa (turno)
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
+         */
+        post: operations["abrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/sessoes/{id}/reabrir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reabre uma sessao de caixa ja fechada (correcao de erro, fica registrado no historico)
+         * @description Requer CAIXA_GERENCIAR
+         */
+        post: operations["reabrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/sessoes/{id}/fechar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fecha uma sessao de caixa com conferencia de valores
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
+         */
+        post: operations["fechar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caixa/movimentos": {
         parameters: {
             query?: never;
@@ -1069,11 +1133,54 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os lancamentos de caixa da oficina corrente */
-        get: operations["listar_16"];
+        /**
+         * Lista os lancamentos de caixa da oficina corrente
+         * @description Requer FINANCEIRO_READ
+         */
+        get: operations["listar_17"];
         put?: never;
-        /** Registra um lancamento manual de caixa */
+        /**
+         * Registra um lancamento manual de caixa (exige caixa aberto)
+         * @description Requer FINANCEIRO_WRITE, CAIXA_OPERAR ou CAIXA_GERENCIAR — CAIXA_OPERAR/CAIXA_GERENCIAR existem para um perfil de operador de caixa lancar sem precisar de acesso amplo ao financeiro (criar/editar Contas a Pagar/Receber), mesmo padrao de ESTOQUE_RESERVAR/ESTOQUE_WRITE
+         */
         post: operations["registrar_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/faturamento/{ordemServicoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fatura uma Ordem de Servico no caixa (cria/liquida a Conta a Receber e alimenta a sessao aberta)
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR, e um caixa aberto
+         */
+        post: operations["faturar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Encerra a sessao ativa do usuario autenticado, liberando a vaga do plano imediatamente */
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1105,7 +1212,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_17"];
+        get: operations["listar_18"];
         put?: never;
         /** Cria um novo agendamento */
         post: operations["criar_13"];
@@ -1126,7 +1233,7 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_18"];
+        get: operations["listar_19"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
@@ -1188,6 +1295,23 @@ export interface paths {
          * @description Payload minimo (id, nome, perfilNome), sem e-mail. Nao exige USUARIO_READ.
          */
         get: operations["listarTecnicos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usuarios/sessoes-ativas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista os usuarios da oficina corrente com sessao ativa (logados agora) */
+        get: operations["listarSessoesAtivas"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1412,6 +1536,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ordens-servico/disponiveis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista as Ordens de Servico Aprovadas ainda sem tecnico responsavel
+         * @description A fila que qualquer mecanico pode assumir — iniciar o cronometro (/timer/start) numa dessas atribui automaticamente quem iniciou.
+         */
+        get: operations["listarDisponiveis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/movimentacoes-estoque": {
         parameters: {
             query?: never;
@@ -1446,15 +1590,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica": {
+    "/api/v1/financeiro/hora-tecnica/auditoria": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Preco da hora tecnica (PHT); a composicao (CF, HP, CH, impostos, margem) so' para quem gerencia */
-        get: operations["consultar"];
+        /** Historico de alteracoes da hora tecnica por categoria (mais recentes primeiro) */
+        get: operations["auditoria"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1463,7 +1607,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/financeiro/hora-tecnica/auditoria": {
+    "/api/v1/financeiro/capacidade-produtiva/auditoria": {
         parameters: {
             query?: never;
             header?: never;
@@ -1471,7 +1615,7 @@ export interface paths {
             cookie?: never;
         };
         /** Historico de alteracoes dos parametros financeiros (mais recentes primeiro) */
-        get: operations["auditoria"];
+        get: operations["auditoria_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1548,6 +1692,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caixa/sessoes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalha uma sessao de caixa
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR so' consegue ver a propria sessao (403 para a de outro usuario da mesma oficina)
+         */
+        get: operations["buscarPorId_12"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/sessoes/{id}/exportar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporta o comprovante de fechamento da sessao em PDF ou Excel
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
+         */
+        get: operations["exportar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/sessoes/{id}/eventos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historico de auditoria (abertura/fechamento/reabertura) da sessao
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
+         */
+        get: operations["listarEventos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/sessoes/aberta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retorna a sessao de caixa aberta no momento (404 se nenhuma)
+         * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
+         */
+        get: operations["buscarAberta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caixa/saldo": {
         parameters: {
             query?: never;
@@ -1555,8 +1779,91 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Calcula o saldo de caixa (entradas - saidas) em um periodo */
+        /**
+         * Calcula o saldo de caixa (entradas - saidas) em um periodo
+         * @description Requer FINANCEIRO_READ
+         */
         get: operations["calcularSaldo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/relatorios/periodo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Evolucao do caixa num periodo, com os dias de pico de entrada e de saida
+         * @description Requer FINANCEIRO_READ ou CAIXA_GERENCIAR
+         */
+        get: operations["periodo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/relatorios/periodo/exportar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporta o relatorio de periodo em PDF ou Excel
+         * @description Requer CAIXA_GERENCIAR
+         */
+        get: operations["exportarPeriodo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/relatorios/diario": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumo de movimentacoes e saldo final de um dia
+         * @description Requer FINANCEIRO_READ ou CAIXA_GERENCIAR
+         */
+        get: operations["diario"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caixa/relatorios/diario/exportar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exporta o relatorio diario em PDF ou Excel
+         * @description Requer CAIXA_GERENCIAR
+         */
+        get: operations["exportarDiario"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1572,7 +1879,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os lancamentos de caixa dentro de um periodo */
+        /**
+         * Lista os lancamentos de caixa dentro de um periodo
+         * @description Requer FINANCEIRO_READ
+         */
         get: operations["listarPorPeriodo"];
         put?: never;
         post?: never;
@@ -1594,6 +1904,23 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/usuarios/{id}/sessao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Encerra manualmente a sessao ativa de um usuario, liberando a vaga do plano */
+        delete: operations["encerrarSessao"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1635,6 +1962,8 @@ export interface components {
             kmAtual?: number;
             chassi?: string;
             observacoes?: string;
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
         };
         VeiculoResponse: {
             /** Format: int64 */
@@ -1654,6 +1983,8 @@ export interface components {
             kmAtual?: number;
             chassi?: string;
             observacoes?: string;
+            /** @enum {string} */
+            categoria?: "A" | "B" | "C";
         };
         UsuarioRequest: {
             nome: string;
@@ -1676,9 +2007,11 @@ export interface components {
         ServicoRequest: {
             nome: string;
             descricao?: string;
-            preco: number;
-            /** Format: int32 */
-            duracaoMinutos?: number;
+            sistema?: string;
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
+            tempoMinHoras: number;
+            tempoMaxHoras: number;
             ativo?: boolean;
         };
         ServicoResponse: {
@@ -1686,9 +2019,13 @@ export interface components {
             id?: number;
             nome?: string;
             descricao?: string;
-            preco?: number;
-            /** Format: int32 */
-            duracaoMinutos?: number;
+            sistema?: string;
+            /** @enum {string} */
+            categoria?: "A" | "B" | "C";
+            tempoMinHoras?: number;
+            tempoMaxHoras?: number;
+            precoMinSugerido?: number;
+            precoMaxSugerido?: number;
             ativo?: boolean;
         };
         ProdutoRequest: {
@@ -1823,6 +2160,7 @@ export interface components {
             /** Format: int64 */
             clienteId?: number;
             clienteNome?: string;
+            clienteDocumento?: string;
             /** Format: int64 */
             veiculoId?: number;
             veiculoPlaca?: string;
@@ -1832,13 +2170,15 @@ export interface components {
             usuarioResponsavelId?: number;
             usuarioResponsavelNome?: string;
             /** @enum {string} */
-            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "FATURADO" | "CANCELADA" | "ENTREGUE";
             /** Format: date-time */
             dataAbertura?: string;
             /** Format: date-time */
             dataPrevisao?: string;
             /** Format: date-time */
             dataConclusao?: string;
+            /** Format: date-time */
+            dataFaturamento?: string;
             /** Format: int32 */
             kmEntrada?: number;
             valorTotal?: number;
@@ -1913,7 +2253,6 @@ export interface components {
             cidade?: string;
             uf?: string;
             cep?: string;
-            logoUrl?: string;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
             /** Format: int32 */
@@ -1936,7 +2275,6 @@ export interface components {
             uf?: string;
             cep?: string;
             ativo?: boolean;
-            logoUrl?: string;
             logoImagemDisponivel?: boolean;
             /** Format: int32 */
             prazoExpiracaoReservaDias?: number;
@@ -1952,19 +2290,33 @@ export interface components {
             modelo?: string;
             imagemBase64?: string;
         };
-        ParametrosHoraTecnicaRequest: {
+        CategoriaHoraTecnicaItemRequest: {
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
+            valorHora: number;
+        };
+        CategoriaHoraTecnicaRequest: {
+            categorias: components["schemas"]["CategoriaHoraTecnicaItemRequest"][];
+            /** Format: int32 */
+            arredondamentoComercial: number;
+        };
+        CategoriaHoraTecnicaResponse: {
+            /** @enum {string} */
+            categoria?: "A" | "B" | "C";
+            valorHora?: number;
+            /** Format: int32 */
+            arredondamentoComercial?: number;
+        };
+        CapacidadeProdutivaRequest: {
             /** Format: int32 */
             numeroMecanicos: number;
             horasPorDia: number;
             /** Format: int32 */
             diasUteisMes: number;
             eficienciaPercentual: number;
-            impostosPercentual: number;
-            margemLucroPercentual: number;
         };
-        ComposicaoHoraTecnicaResponse: {
-            custosFixos?: number;
-            itensCustoFixo?: components["schemas"]["CustoFixoResponse"][];
+        CapacidadeProdutivaResponse: {
+            configurado?: boolean;
             /** Format: int32 */
             numeroMecanicos?: number;
             horasPorDia?: number;
@@ -1972,28 +2324,6 @@ export interface components {
             diasUteisMes?: number;
             eficienciaPercentual?: number;
             horasProdutivas?: number;
-            custoPorHora?: number;
-            impostosPercentual?: number;
-            margemLucroPercentual?: number;
-        };
-        CustoFixoResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** @enum {string} */
-            categoria?: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
-            descricao?: string;
-            valorMensal?: number;
-        };
-        HoraTecnicaResponse: {
-            configurado?: boolean;
-            precoHoraTecnica?: number;
-            composicao?: components["schemas"]["ComposicaoHoraTecnicaResponse"];
-        };
-        CustoFixoRequest: {
-            /** @enum {string} */
-            categoria: "ALUGUEL" | "ENERGIA" | "AGUA" | "SALARIOS" | "ENCARGOS" | "PRO_LABORE" | "CONTADOR" | "SEGUROS" | "SISTEMAS" | "OUTROS";
-            descricao: string;
-            valorMensal: number;
         };
         ContaReceberRequest: {
             descricao: string;
@@ -2072,6 +2402,8 @@ export interface components {
             kmAtual?: number;
             chassi?: string;
             observacoes?: string;
+            /** @enum {string} */
+            categoria: "A" | "B" | "C";
         };
         ClienteResponse: {
             /** Format: int64 */
@@ -2125,6 +2457,12 @@ export interface components {
             id?: number;
             nome?: string;
         };
+        ImportacaoCatalogoResponse: {
+            /** Format: int32 */
+            servicosCriados?: number;
+            /** Format: int32 */
+            servicosIgnorados?: number;
+        };
         OrdemServicoPublicoResponse: {
             /** Format: int64 */
             id?: number;
@@ -2133,7 +2471,7 @@ export interface components {
             clienteNome?: string;
             veiculoPlaca?: string;
             /** @enum {string} */
-            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+            status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "FATURADO" | "CANCELADA" | "ENTREGUE";
             valorTotal?: number;
             observacoes?: string;
             itens?: components["schemas"]["ItemResponse"][];
@@ -2314,6 +2652,58 @@ export interface components {
         RejeitarSolicitacaoDescontoRequest: {
             motivo?: string;
         };
+        CaixaSessaoAberturaRequest: {
+            turno?: string;
+            saldoInicialDinheiro?: number;
+            saldoInicialCartao?: number;
+            saldoInicialPix?: number;
+            saldoInicialTransferencia?: number;
+        };
+        CaixaSessaoResponse: {
+            /** Format: int64 */
+            id?: number;
+            identificador?: string;
+            turno?: string;
+            /** @enum {string} */
+            status?: "ABERTO" | "FECHADO";
+            /** Format: int64 */
+            abertoPorUsuarioId?: number;
+            abertoPorUsuarioNome?: string;
+            /** Format: date-time */
+            abertoEm?: string;
+            saldoInicial?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            totalEntradas?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            totalSaidas?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            saldoAtual?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            /** Format: int64 */
+            fechadoPorUsuarioId?: number;
+            fechadoPorUsuarioNome?: string;
+            /** Format: date-time */
+            fechadoEm?: string;
+            saldoFinalInformado?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            saldoFinalCalculado?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            divergencia?: components["schemas"]["SaldoPorFormaPagamentoResponse"];
+            observacaoFechamento?: string;
+            justificativaDivergencia?: string;
+        };
+        SaldoPorFormaPagamentoResponse: {
+            dinheiro?: number;
+            cartao?: number;
+            pix?: number;
+            transferencia?: number;
+            total?: number;
+        };
+        CaixaSessaoReaberturaRequest: {
+            motivo: string;
+        };
+        CaixaSessaoFechamentoRequest: {
+            saldoFinalInformadoDinheiro: number;
+            saldoFinalInformadoCartao: number;
+            saldoFinalInformadoPix: number;
+            saldoFinalInformadoTransferencia: number;
+            observacao?: string;
+            justificativaDivergencia?: string;
+        };
         CaixaMovimentoRequest: {
             /** @enum {string} */
             tipo: "ENTRADA" | "SAIDA";
@@ -2324,6 +2714,8 @@ export interface components {
             referenciaTipo?: string;
             /** Format: int64 */
             referenciaId?: number;
+            /** @enum {string} */
+            formaPagamento: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
         };
         CaixaMovimentoResponse: {
             /** Format: int64 */
@@ -2342,10 +2734,56 @@ export interface components {
             /** Format: int64 */
             usuarioId?: number;
             usuarioNome?: string;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+            /** Format: int64 */
+            caixaSessaoId?: number;
+            caixaSessaoIdentificador?: string;
+        };
+        FaturamentoOrdemServicoRequest: {
+            /** @enum {string} */
+            formaPagamento: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+        };
+        FaturamentoOrdemServicoResponse: {
+            /** Format: int64 */
+            ordemServicoId?: number;
+            ordemServicoNumero?: string;
+            /** Format: int64 */
+            clienteId?: number;
+            clienteNome?: string;
+            valor?: number;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+            /** Format: int64 */
+            contaReceberId?: number;
+            /** Format: int64 */
+            caixaMovimentoId?: number;
+            caixaSessaoIdentificador?: string;
+            /** Format: date-time */
+            recebidoEm?: string;
         };
         LoginRequest: {
             identificador: string;
             senha: string;
+        };
+        LicencaResponse: {
+            /** @enum {string} */
+            status?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
+            /** Format: date-time */
+            dataAtivacao?: string;
+            /** Format: date-time */
+            dataExpiracao?: string;
+            /** Format: date-time */
+            proximaCobranca?: string;
+            plano?: string;
+            expirada?: boolean;
+            /** Format: int64 */
+            diasRestantes?: number;
+            /** Format: int32 */
+            limiteUsuarios?: number;
+            /** Format: int64 */
+            usuariosAtivos?: number;
+            emCarencia?: boolean;
         };
         LoginResponse: {
             token?: string;
@@ -2360,6 +2798,7 @@ export interface components {
             email?: string;
             perfil?: string;
             permissoes?: string[];
+            licenca?: components["schemas"]["LicencaResponse"];
         };
         OficinaRegistrationRequest: {
             razaoSocial: string;
@@ -2401,6 +2840,17 @@ export interface components {
             id?: number;
             nome?: string;
             perfilNome?: string;
+        };
+        SessaoAtivaResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            nome?: string;
+            email?: string;
+            perfilNome?: string;
+            /** Format: date-time */
+            sessaoIniciadaEm?: string;
+            /** Format: date-time */
+            sessaoExpiraEm?: string;
         };
         PageResponseServicoResponse: {
             content?: components["schemas"]["ServicoResponse"][];
@@ -2627,24 +3077,6 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
-        LicencaResponse: {
-            /** @enum {string} */
-            status?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
-            /** Format: date-time */
-            dataAtivacao?: string;
-            /** Format: date-time */
-            dataExpiracao?: string;
-            /** Format: date-time */
-            proximaCobranca?: string;
-            plano?: string;
-            expirada?: boolean;
-            /** Format: int64 */
-            diasRestantes?: number;
-            /** Format: int32 */
-            limiteUsuarios?: number;
-            /** Format: int64 */
-            usuariosAtivos?: number;
-        };
         AuditoriaParametroFinanceiroResponse: {
             /** Format: int64 */
             id?: number;
@@ -2738,6 +3170,60 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
+        PageResponseCaixaSessaoResponse: {
+            content?: components["schemas"]["CaixaSessaoResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        CaixaSessaoEventoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            tipo?: "ABERTURA" | "FECHAMENTO" | "REABERTURA";
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            /** Format: date-time */
+            ocorridoEm?: string;
+            observacao?: string;
+        };
+        PontoDiarioCaixaResponse: {
+            /** Format: date */
+            data?: string;
+            totalEntradas?: number;
+            totalSaidas?: number;
+            saldoDia?: number;
+        };
+        RelatorioCaixaPeriodoResponse: {
+            /** Format: date */
+            inicio?: string;
+            /** Format: date */
+            fim?: string;
+            totalEntradas?: number;
+            totalSaidas?: number;
+            saldoPeriodo?: number;
+            /** Format: date */
+            diaDePicoDeEntrada?: string;
+            /** Format: date */
+            diaDePicoDeSaida?: string;
+            pontosDiarios?: components["schemas"]["PontoDiarioCaixaResponse"][];
+        };
+        RelatorioCaixaDiarioResponse: {
+            /** Format: date */
+            data?: string;
+            totalEntradas?: number;
+            totalSaidas?: number;
+            saldoDia?: number;
+            movimentos?: components["schemas"]["CaixaMovimentoResponse"][];
+            sessoes?: components["schemas"]["CaixaSessaoResponse"][];
+        };
         PageResponseCaixaMovimentoResponse: {
             content?: components["schemas"]["CaixaMovimentoResponse"][];
             /** Format: int32 */
@@ -2769,7 +3255,6 @@ export interface components {
             nomeFantasia?: string;
             cnpj?: string;
             email?: string;
-            logoUrl?: string;
             ativo?: boolean;
             /** @enum {string} */
             statusLicenca?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
@@ -2779,6 +3264,9 @@ export interface components {
             dataExpiracaoLicenca?: string;
             plano?: string;
             licencaExpirada?: boolean;
+            /** Format: date-time */
+            proximaCobranca?: string;
+            emCarencia?: boolean;
         };
         PageResponseAdminOficinaResponse: {
             content?: components["schemas"]["AdminOficinaResponse"][];
@@ -3375,63 +3863,11 @@ export interface operations {
             };
         };
     };
-    atualizarParametros: {
+    consultar: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ParametrosHoraTecnicaRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["HoraTecnicaResponse"];
-                };
-            };
-        };
-    };
-    atualizarCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustoFixoRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"];
-                };
-            };
-        };
-    };
-    excluirCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
             cookie?: never;
         };
         requestBody?: never;
@@ -3441,7 +3877,77 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    atualizar_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoriaHoraTecnicaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    consultar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CapacidadeProdutivaResponse"];
+                };
+            };
+        };
+    };
+    atualizar_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CapacidadeProdutivaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CapacidadeProdutivaResponse"];
+                };
             };
         };
     };
@@ -3467,7 +3973,7 @@ export interface operations {
             };
         };
     };
-    atualizar_8: {
+    atualizar_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -3515,7 +4021,7 @@ export interface operations {
             };
         };
     };
-    atualizar_9: {
+    atualizar_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -3563,7 +4069,7 @@ export interface operations {
             };
         };
     };
-    atualizar_10: {
+    atualizar_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -3609,7 +4115,7 @@ export interface operations {
             };
         };
     };
-    buscarPorId_12: {
+    buscarPorId_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -3631,7 +4137,7 @@ export interface operations {
             };
         };
     };
-    atualizar_11: {
+    atualizar_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -3809,6 +4315,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ServicoResponse"];
+                };
+            };
+        };
+    };
+    importarCatalogoPadrao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ImportacaoCatalogoResponse"];
                 };
             };
         };
@@ -4212,9 +4738,10 @@ export interface operations {
     listar_6: {
         parameters: {
             query: {
-                status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+                status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "FATURADO" | "CANCELADA" | "ENTREGUE";
                 numero?: string;
                 usuarioResponsavelId?: number;
+                clienteDocumento?: string;
                 pageable: components["schemas"]["Pageable"];
             };
             header?: never;
@@ -4702,50 +5229,6 @@ export interface operations {
             };
         };
     };
-    listarCustosFixos: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"][];
-                };
-            };
-        };
-    };
-    criarCustoFixo: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CustoFixoRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CustoFixoResponse"];
-                };
-            };
-        };
-    };
     listar_12: {
         parameters: {
             query: {
@@ -5088,6 +5571,104 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "*/*": components["schemas"]["PageResponseCaixaSessaoResponse"];
+                };
+            };
+        };
+    };
+    abrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaixaSessaoAberturaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoResponse"];
+                };
+            };
+        };
+    };
+    reabrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaixaSessaoReaberturaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoResponse"];
+                };
+            };
+        };
+    };
+    fechar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaixaSessaoFechamentoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoResponse"];
+                };
+            };
+        };
+    };
+    listar_17: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "*/*": components["schemas"]["PageResponseCaixaMovimentoResponse"];
                 };
             };
@@ -5117,6 +5698,50 @@ export interface operations {
             };
         };
     };
+    faturar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ordemServicoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaturamentoOrdemServicoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FaturamentoOrdemServicoResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -5141,7 +5766,7 @@ export interface operations {
             };
         };
     };
-    listar_17: {
+    listar_18: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5187,7 +5812,7 @@ export interface operations {
             };
         };
     };
-    listar_18: {
+    listar_19: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5236,7 +5861,7 @@ export interface operations {
     atualizarStatus: {
         parameters: {
             query: {
-                status: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "CANCELADA" | "ENTREGUE";
+                status: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "FATURADO" | "CANCELADA" | "ENTREGUE";
             };
             header?: never;
             path: {
@@ -5297,6 +5922,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TecnicoResumoResponse"][];
+                };
+            };
+        };
+    };
+    listarSessoesAtivas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SessaoAtivaResponse"][];
                 };
             };
         };
@@ -5590,6 +6235,28 @@ export interface operations {
             };
         };
     };
+    listarDisponiveis: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseOrdemServicoResponse"];
+                };
+            };
+        };
+    };
     listar_10: {
         parameters: {
             query: {
@@ -5632,9 +6299,11 @@ export interface operations {
             };
         };
     };
-    consultar: {
+    auditoria: {
         parameters: {
-            query?: never;
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5647,12 +6316,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["HoraTecnicaResponse"];
+                    "*/*": components["schemas"]["PageResponseAuditoriaParametroFinanceiroResponse"];
                 };
             };
         };
     };
-    auditoria: {
+    auditoria_1: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5762,6 +6431,94 @@ export interface operations {
             };
         };
     };
+    buscarPorId_12: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoResponse"];
+                };
+            };
+        };
+    };
+    exportar: {
+        parameters: {
+            query: {
+                formato: "PDF" | "XLSX";
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    listarEventos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoEventoResponse"][];
+                };
+            };
+        };
+    };
+    buscarAberta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CaixaSessaoResponse"];
+                };
+            };
+        };
+    };
     calcularSaldo: {
         parameters: {
             query: {
@@ -5783,6 +6540,98 @@ export interface operations {
                     "*/*": {
                         [key: string]: number;
                     };
+                };
+            };
+        };
+    };
+    periodo: {
+        parameters: {
+            query: {
+                inicio: string;
+                fim: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelatorioCaixaPeriodoResponse"];
+                };
+            };
+        };
+    };
+    exportarPeriodo: {
+        parameters: {
+            query: {
+                inicio: string;
+                fim: string;
+                formato: "PDF" | "XLSX";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    diario: {
+        parameters: {
+            query: {
+                data: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RelatorioCaixaDiarioResponse"];
+                };
+            };
+        };
+    };
+    exportarDiario: {
+        parameters: {
+            query: {
+                data: string;
+                formato: "PDF" | "XLSX";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
                 };
             };
         };
@@ -5830,6 +6679,26 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AgendamentoResponse"][];
                 };
+            };
+        };
+    };
+    encerrarSessao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

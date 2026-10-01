@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,9 +8,11 @@ import { Button } from '@/components/ui/Button';
 import { onlyDigits, formatCnpj } from '@/lib/formatters';
 import { extractErrorMessage } from '@/api/client';
 import { toast } from '@/store/toastStore';
+import { isSenhaForte, SENHA_FRACA_MSG, SENHA_HINT, SENHA_NAO_CONFERE_MSG } from '@/lib/senha';
 import { useCriarOficinaAdmin } from '@/hooks/useOficinasAdmin';
 
-const schema = z.object({
+const schema = z
+  .object({
   razaoSocial: z.string().min(1, 'Informe a razão social'),
   nomeFantasia: z.string().optional(),
   cnpj: z.string().transform(onlyDigits).refine((v) => v.length === 14, 'CNPJ deve ter 14 dígitos'),
@@ -23,8 +26,13 @@ const schema = z.object({
   cep: z.string().optional(),
   adminNome: z.string().min(1, 'Informe o nome do administrador'),
   adminEmail: z.string().email('E-mail inválido'),
-  adminSenha: z.string().min(6, 'A senha deve ter ao menos 6 caracteres'),
-});
+  adminSenha: z.string().min(1, 'Informe a senha').refine(isSenhaForte, SENHA_FRACA_MSG),
+  adminConfirmacaoSenha: z.string().min(1, 'Confirme a senha'),
+})
+  .refine((v) => v.adminSenha === v.adminConfirmacaoSenha, {
+    message: SENHA_NAO_CONFERE_MSG,
+    path: ['adminConfirmacaoSenha'],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -48,11 +56,18 @@ export function NovaOficinaModal({
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  // Mesmo padrão dos demais formulários de criação do app: reseta sempre que
+  // o modal abre, não só depois de um cadastro bem-sucedido — sem isso, um
+  // Cancelar no meio do preenchimento deixava os campos preenchidos quando o
+  // modal reabria pra cadastrar a próxima oficina.
+  useEffect(() => {
+    if (open) reset();
+  }, [open, reset]);
+
   async function onSubmit(values: FormValues) {
     try {
       await criar.mutateAsync(values);
       toast.success('Oficina cadastrada com sucesso.');
-      reset();
       onClose();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível cadastrar a oficina.'));
@@ -120,8 +135,15 @@ export function NovaOficinaModal({
               type="password"
               required
               error={errors.adminSenha?.message}
-              hint="Mínimo de 6 caracteres"
+              hint={SENHA_HINT}
               {...register('adminSenha')}
+            />
+            <Input
+              label="Confirmar senha"
+              type="password"
+              required
+              error={errors.adminConfirmacaoSenha?.message}
+              {...register('adminConfirmacaoSenha')}
             />
           </div>
         </div>

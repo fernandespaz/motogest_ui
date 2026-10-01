@@ -49,6 +49,21 @@ export function formatDocumento(value: string, tipoPessoa: 'PF' | 'PJ'): string 
   return tipoPessoa === 'PJ' ? formatCnpj(value) : formatCpf(value);
 }
 
+/**
+ * Mesmo formatDocumento, mas pra quando só se tem o número (ex.:
+ * OrdemServicoResponse.clienteDocumento), sem o tipoPessoa do cliente por
+ * perto — decide CPF/CNPJ só pela quantidade de dígitos (14 = CNPJ).
+ */
+export function formatCpfOuCnpj(value: string): string {
+  const digits = onlyDigits(value);
+  return digits.length > 11 ? formatCnpj(digits) : formatCpf(digits);
+}
+
+/** Mesma decisão de formatCpfOuCnpj, só que devolvendo o rótulo — pra exibir "CPF: ..."/"CNPJ: ..." em vez do número solto, que sozinho não diz o que é. */
+export function labelCpfOuCnpj(value: string): 'CPF' | 'CNPJ' {
+  return onlyDigits(value).length > 11 ? 'CNPJ' : 'CPF';
+}
+
 export function formatPhone(value: string): string {
   const digits = onlyDigits(value).slice(0, 11);
   if (digits.length <= 10) {

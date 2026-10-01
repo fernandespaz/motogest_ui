@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { Loader2 } from 'lucide-react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'success';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,6 +21,10 @@ const variantStyles: Record<Variant, string> = {
     'bg-transparent text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/40 focus-visible:ring-brand-300',
   ghost: 'bg-transparent text-ink hover:bg-surface-alt focus-visible:ring-brand-300',
   danger: 'bg-danger text-white hover:bg-danger/90 focus-visible:ring-red-400 disabled:bg-red-300',
+  // Ações de aprovação/confirmação positiva — deliberadamente verde, não
+  // laranja da marca, pra não se confundir com a cor de CTA "padrão" usada
+  // em todo o resto do app (ver TrialBanner/UsuariosPage/ProdutosPage).
+  success: 'bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-400 disabled:bg-green-300',
 };
 
 const sizeStyles: Record<Size, string> = {

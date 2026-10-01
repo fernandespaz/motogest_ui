@@ -22,7 +22,24 @@ export interface CarteiraConsultor {
   aguardandoCliente: OrcamentoResponse[];
   aprovadosSemOs: OrcamentoResponse[];
   osEmExecucao: OrdemServicoResponse[];
+  /**
+   * Regra de negócio: o veículo só é liberado pro cliente depois de pago —
+   * por isso CONCLUIDA (trabalho pronto, ainda não faturada) e FATURADO (já
+   * paga, falta só a entrega física) são etapas distintas, cada uma esperando
+   * uma ação de pessoas diferentes (o caixa fatura; o consultor entrega).
+   */
+  osProntasParaFaturar: OrdemServicoResponse[];
+  /** Só FATURADO — ENTREGUE só existe vindo daqui, então uma vez entregue ela sai desta lista. */
   osProntasParaEntrega: OrdemServicoResponse[];
+  /**
+   * OS já entregues, mais recente primeiro — recorte das últimas 100 (mesma
+   * limitação de PAGINA_RECENTE), não um relatório fechado por mês: GET
+   * /ordens-servico não tem filtro de período nem existe campo de "data de
+   * entrega" no schema, só `dataConclusao`. Pra um relatório mensal de
+   * verdade ("entregues em janeiro"), o backend precisaria expor isso —
+   * histórico completo por enquanto só existe no `numero`/PDF de cada OS.
+   */
+  osEntregues: OrdemServicoResponse[];
   /** Clientes distintos que a pessoa já atendeu (orçamento ou OS) — a carteira visível no período carregado. */
   clientesNaCarteira: number;
 }
@@ -42,11 +59,17 @@ export function resumirCarteiraConsultor(
     [...meus.map((o) => o.clienteId), ...minhasOs.map((o) => o.clienteId)].filter((id): id is number => id != null),
   );
 
+  // Mais recente primeiro (por conclusão, já que não existe data de entrega).
+  const porConclusaoDesc = (a: OrdemServicoResponse, b: OrdemServicoResponse) =>
+    (b.dataConclusao ?? '').localeCompare(a.dataConclusao ?? '');
+
   return {
     aguardandoCliente: meus.filter((o) => o.status === 'ENVIADO').sort(porEmissao),
     aprovadosSemOs: meus.filter((o) => o.status === 'APROVADO').sort(porEmissao),
     osEmExecucao: minhasOs.filter((o) => OS_EM_EXECUCAO.has(o.status ?? '')),
-    osProntasParaEntrega: minhasOs.filter((o) => o.status === 'CONCLUIDA'),
+    osProntasParaFaturar: minhasOs.filter((o) => o.status === 'CONCLUIDA'),
+    osProntasParaEntrega: minhasOs.filter((o) => o.status === 'FATURADO'),
+    osEntregues: minhasOs.filter((o) => o.status === 'ENTREGUE').sort(porConclusaoDesc),
     clientesNaCarteira: clientes.size,
   };
 }

@@ -32,12 +32,16 @@ export function FotosTab({ ordemServicoId }: { ordemServicoId: number }) {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { tipo: 'EVIDENCIA' } });
 
+  function fecharFormulario() {
+    reset({ tipo: 'EVIDENCIA', url: '', descricao: '' });
+    setAdding(false);
+  }
+
   async function onSubmit(values: FormValues) {
     try {
       await adicionar.mutateAsync(values);
       toast.success('Foto adicionada.');
-      reset({ tipo: 'EVIDENCIA', url: '', descricao: '' });
-      setAdding(false);
+      fecharFormulario();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível adicionar a foto.'));
     }
@@ -79,7 +83,7 @@ export function FotosTab({ ordemServicoId }: { ordemServicoId: number }) {
               </Select>
               <Input label="Descrição" {...register('descricao')} />
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="secondary" onClick={() => setAdding(false)}>
+                <Button type="button" variant="secondary" onClick={fecharFormulario}>
                   Cancelar
                 </Button>
                 <Button type="submit" loading={adicionar.isPending}>

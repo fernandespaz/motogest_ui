@@ -127,6 +127,16 @@ describe('OrdensServicoPage filtros', () => {
     expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'CANCELADA' }));
   });
 
+  // FATURADO é o status novo que uma OS ganha depois de faturada no caixa —
+  // precisa ser filtrável aqui igual a qualquer outro status terminal.
+  it('filters by Faturada through "Mais status"', async () => {
+    renderPage();
+
+    await userEvent.selectOptions(screen.getByDisplayValue('Mais status…'), 'FATURADO');
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'FATURADO' }));
+  });
+
   it('does not show the técnico filter when there are no mecânicos to filter by', () => {
     renderPage();
     expect(screen.queryByText('Técnico: Todos')).not.toBeInTheDocument();
@@ -154,5 +164,49 @@ describe('OrdensServicoPage filtros', () => {
     await userEvent.selectOptions(screen.getByLabelText('Itens por página'), '50');
 
     expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ size: 50, page: 0 }));
+  });
+});
+
+describe('OrdensServicoPage — CPF/CNPJ do cliente', () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    vi.mocked(useUsuarios).mockReturnValue({ data: [] } as never);
+  });
+
+  // O rótulo existe pra ninguém confundir esses dígitos com telefone, protocolo
+  // etc. — o número sozinho não diz o que representa.
+  it('shows the formatted CPF, labeled, under the client name when the OS carries clienteDocumento', () => {
+    vi.mocked(useOrdensServico).mockReturnValue({
+      data: {
+        ...data,
+        content: [{ ...data.content[0], clienteDocumento: '12345678901' }],
+      },
+      isLoading: false,
+    } as never);
+    renderPage();
+
+    expect(screen.getByText('CPF: 123.456.789-01')).toBeInTheDocument();
+  });
+
+  it('labels and formats a 14-digit clienteDocumento as CNPJ instead of CPF', () => {
+    vi.mocked(useOrdensServico).mockReturnValue({
+      data: {
+        ...data,
+        content: [{ ...data.content[0], clienteDocumento: '98765432000188' }],
+      },
+      isLoading: false,
+    } as never);
+    renderPage();
+
+    expect(screen.getByText('CNPJ: 98.765.432/0001-88')).toBeInTheDocument();
+  });
+
+  // Nem toda OS existente tem esse dado ainda (campo novo no backend) — a
+  // linha não pode quebrar nem sobrar um espaço vazio estranho sem ele.
+  it('renders no CPF line at all when clienteDocumento is absent', () => {
+    vi.mocked(useOrdensServico).mockReturnValue({ data, isLoading: false } as never);
+    renderPage();
+
+    expect(screen.getByText('Frota Rápida — MTG0019')).toBeInTheDocument();
   });
 });

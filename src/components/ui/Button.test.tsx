@@ -24,7 +24,7 @@ describe('Button', () => {
     expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
   });
 
-  it.each(['primary', 'secondary', 'ghost', 'danger', 'outline'] as const)(
+  it.each(['primary', 'secondary', 'ghost', 'danger', 'outline', 'success'] as const)(
     'renders the %s variant without crashing',
     (variant) => {
       render(<Button variant={variant}>Ação</Button>);

@@ -37,8 +37,8 @@ describe('UsuarioFormModal', () => {
   it('labels the password field as required "Senha" for a new usuário', () => {
     renderModal();
     expect(screen.getByText('Novo usuário')).toBeInTheDocument();
-    expect(screen.getByText('Senha', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('Mínimo de 6 caracteres')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Senha/)).toBeInTheDocument();
+    expect(screen.getByText('Mínimo de 8 caracteres, com letra maiúscula e caractere especial')).toBeInTheDocument();
   });
 
   it('relabels the password field as optional "Nova senha" when editing', () => {
@@ -57,7 +57,7 @@ describe('UsuarioFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText('A senha deve ter ao menos 6 caracteres')).toBeInTheDocument();
+    expect(await screen.findByText('Informe a senha')).toBeInTheDocument();
     expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
@@ -68,13 +68,14 @@ describe('UsuarioFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
     await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
     await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-    await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+    await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
     expect(createMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ nome: 'Fernanda', email: 'fernanda@ramtec.com.br', senha: 'senha123' }),
+      expect.objectContaining({ nome: 'Fernanda', email: 'fernanda@ramtec.com.br', senha: 'Senha@123' }),
     );
     expect(toast.success).toHaveBeenCalledWith('Usuário cadastrado.');
     expect(onClose).toHaveBeenCalled();
@@ -101,13 +102,40 @@ describe('UsuarioFormModal', () => {
       usuario: { id: 5, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true } as never,
     });
 
-    await userEvent.type(screen.getByLabelText('Nova senha'), 'novaSenha123');
+    await userEvent.type(screen.getByLabelText('Nova senha'), 'NovaSenha@123');
+    await userEvent.type(screen.getByLabelText('Confirmar nova senha'), 'NovaSenha@123');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
     expect(updateMutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ payload: expect.objectContaining({ senha: 'novaSenha123' }) }),
+      expect.objectContaining({ payload: expect.objectContaining({ senha: 'NovaSenha@123' }) }),
     );
+  });
+
+  it('rejects a weak password without calling the API', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
+    await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
+    await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+    await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'senha123');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText(/Senha fraca/)).toBeInTheDocument();
+    expect(createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('rejects a confirmation that does not match the password', async () => {
+    renderModal();
+    await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
+    await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
+    await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+    await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@124');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText('A confirmação de senha não confere com a senha')).toBeInTheDocument();
+    expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
   it('toasts an error when saving fails', async () => {
@@ -117,7 +145,8 @@ describe('UsuarioFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
     await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
     await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-    await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+    await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('e-mail já cadastrado'));
@@ -135,7 +164,8 @@ describe('UsuarioFormModal', () => {
       await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
       await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
       await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-      await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+      await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+      await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
       await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(await screen.findByText('Limite de usuários atingido')).toBeInTheDocument();
@@ -158,7 +188,8 @@ describe('UsuarioFormModal', () => {
       await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
       await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
       await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-      await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+      await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+      await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
       await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(await screen.findByText('Seu plano atingiu o limite de usuários ativos.')).toBeInTheDocument();
@@ -174,7 +205,8 @@ describe('UsuarioFormModal', () => {
       await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
       await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
       await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
-      await userEvent.type(screen.getByLabelText(/^Senha/), 'senha123');
+      await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+      await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
       await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
       await screen.findByText('Limite de usuários atingido');
 

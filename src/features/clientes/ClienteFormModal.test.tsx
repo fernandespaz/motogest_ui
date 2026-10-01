@@ -38,7 +38,7 @@ const clienteComVeiculo = {
   nome: 'Carlos Eduardo',
   documento: '12345678901',
   ativo: true,
-  veiculos: [{ id: 10, placa: 'MTG0001', marca: 'Volkswagen', modelo: 'Gol 1.6' }],
+  veiculos: [{ id: 10, placa: 'MTG0001', marca: 'Volkswagen', modelo: 'Gol 1.6', categoria: 'B' }],
 };
 
 describe('ClienteFormModal', () => {
@@ -114,7 +114,7 @@ describe('ClienteFormModal', () => {
     expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('creates a new cliente, sending along any new veículos', async () => {
+  it('creates a new cliente, sending along any new veículos (categoria defaults to A when untouched)', async () => {
     const onClose = vi.fn();
     renderModal({ open: true, onClose, cliente: null });
 
@@ -129,7 +129,7 @@ describe('ClienteFormModal', () => {
     expect(createMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
         nome: 'Fernanda Souza',
-        veiculos: [expect.objectContaining({ placa: 'MTG0002' })],
+        veiculos: [expect.objectContaining({ placa: 'MTG0002', categoria: 'A' })],
       }),
     );
     expect(toast.success).toHaveBeenCalledWith('Cliente cadastrado com sucesso.');
@@ -156,9 +156,32 @@ describe('ClienteFormModal', () => {
     expect(updateMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ id: 1, payload: expect.objectContaining({ nome: 'Carlos Eduardo' }) }),
     );
-    expect(veiculosApi.update).toHaveBeenCalledWith(10, expect.objectContaining({ placa: 'MTG0001', clienteId: 1 }));
+    expect(veiculosApi.update).toHaveBeenCalledWith(10, expect.objectContaining({ placa: 'MTG0001', clienteId: 1, categoria: 'B' }));
     expect(toast.success).toHaveBeenCalledWith('Cliente atualizado com sucesso.');
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // Regressão: categoria decide preço real (hora técnica) num Orçamento/OS
+  // futuro pra esse veículo — um veículo vinculado cadastrado antes desta
+  // feature não tem categoria salva, e salvar o cliente (por qualquer
+  // motivo) não pode herdar silenciosamente "A" pra ele.
+  it('flags a linked veículo with no categoria and blocks saving the cliente until it is classified', async () => {
+    const clienteComVeiculoLegado = {
+      ...clienteComVeiculo,
+      veiculos: [{ id: 10, placa: 'MTG0001', marca: 'Volkswagen', modelo: 'Gol 1.6' }],
+    };
+    renderModal({ open: true, onClose: vi.fn(), cliente: clienteComVeiculoLegado as never });
+    expect(screen.getByText('Sem categoria')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(updateMutateAsync).not.toHaveBeenCalled());
+
+    await userEvent.click(screen.getByLabelText('Editar veículo'));
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Categoria/ }), 'C');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalled());
+    expect(veiculosApi.update).toHaveBeenCalledWith(10, expect.objectContaining({ categoria: 'C' }));
   });
 
   it('removes a linked veículo after confirming, and toasts success', async () => {

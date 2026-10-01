@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, ArrowRightLeft, AlertTriangle, Package, X, type LucideIcon } from 'lucide-react';
+import { Plus, AlertTriangle, Package, X, type LucideIcon } from 'lucide-react';
+import { PencilSimple, Trash, ArrowsLeftRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
@@ -8,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { StatCard } from '@/components/ui/StatCard';
 import { useProdutos, useDeleteProduto, useProdutosAbaixoDoMinimo } from '@/hooks/useProdutos';
@@ -211,37 +213,33 @@ export function ProdutosPage() {
                     header: '',
                     render: (row) => (
                       <div className="flex justify-end gap-1">
-                        <button
+                        <IconActionButton
+                          icon={ArrowsLeftRight}
+                          label="Movimentar estoque"
+                          tone="brand"
                           onClick={(e) => {
                             e.stopPropagation();
                             setMovProduto(row);
                           }}
-                          className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                          aria-label="Movimentar"
-                          title="Movimentar estoque"
-                        >
-                          <ArrowRightLeft size={16} />
-                        </button>
-                        <button
+                        />
+                        <IconActionButton
+                          icon={PencilSimple}
+                          label="Editar"
+                          tone="brand"
                           onClick={(e) => {
                             e.stopPropagation();
                             setModalProduto(row);
                           }}
-                          className="rounded-md p-1.5 text-ink-muted hover:bg-surface-alt hover:text-brand-700"
-                          aria-label="Editar"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
+                        />
+                        <IconActionButton
+                          icon={Trash}
+                          label="Remover"
+                          tone="danger"
                           onClick={(e) => {
                             e.stopPropagation();
                             setDeleting(row);
                           }}
-                          className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger"
-                          aria-label="Remover"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        />
                       </div>
                     ),
                   },

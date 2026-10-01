@@ -10,6 +10,7 @@ import {
   useAtualizarStatusOS,
 } from '@/hooks/useOrdensServico';
 import { useAuthStore } from '@/store/authStore';
+import { useVeiculo } from '@/hooks/useVeiculos';
 import { MinhaOrdemServicoDetalhePage } from './MinhaOrdemServicoDetalhePage';
 
 vi.mock('@/hooks/useOrdensServico', () => ({
@@ -73,6 +74,7 @@ describe('MinhaOrdemServicoDetalhePage', () => {
     vi.mocked(useTimerPauseOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useTimerResumeOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useAtualizarStatusOS).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useVeiculo).mockReturnValue({ data: undefined } as never);
     useAuthStore.setState({ usuarioId: 3 });
   });
 
@@ -81,6 +83,20 @@ describe('MinhaOrdemServicoDetalhePage', () => {
     expect(screen.getByText('Barulho estranho no motor ao acelerar')).toBeInTheDocument();
     expect(screen.getByText(/Troca de óleo/)).toBeInTheDocument();
     expect(screen.getByText(/Óleo 10W30/)).toBeInTheDocument();
+  });
+
+  // OrdemServicoResponse só devolve veiculoId+veiculoPlaca (sem chassi) — esta
+  // tela já busca o veículo à parte pra casar a miniatura do catálogo
+  // (useVeiculo), então o chassi vem de graça da mesma chamada.
+  it('shows the vehicle’s chassi once useVeiculo resolves it', () => {
+    vi.mocked(useVeiculo).mockReturnValue({ data: { id: 19, chassi: '9BWZZZ377VT004251' } } as never);
+    renderPage();
+    expect(screen.getByText('9BWZZZ377VT004251')).toBeInTheDocument();
+  });
+
+  it('falls back to an em dash while the vehicle (and its chassi) hasn’t loaded yet', () => {
+    renderPage();
+    expect(screen.getByText('Chassi').nextSibling).toHaveTextContent('—');
   });
 
   // O ponto de segurança central desta tela: nenhum caminho aqui deixa o
@@ -108,5 +124,20 @@ describe('MinhaOrdemServicoDetalhePage', () => {
     } as never);
     renderPage();
     expect(screen.queryByRole('button', { name: /iniciar/i })).not.toBeInTheDocument();
+  });
+
+  // Bug real: motivoPausa é estado do componente pai, não do PausarOSModal —
+  // cancelar sem confirmar só fechava o modal, sem limpar o texto já digitado,
+  // que reaparecia na próxima vez que o técnico abrisse "Pausar".
+  it('clears the motivo field when Pausar is cancelled, so reopening it starts blank', async () => {
+    vi.mocked(useOrdemServico).mockReturnValue({ data: { ...os, status: 'EM_ANDAMENTO' }, isLoading: false } as never);
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: /pausar/i }));
+    await userEvent.type(screen.getByLabelText('Motivo da pausa', { exact: false }), 'Aguardando peça');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await userEvent.click(screen.getByRole('button', { name: /pausar/i }));
+    expect(screen.getByLabelText('Motivo da pausa', { exact: false })).toHaveValue('');
   });
 });

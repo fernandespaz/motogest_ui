@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileDown, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { FileArrowDown } from '@phosphor-icons/react';
 import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
@@ -14,7 +15,7 @@ import { useUsuarios } from '@/hooks/useUsuarios';
 import { useAuthStore } from '@/store/authStore';
 import { isMecanico } from '@/lib/perfil';
 import type { OrdemServicoResponse, OrdemServicoStatus } from '@/api/types';
-import { formatCurrency, formatDate } from '@/lib/formatters';
+import { formatCpfOuCnpj, formatCurrency, formatDate, labelCpfOuCnpj } from '@/lib/formatters';
 import { ordemServicoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { buildOrdemServicoPdfBlob } from './ordemServicoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
@@ -29,6 +30,7 @@ const statusEmDestaque: OrdemServicoStatus[] = ['ABERTA', 'APROVADA', 'EM_ANDAME
 const statusOutros: OrdemServicoStatus[] = [
   'AGUARDANDO_APROVACAO',
   'CONCLUIDA',
+  'FATURADO',
   'CANCELADA',
   'ENTREGUE',
 ];
@@ -187,7 +189,21 @@ export function OrdensServicoPage() {
                 </span>
               ),
             },
-            { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
+            {
+              header: 'Cliente',
+              render: (row) => (
+                <div>
+                  <p className="text-ink">
+                    {row.clienteNome ?? ''} — {row.veiculoPlaca ?? ''}
+                  </p>
+                  {row.clienteDocumento && (
+                    <p className="text-xs text-ink-muted">
+                      {labelCpfOuCnpj(row.clienteDocumento)}: {formatCpfOuCnpj(row.clienteDocumento)}
+                    </p>
+                  )}
+                </div>
+              ),
+            },
             { header: 'Consultor', render: (row) => row.consultorNome || '-', hideBelow: 'md' },
             { header: 'Técnico', render: (row) => row.usuarioResponsavelNome || '-', hideBelow: 'md' },
             { header: 'Abertura', render: (row) => formatDate(row.dataAbertura), hideBelow: 'sm' },
@@ -202,16 +218,15 @@ export function OrdensServicoPage() {
             {
               header: '',
               render: (row) => (
-                <Button
-                  variant="secondary"
-                  size="sm"
+                <IconActionButton
+                  icon={FileArrowDown}
+                  label="PDF"
+                  tone="brand"
                   onClick={(e) => {
                     e.stopPropagation();
                     baixarPdf(row);
                   }}
-                >
-                  <FileDown size={14} /> PDF
-                </Button>
+                />
               ),
             },
           ]}

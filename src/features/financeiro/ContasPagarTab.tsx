@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Check, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { CheckCircle, XCircle } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -11,6 +12,7 @@ import { Badge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { IconActionButton } from '@/components/ui/IconActionButton';
 import {
   useContasPagar,
   useCreateContaPagar,
@@ -49,12 +51,16 @@ export function ContasPagarTab() {
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
+  function fecharModal() {
+    reset();
+    setModalOpen(false);
+  }
+
   async function onSubmit(values: FormValues) {
     try {
       await create.mutateAsync(values);
       toast.success('Conta a pagar cadastrada.');
-      reset();
-      setModalOpen(false);
+      fecharModal();
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível cadastrar.'));
     }
@@ -108,13 +114,9 @@ export function ContasPagarTab() {
               header: '',
               render: (row) =>
                 row.status === 'PENDENTE' || row.status === 'ATRASADO' ? (
-                  <div className="flex justify-end gap-1">
-                    <button onClick={() => handlePagar(row.id!)} className="rounded-md p-1.5 text-ink-muted hover:bg-green-50 hover:text-success" title="Marcar como paga">
-                      <Check size={16} />
-                    </button>
-                    <button onClick={() => setCancelando(row)} className="rounded-md p-1.5 text-ink-muted hover:bg-red-50 hover:text-danger" title="Cancelar">
-                      <X size={16} />
-                    </button>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <IconActionButton icon={CheckCircle} label="Pagar" tone="success" onClick={() => handlePagar(row.id!)} />
+                    <IconActionButton icon={XCircle} label="Cancelar" tone="danger" onClick={() => setCancelando(row)} />
                   </div>
                 ) : null,
             },
@@ -125,14 +127,14 @@ export function ContasPagarTab() {
         )}
       </Card>
 
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nova conta a pagar">
+      <Modal open={modalOpen} onClose={fecharModal} title="Nova conta a pagar">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <Input label="Descrição" required error={errors.descricao?.message} {...register('descricao')} />
           <Input label="Fornecedor" {...register('fornecedor')} />
           <Input label="Valor (R$)" type="number" step="0.01" required error={errors.valor?.message} {...register('valor')} />
           <Input label="Vencimento" type="date" required error={errors.dataVencimento?.message} {...register('dataVencimento')} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={fecharModal}>
               Cancelar
             </Button>
             <Button type="submit" loading={create.isPending}>

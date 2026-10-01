@@ -1,12 +1,31 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { useLicencaAtual } from '@/hooks/useOficina';
+import { useAuthStore } from '@/store/authStore';
+import { formatDate } from '@/lib/formatters';
 import { precisaRenovarLicencaManualmente } from '@/lib/licenca';
 
 export function TrialBanner() {
   const { data: licenca } = useLicencaAtual();
+  const hasPermission = useAuthStore((s) => s.hasPermission);
 
   if (!licenca) return null;
+
+  // Carência: acesso segue normal, mas o pagamento está pendente. Só quem
+  // tem OFICINA_WRITE consegue pagar, então os demais veem só o aviso.
+  if (licenca.emCarencia) {
+    return (
+      <div className="flex items-center justify-center gap-2 bg-brand-600 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
+        <AlertTriangle size={15} />
+        Pagamento pendente, regularize até {formatDate(licenca.dataExpiracao)}
+        {hasPermission('OFICINA_WRITE') && (
+          <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">
+            Regularizar agora
+          </Link>
+        )}
+      </div>
+    );
+  }
 
   const dias = licenca.diasRestantes ?? 0;
   const isTrial = licenca.status === 'TRIAL';
