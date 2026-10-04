@@ -27,6 +27,8 @@ import {
 import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
+import { FuelGauge } from '@/features/shared/FuelGauge';
+import { ehNivelCombustivel } from '@/lib/combustivel';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCurrency, formatDateTime, formatDocumento, toDateTimeLocalValue } from '@/lib/formatters';
@@ -59,6 +61,7 @@ const schema = z.object({
     .string()
     .optional()
     .refine((v) => !v || new Date(v).getTime() <= Date.now() + 60_000, 'A entrada não pode estar no futuro'),
+  nivelCombustivel: z.number().optional(),
   observacoes: z.string().optional(),
   itens: z
     .array(itemSchema)
@@ -183,6 +186,7 @@ function OrcamentoFormContent() {
         veiculoId: orcamento.veiculoId ?? 0,
         validadeDias: orcamento.validadeDias ?? 7,
         dataEntradaVeiculo: toDateTimeLocalValue(orcamento.dataEntradaVeiculo),
+        nivelCombustivel: ehNivelCombustivel(orcamento.nivelCombustivel) ? orcamento.nivelCombustivel : undefined,
         observacoes: orcamento.observacoes ?? '',
         itens: itensParaFormValues(orcamento.itens),
       });
@@ -270,6 +274,7 @@ function OrcamentoFormContent() {
         veiculoId: criado.veiculoId ?? valores.veiculoId,
         validadeDias: criado.validadeDias ?? valores.validadeDias,
         dataEntradaVeiculo: toDateTimeLocalValue(criado.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
+        nivelCombustivel: ehNivelCombustivel(criado.nivelCombustivel) ? criado.nivelCombustivel : valores.nivelCombustivel,
         observacoes: criado.observacoes ?? valores.observacoes,
         itens: itensParaFormValues(criado.itens),
       });
@@ -439,6 +444,16 @@ function OrcamentoFormContent() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                <div className="mt-4 flex justify-center rounded-lg border border-border bg-surface-alt p-4 sm:justify-start">
+                  <Controller
+                    control={control}
+                    name="nivelCombustivel"
+                    render={({ field }) => (
+                      <FuelGauge label="Combustível na entrada" value={field.value} onChange={field.onChange} disabled={readOnly} />
+                    )}
+                  />
+                </div>
 
                 <div className="mt-4 border-t border-border pt-4">
                   <ItemsEditor

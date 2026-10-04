@@ -2240,6 +2240,8 @@ export interface components {
             itens: components["schemas"]["ItemRequest"][];
             /** Format: date-time */
             dataEntradaVeiculo?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
         };
         OrcamentoResponse: {
             /** Format: int64 */
@@ -2273,6 +2275,8 @@ export interface components {
             dataEmissao?: string;
             /** Format: date-time */
             dataAprovacao?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -2509,6 +2513,7 @@ export interface components {
             itens?: components["schemas"]["ItemResponse"][];
             /** Format: date-time */
             dataAbertura?: string;
+            logoBase64?: string;
         };
         OrcamentoPublicoResponse: {
             /** Format: int64 */
@@ -2525,6 +2530,7 @@ export interface components {
             itens?: components["schemas"]["ItemResponse"][];
             /** Format: date-time */
             createdAt?: string;
+            logoBase64?: string;
         };
         ReservarEstoqueRequest: {
             quantidade: number;

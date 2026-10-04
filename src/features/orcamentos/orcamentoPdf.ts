@@ -77,8 +77,9 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
           anoFabricacaoModelo: [veiculo.anoFabricacao, veiculo.anoModelo].filter(Boolean).join('/'),
           cor: veiculo.cor,
           kmAtual: veiculo.kmAtual != null ? `${veiculo.kmAtual.toLocaleString('pt-BR')} km` : undefined,
+          nivelCombustivel: orcamento.nivelCombustivel ?? undefined,
         }
-      : { descricao: '', placa: orcamento.veiculoPlaca ?? '' },
+      : { descricao: '', placa: orcamento.veiculoPlaca ?? '', nivelCombustivel: orcamento.nivelCombustivel ?? undefined },
     consultor: orcamento.consultorNome,
     solicitacaoCliente: orcamento.observacoes,
     servicos,

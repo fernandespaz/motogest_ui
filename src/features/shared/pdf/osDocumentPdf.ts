@@ -1,5 +1,6 @@
 import type { OSDocumentData, OSDocumentLineItem } from './types';
 import { formatCurrency } from '@/lib/formatters';
+import { rotuloCombustivel } from '@/lib/combustivel';
 
 const PAGE_MARGIN = 12;
 const INK = '#1b2129';
@@ -19,13 +20,27 @@ async function loadPdfLibs() {
   return { JsPDF, autoTable };
 }
 
-function drawFuelGauge(doc: InstanceType<Awaited<ReturnType<typeof loadPdfLibs>>['JsPDF']>, x: number, y: number) {
-  // Static gauge illustration (not bound to real data) — matches the reference OS
-  // model, which shows the same fixed E···1/2···F dial on every printed order.
+function drawFuelGauge(
+  doc: InstanceType<Awaited<ReturnType<typeof loadPdfLibs>>['JsPDF']>,
+  x: number,
+  y: number,
+  nivel?: number,
+) {
+  // Escala E·1/4·1/2·3/4·F; quando há nível informado, preenche a barra até ele e
+  // marca o ponto — sem nível, sai só a escala vazia (comportamento anterior).
   const width = 26;
   doc.setDrawColor(LINE);
   doc.setLineWidth(0.3);
   doc.line(x, y, x + width, y);
+  if (nivel != null && nivel >= 0 && nivel <= 100) {
+    doc.setDrawColor(BRAND);
+    doc.setLineWidth(1.2);
+    doc.line(x, y, x + (width * nivel) / 100, y);
+    doc.setFillColor(BRAND);
+    doc.circle(x + (width * nivel) / 100, y, 1.4, 'F');
+    doc.setDrawColor(LINE);
+    doc.setLineWidth(0.3);
+  }
   [0, 0.25, 0.5, 0.75, 1].forEach((t) => {
     const tx = x + width * t;
     doc.line(tx, y - 1.2, tx, y + 1.2);
@@ -258,8 +273,9 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   );
   doc.setFontSize(7);
   doc.setTextColor(INK_MUTED);
-  doc.text('COMBUSTÍVEL', PAGE_MARGIN + (contentWidth / 3) * 3 - 30, y);
-  drawFuelGauge(doc, PAGE_MARGIN + (contentWidth / 3) * 3 - 30, y + 6);
+  const rotuloNivel = rotuloCombustivel(data.veiculo.nivelCombustivel);
+  doc.text(rotuloNivel ? `COMBUSTÍVEL: ${rotuloNivel}` : 'COMBUSTÍVEL', PAGE_MARGIN + (contentWidth / 3) * 3 - 30, y);
+  drawFuelGauge(doc, PAGE_MARGIN + (contentWidth / 3) * 3 - 30, y + 6, data.veiculo.nivelCombustivel);
   y += 14;
 
   // ---- Solicitação do cliente ----

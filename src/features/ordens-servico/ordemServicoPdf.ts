@@ -1,4 +1,6 @@
 import { clientesApi } from '@/api/endpoints/clientes';
+import { orcamentosApi } from '@/api/endpoints/orcamentos';
+import { useAuthStore } from '@/store/authStore';
 import { veiculosApi } from '@/api/endpoints/veiculos';
 import type { OrdemServicoResponse } from '@/api/types';
 import { formatCnpj, formatDateTime, formatDocumento } from '@/lib/formatters';
@@ -18,14 +20,31 @@ function toLineItems(os: OrdemServicoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSD
     }));
 }
 
+/**
+ * A OS não guarda o combustível — o nível é registrado na entrada do veículo,
+ * no orçamento de origem. Cosmético como a logo: sem orçamento, sem permissão
+ * ou erro de rede, a OS/recibo sai com a escala vazia em vez de falhar.
+ */
+async function nivelCombustivelDoOrcamento(orcamentoId?: number | null): Promise<number | undefined> {
+  // Sem ORCAMENTO_READ (ex.: Mecânico) o GET daria 403 e o interceptor global
+  // mostraria o toast de "sem permissão" mesmo com o catch — então nem tenta.
+  if (!orcamentoId || !useAuthStore.getState().hasPermission('ORCAMENTO_READ')) return undefined;
+  try {
+    return (await orcamentosApi.get(orcamentoId)).nivelCombustivel ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function buildOrdemServicoPdfBlob(
   os: OrdemServicoResponse,
   opcoes?: { tipoDocumento?: string; pagamento?: OSDocumentData['pagamento'] },
 ): Promise<Blob> {
-  const [cliente, veiculo, oficina] = await Promise.all([
+  const [cliente, veiculo, oficina, nivelCombustivel] = await Promise.all([
     os.clienteId ? clientesApi.get(os.clienteId) : Promise.resolve(null),
     os.veiculoId ? veiculosApi.get(os.veiculoId) : Promise.resolve(null),
     resolverOficinaParaPdf(),
+    nivelCombustivelDoOrcamento(os.orcamentoId),
   ]);
 
   const servicos = toLineItems(os, 'SERVICO');
@@ -68,8 +87,9 @@ export async function buildOrdemServicoPdfBlob(
           anoFabricacaoModelo: [veiculo.anoFabricacao, veiculo.anoModelo].filter(Boolean).join('/'),
           cor: veiculo.cor,
           kmAtual: os.kmEntrada != null ? `${os.kmEntrada.toLocaleString('pt-BR')} km` : undefined,
+          nivelCombustivel,
         }
-      : { descricao: '', placa: os.veiculoPlaca ?? '' },
+      : { descricao: '', placa: os.veiculoPlaca ?? '', nivelCombustivel },
     consultor: os.consultorNome,
     tecnicoResponsavel: os.usuarioResponsavelNome,
     previsaoEntrega: formatDateTime(os.dataPrevisao),

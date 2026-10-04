@@ -59,6 +59,8 @@ export interface OSDocumentData {
     anoFabricacaoModelo?: string; // "2022/2023"
     cor?: string;
     kmAtual?: string;
+    /** Nível do tanque em % (0|25|50|75|100) — desenhado no marcador; ausente = escala vazia. */
+    nivelCombustivel?: number;
   };
 
   /** Consultor responsável — impresso no topo. Orçamento e OS têm os dois. */
