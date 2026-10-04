@@ -24,6 +24,8 @@ import { PerfisPage } from '@/features/perfis/PerfisPage';
 import { OficinaPage } from '@/features/oficina/OficinaPage';
 import { DescontosPage } from '@/features/descontos/DescontosPage';
 import { MeuCaixaPage } from '@/features/caixa/MeuCaixaPage';
+import { FiscalPage, FiscalSemAcesso } from '@/features/fiscal/FiscalPage';
+import { PERMISSOES_FISCAL } from '@/hooks/useFiscal';
 import { RequirePermission } from '@/auth/RequirePermission';
 import { PERMISSAO_GERENCIAR_HORA_TECNICA } from '@/hooks/useHoraTecnica';
 import { HoraTecnicaPage, HoraTecnicaSemAcesso } from '@/features/hora-tecnica/HoraTecnicaPage';
@@ -81,6 +83,15 @@ export const router = createBrowserRouter([
             element: (
               <RequirePermission codigo="CAIXA_OPERAR">
                 <MeuCaixaPage />
+              </RequirePermission>
+            ),
+          },
+          // Qualquer permissão FISCAL_* abre a página; cada aba filtra pela sua própria.
+          {
+            path: '/fiscal',
+            element: (
+              <RequirePermission codigo={PERMISSOES_FISCAL} fallback={<FiscalSemAcesso />}>
+                <FiscalPage />
               </RequirePermission>
             ),
           },

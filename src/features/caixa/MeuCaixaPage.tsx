@@ -18,12 +18,18 @@ import { AbrirCaixaModal } from './AbrirCaixaModal';
 import { RegistrarMovimentoModal } from './RegistrarMovimentoModal';
 import { FecharCaixaModal } from './FecharCaixaModal';
 import { FaturarOSModal } from './FaturarOSModal';
+import { OfertaEmissaoNfse } from '@/features/fiscal/OfertaEmissaoNfse';
+import { PERMISSAO_FISCAL_EMITIR } from '@/hooks/useFiscal';
+import { useAuthStore } from '@/store/authStore';
 
 export function MeuCaixaPage() {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [abrirAberto, setAbrirAberto] = useState(false);
   const [fecharAberto, setFecharAberto] = useState(false);
   const [movimentoTipo, setMovimentoTipo] = useState<CaixaTipo | null>(null);
   const [faturarAberto, setFaturarAberto] = useState(false);
+  // Convite pra emitir a NFS-e da OS recém-faturada; só existe pra quem tem FISCAL_EMITIR.
+  const [osParaEmitir, setOsParaEmitir] = useState<{ id: number; numero?: string } | null>(null);
   // Janela da sessão atual, fixada no momento em que a tela monta — o botão
   // "Atualizar" reabre a janela pra agora, em vez de recalcular a cada render
   // (isso mudaria a queryKey a cada digitação/render e disparava um refetch
@@ -167,7 +173,14 @@ export function MeuCaixaPage() {
         <RegistrarMovimentoModal open={!!movimentoTipo} tipo={movimentoTipo} onClose={() => setMovimentoTipo(null)} />
       )}
       <FecharCaixaModal open={fecharAberto} sessao={sessao} onClose={() => setFecharAberto(false)} />
-      <FaturarOSModal open={faturarAberto} onClose={() => setFaturarAberto(false)} />
+      <FaturarOSModal
+        open={faturarAberto}
+        onClose={() => setFaturarAberto(false)}
+        onFaturada={(os) => hasPermission(PERMISSAO_FISCAL_EMITIR) && setOsParaEmitir(os)}
+      />
+      {osParaEmitir && (
+        <OfertaEmissaoNfse key={osParaEmitir.id} ordemServico={osParaEmitir} onClose={() => setOsParaEmitir(null)} />
+      )}
     </div>
   );
 }

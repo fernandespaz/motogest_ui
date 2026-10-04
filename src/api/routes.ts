@@ -128,6 +128,19 @@ export const API_ROUTES = {
   licenca: {
     atual: '/api/v1/licenca/atual',
   },
+  fiscal: {
+    configuracao: '/api/v1/fiscal/configuracao',
+    regimes: '/api/v1/fiscal/regimes-tributarios',
+    certificado: '/api/v1/fiscal/certificado',
+    nfse: {
+      base: '/api/v1/fiscal/nfse',
+      porId: (id: number) => `/api/v1/fiscal/nfse/${id}`,
+      emitir: (ordemServicoId: number) => `/api/v1/fiscal/nfse/ordens-servico/${ordemServicoId}`,
+      atualizar: (id: number) => `/api/v1/fiscal/nfse/${id}/atualizar`,
+      cancelar: (id: number) => `/api/v1/fiscal/nfse/${id}/cancelar`,
+      xml: (id: number) => `/api/v1/fiscal/nfse/${id}/xml`,
+    },
+  },
   pagamentos: {
     pedido: '/api/v1/pagamentos/pedido',
     assinatura: '/api/v1/pagamentos/assinatura',
