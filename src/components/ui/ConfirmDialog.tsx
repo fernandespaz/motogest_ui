@@ -6,6 +6,7 @@ interface ConfirmDialogProps {
   title: string;
   description?: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   variant?: 'primary' | 'danger';
   loading?: boolean;
   onConfirm: () => void;
@@ -17,6 +18,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Confirmar',
+  cancelLabel = 'Cancelar',
   variant = 'primary',
   loading,
   onConfirm,
@@ -27,7 +29,7 @@ export function ConfirmDialog({
       {description && <p className="mb-5 text-sm text-ink-muted">{description}</p>}
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={loading}>
-          Cancelar
+          {cancelLabel}
         </Button>
         <Button variant={variant} onClick={onConfirm} loading={loading}>
           {confirmLabel}

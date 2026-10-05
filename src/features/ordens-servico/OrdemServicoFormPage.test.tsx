@@ -45,6 +45,8 @@ vi.mock('@/features/shared/ItemsEditor', async (importOriginal) => {
   return { ...actual, ItemsEditor: () => <div data-testid="items-editor" /> };
 });
 vi.mock('@/features/shared/HoraTecnicaReferencia', () => ({ HoraTecnicaReferencia: () => null }));
+// O bloco de NFS-e tem testes próprios (OsNfseCard.test.tsx) e depende de React Query.
+vi.mock('@/features/fiscal/OsNfseCard', () => ({ OsNfseCard: () => null }));
 
 const mecanicos = [
   { id: 3, nome: 'Marcos Mecânico', perfilNome: 'Mecânico' },
