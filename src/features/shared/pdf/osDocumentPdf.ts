@@ -301,6 +301,26 @@ export async function renderOSDocumentPdf(data: OSDocumentData): Promise<Blob> {
   // @ts-expect-error autotable augments doc at runtime with lastAutoTable
   y = doc.lastAutoTable.finalY + 8;
 
+  // ---- Avarias na entrada ----
+  if (data.avarias && data.avarias.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(INK);
+    doc.text('AVARIAS NA ENTRADA DO VEÍCULO', PAGE_MARGIN, y);
+    y += 2;
+    autoTable(doc, {
+      startY: y,
+      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 16 },
+      head: [['Item', 'Região', 'Tipo', 'Detalhes']],
+      body: data.avarias.map((a, i) => [String(i + 1), a.regiao, a.tipo, a.descricao || '—']),
+      styles: { fontSize: 8.5, textColor: INK, cellPadding: 2 },
+      headStyles: { fillColor: [232, 234, 226], textColor: INK_MUTED, fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 52 }, 2: { cellWidth: 30 } },
+    });
+    // @ts-expect-error autotable augments doc at runtime with lastAutoTable
+    y = doc.lastAutoTable.finalY + 8;
+  }
+
   // ---- Serviço técnico ----
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);

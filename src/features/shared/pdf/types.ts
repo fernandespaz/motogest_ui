@@ -18,6 +18,13 @@ export interface OSDocumentLineItem {
   valorTotal: number;
 }
 
+export interface OSDocumentAvaria {
+  /** Região já em português ("Porta dianteira esquerda"). */
+  regiao: string;
+  tipo: string;
+  descricao?: string;
+}
+
 export interface OSDocumentData {
   /** "Orçamento" or "Ordem de Serviço" — printed as the document title. */
   tipoDocumento: string;
@@ -74,6 +81,9 @@ export interface OSDocumentData {
 
   /** Free-text account of what the client reported, or what the consultant relayed. */
   solicitacaoCliente?: string;
+
+  /** Avarias registradas na vistoria de entrada — a seção só é desenhada quando há ao menos uma. */
+  avarias?: OSDocumentAvaria[];
 
   servicos: OSDocumentLineItem[];
   pecas: OSDocumentLineItem[];

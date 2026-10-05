@@ -8,6 +8,7 @@ import { metaFor, ordemServicoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
 import { resolverOficinaParaPdf } from '@/features/shared/pdf/logo';
 import type { OSDocumentData, OSDocumentLineItem } from '@/features/shared/pdf/types';
+import { avariasParaExibicao } from '@/features/vistoria/avariasExibicao';
 
 function toLineItems(os: OrdemServicoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
   return (os.itens ?? [])
@@ -98,6 +99,7 @@ export async function buildOrdemServicoPdfBlob(
     // The mechanic's technical read on the vehicle IS the itens list below (what they
     // registered on assuming the OS) — the client's original complaint lives here.
     solicitacaoCliente: os.observacoes,
+    avarias: avariasParaExibicao(os.avarias),
     servicos,
     pecas,
     totalServicos,

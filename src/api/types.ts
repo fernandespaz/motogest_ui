@@ -32,6 +32,14 @@ export type OrcamentoResponse = Schemas['OrcamentoResponse'];
 export type OrcamentoStatus = NonNullable<OrcamentoResponse['status']>;
 export type OrcamentoPublicoResponse = Schemas['OrcamentoPublicoResponse'];
 
+export type AvariaRequest = Schemas['AvariaRequest'];
+export type AvariaResponse = Schemas['AvariaResponse'];
+export type AvariaPublicaResponse = Schemas['AvariaPublicaResponse'];
+export type PosicaoAvaria = Schemas['PosicaoAvaria'];
+export type ZonaAvaria = NonNullable<AvariaRequest['zona']>;
+export type TipoAvaria = NonNullable<AvariaRequest['tipo']>;
+export type VistaAvaria = NonNullable<AvariaRequest['vista']>;
+
 export type ItemRequest = Schemas['ItemRequest'];
 export type ItemResponse = Schemas['ItemResponse'];
 export type TipoItem = NonNullable<ItemRequest['tipoItem']>;

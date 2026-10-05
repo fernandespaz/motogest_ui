@@ -7,6 +7,7 @@ import { metaFor, orcamentoStatusMeta } from '@/lib/statusMeta';
 import { renderOSDocumentPdf } from '@/features/shared/pdf/osDocumentPdf';
 import { resolverOficinaParaPdf } from '@/features/shared/pdf/logo';
 import type { OSDocumentLineItem } from '@/features/shared/pdf/types';
+import { avariasParaExibicao } from '@/features/vistoria/avariasExibicao';
 
 function toLineItems(orcamento: OrcamentoResponse, tipo: 'SERVICO' | 'PRODUTO'): OSDocumentLineItem[] {
   return (orcamento.itens ?? [])
@@ -82,6 +83,7 @@ export async function buildOrcamentoPdfBlob(orcamento: OrcamentoResponse): Promi
       : { descricao: '', placa: orcamento.veiculoPlaca ?? '', nivelCombustivel: orcamento.nivelCombustivel ?? undefined },
     consultor: orcamento.consultorNome,
     solicitacaoCliente: orcamento.observacoes,
+    avarias: avariasParaExibicao(orcamento.avarias),
     servicos,
     pecas,
     totalServicos,

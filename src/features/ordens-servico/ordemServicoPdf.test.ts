@@ -110,3 +110,23 @@ describe('buildOrdemServicoPdfBlob — combustível do orçamento de origem', ()
     );
   });
 });
+
+describe('buildOrdemServicoPdfBlob — avarias da vistoria de entrada', () => {
+  // O backend copia as avarias do orçamento pra OS na conversão; a OS impressa
+  // precisa mostrar o estado em que o veículo entrou.
+  it('imprime as avarias da própria OS, em português', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+
+    await buildOrdemServicoPdfBlob({
+      ...os,
+      avarias: [{ id: 1, zona: 'PARA_CHOQUE_TRASEIRO', tipo: 'TRINCA', descricao: 'trinca no canto' }],
+    });
+
+    expect(renderOSDocumentPdf).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        avarias: [{ regiao: 'Para-choque traseiro', tipo: 'Trinca', descricao: 'trinca no canto' }],
+      }),
+    );
+  });
+});

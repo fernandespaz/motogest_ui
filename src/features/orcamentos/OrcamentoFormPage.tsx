@@ -27,7 +27,8 @@ import {
 import { HoraTecnicaReferencia } from '@/features/shared/HoraTecnicaReferencia';
 import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
 import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
-import { FuelGauge } from '@/features/shared/FuelGauge';
+import { VistoriaEntrada } from '@/features/vistoria/VistoriaEntrada';
+import { MAX_AVARIAS, avariaSchema, avariasParaFormValues, avariasParaPayload } from '@/features/vistoria/avarias';
 import { ehNivelCombustivel } from '@/lib/combustivel';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -62,6 +63,7 @@ const schema = z.object({
     .optional()
     .refine((v) => !v || new Date(v).getTime() <= Date.now() + 60_000, 'A entrada não pode estar no futuro'),
   nivelCombustivel: z.number().optional(),
+  avarias: z.array(avariaSchema).max(MAX_AVARIAS, `No máximo ${MAX_AVARIAS} avarias`),
   observacoes: z.string().optional(),
   itens: z
     .array(itemSchema)
@@ -153,7 +155,7 @@ function OrcamentoFormContent() {
 
   const methods = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { itens: [], validadeDias: 7, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
+    defaultValues: { itens: [], avarias: [], validadeDias: 7, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
   });
   const {
     control,
@@ -188,6 +190,7 @@ function OrcamentoFormContent() {
         dataEntradaVeiculo: toDateTimeLocalValue(orcamento.dataEntradaVeiculo),
         nivelCombustivel: ehNivelCombustivel(orcamento.nivelCombustivel) ? orcamento.nivelCombustivel : undefined,
         observacoes: orcamento.observacoes ?? '',
+        avarias: avariasParaFormValues(orcamento.avarias),
         itens: itensParaFormValues(orcamento.itens),
       });
     }
@@ -220,6 +223,14 @@ function OrcamentoFormContent() {
       sublabel: `${v.marca ?? ''} ${v.modelo ?? ''}`.trim() || undefined,
     }));
 
+  // As posições 3D das avarias foram tiradas no modelo do veículo anterior — num carro diferente os pinos
+  // ficariam em lugares sem sentido (e seriam salvos assim). Mesmo princípio dos itens ao trocar o cliente.
+  function descartarAvarias() {
+    if ((getValues('avarias') ?? []).length === 0) return;
+    setValue('avarias', []);
+    toast.info('As avarias marcadas foram removidas ao trocar de veículo.');
+  }
+
   // "id" e "precificadoPorHT" são só do form; serviço cobrado pela hora
   // técnica vai sem valorUnitario pro backend calcular (ver itemParaPayload).
   function paraPayload(values: FormValues) {
@@ -228,6 +239,7 @@ function OrcamentoFormContent() {
       // Vazio = não informado: na criação o backend assume "agora"; na edição mantém o que já tinha.
       dataEntradaVeiculo: values.dataEntradaVeiculo || undefined,
       itens: values.itens.map(itemParaPayload),
+      avarias: avariasParaPayload(values.avarias),
     };
   }
 
@@ -276,9 +288,18 @@ function OrcamentoFormContent() {
         dataEntradaVeiculo: toDateTimeLocalValue(criado.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
         nivelCombustivel: ehNivelCombustivel(criado.nivelCombustivel) ? criado.nivelCombustivel : valores.nivelCombustivel,
         observacoes: criado.observacoes ?? valores.observacoes,
+        // Avarias não vêm do servidor de volta: a lista da tela é a fonte da verdade (o payload nunca
+        // usa o id delas) e o getValues pega o que o consultor marcou enquanto o save estava em voo.
+        avarias: getValues('avarias') ?? valores.avarias,
         itens: itensParaFormValues(criado.itens),
       });
-      toast.success('Rascunho salvo automaticamente.');
+      if ((criado.avarias?.length ?? 0) < valores.avarias.length) {
+        // Schema presente não prova persistência (ver prohibited-actions #5): se o backend devolveu menos
+        // avarias do que enviamos, mantemos as da tela e avisamos em vez de mostrar sucesso silencioso.
+        toast.error('O servidor não confirmou todas as avarias marcadas. Elas continuam na tela — revise antes de salvar.');
+      } else {
+        toast.success('Rascunho salvo automaticamente.');
+      }
       return { tipo: 'ORCAMENTO' as const, id: criado.id };
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível salvar o rascunho automaticamente.'));
@@ -356,7 +377,10 @@ function OrcamentoFormContent() {
                           // from whoever was picked before must not survive this.
                           setValue('veiculoId', 0);
                           // Os itens foram precificados pela categoria do veículo anterior.
-                          if (value !== field.value) setValue('itens', []);
+                          if (value !== field.value) {
+                            setValue('itens', []);
+                            descartarAvarias();
+                          }
                           setBuscaVeiculo('');
                         }}
                         options={clienteOptions}
@@ -377,7 +401,10 @@ function OrcamentoFormContent() {
                         error={errors.veiculoId?.message}
                         placeholder={clienteId ? 'Buscar por placa...' : 'Selecione um cliente primeiro'}
                         value={field.value || undefined}
-                        onChange={field.onChange}
+                        onChange={(value) => {
+                          if (value !== field.value) descartarAvarias();
+                          field.onChange(value);
+                        }}
                         options={veiculoOptions}
                         query={buscaVeiculo}
                         onQueryChange={setBuscaVeiculo}
@@ -445,15 +472,7 @@ function OrcamentoFormContent() {
                   )}
                 </AnimatePresence>
 
-                <div className="mt-4 flex justify-center rounded-lg border border-border bg-surface-alt p-4 sm:justify-start">
-                  <Controller
-                    control={control}
-                    name="nivelCombustivel"
-                    render={({ field }) => (
-                      <FuelGauge label="Combustível na entrada" value={field.value} onChange={field.onChange} disabled={readOnly} />
-                    )}
-                  />
-                </div>
+                <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />
 
                 <div className="mt-4 border-t border-border pt-4">
                   <ItemsEditor
