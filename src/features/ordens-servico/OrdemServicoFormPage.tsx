@@ -13,6 +13,7 @@ import { Modal } from '@/components/ui/Modal';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { Badge } from '@/components/ui/Badge';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
+import { OsNfseCard } from '@/features/fiscal/OsNfseCard';
 import { useClientes } from '@/hooks/useClientes';
 import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import { useUsuarios } from '@/hooks/useUsuarios';
@@ -487,6 +488,10 @@ export function OrdemServicoFormPage() {
             ))}
           </Select>
         </div>
+      )}
+
+      {isEditing && osId != null && (
+        <OsNfseCard ordemServicoId={osId} status={os?.status} clienteDocumento={os?.clienteDocumento} />
       )}
 
       {temCronometro && (

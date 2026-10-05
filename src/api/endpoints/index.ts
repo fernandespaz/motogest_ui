@@ -19,3 +19,4 @@ export * from './licenca';
 export * from './dashboard';
 export * from './horaTecnica';
 export * from './produtividade';
+export * from './fiscal';

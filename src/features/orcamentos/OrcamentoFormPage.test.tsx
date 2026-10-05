@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
@@ -29,6 +30,8 @@ vi.mock('@/features/shared/ItemsEditor', async (importOriginal) => {
   return { ...actual, ItemsEditor: () => <div data-testid="items-editor" /> };
 });
 vi.mock('@/features/shared/HoraTecnicaReferencia', () => ({ HoraTecnicaReferencia: () => null }));
+// three.js não roda no jsdom (sem WebGL) e o import real deixaria cada render da página lento.
+vi.mock('@/features/vistoria/VistoriaViewer', () => ({ default: () => <div data-testid="viewer" /> }));
 vi.mock('@/features/shared/ModeloVeiculoField', () => ({
   ModeloVeiculoThumb: () => null,
   useModeloVeiculoImagem: () => undefined,
@@ -142,5 +145,64 @@ describe('OrcamentoFormPage — carteira do consultor (bloqueio por URL direta)'
     renderPage('/orcamentos/5');
 
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
+  const orcamentoComAvaria = {
+    id: 5,
+    status: 'RASCUNHO',
+    clienteId: 1,
+    veiculoId: 2,
+    validadeDias: 7,
+    itens: [{ id: 1, tipoItem: 'SERVICO', descricao: 'Troca de óleo', quantidade: 1, valorUnitario: 50 }],
+    avarias: [
+      { id: 9, zona: 'CAPO', tipo: 'AMASSADO', descricao: 'amassado fundo', vista: 'TOPO', posicao: { x: 0, y: 0.9, z: 1.2 } },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ nome: 'Admin', perfil: 'Administrador', usuarioId: 1, hasPermission: () => true });
+    vi.mocked(useCreateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useClientes).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
+    vi.mocked(useVeiculosDoCliente).mockReturnValue({ data: [] } as never);
+  });
+
+  it('carrega as avarias do orçamento salvo na lista da vistoria', async () => {
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoComAvaria, isLoading: false } as never);
+    renderPage('/orcamentos/5');
+
+    await waitFor(() => expect(screen.getByLabelText('Região da avaria 1')).toHaveValue('CAPO'));
+    expect(screen.getByLabelText('Tipo da avaria 1')).toHaveValue('AMASSADO');
+    expect(screen.getByLabelText('Detalhes da avaria 1')).toHaveValue('amassado fundo');
+  });
+
+  // Schema presente não prova persistência (prohibited-actions #5): isto garante ao menos que o payload sai completo.
+  it('envia as avarias (sem id) no payload ao salvar', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoComAvaria, isLoading: false } as never);
+    renderPage('/orcamentos/5');
+    await waitFor(() => expect(screen.getByLabelText('Região da avaria 1')).toHaveValue('CAPO'));
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    const { payload } = mutateAsync.mock.calls[0][0];
+    expect(payload.avarias).toEqual([
+      { zona: 'CAPO', tipo: 'AMASSADO', descricao: 'amassado fundo', vista: 'TOPO', posicao: { x: 0, y: 0.9, z: 1.2 }, fotoId: undefined },
+    ]);
+    expect(payload.avarias[0]).not.toHaveProperty('id');
+  });
+
+  it('em orçamento que já saiu de rascunho, a vistoria fica só para consulta', async () => {
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: { ...orcamentoComAvaria, status: 'ENVIADO' }, isLoading: false } as never);
+    renderPage('/orcamentos/5');
+
+    await waitFor(() => expect(screen.getByLabelText('Região da avaria 1')).toBeDisabled());
+    expect(screen.queryByRole('button', { name: /Adicionar manual/ })).not.toBeInTheDocument();
   });
 });

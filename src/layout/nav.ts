@@ -18,6 +18,7 @@ import {
   Gauge,
   Banknote,
   Factory,
+  Receipt,
 } from 'lucide-react';
 import { isMecanico } from '@/lib/perfil';
 
@@ -78,6 +79,14 @@ export const navItems: NavItem[] = [
     icon: Wallet,
     group: 'gestao',
     permissions: ['FINANCEIRO_READ', 'CAIXA_GERENCIAR'],
+  },
+  // Módulo de NFS-e: qualquer FISCAL_* abre (emitir, configurar, certificado ou cancelar).
+  {
+    label: 'Fiscal',
+    to: '/fiscal',
+    icon: Receipt,
+    group: 'gestao',
+    permissions: ['FISCAL_EMITIR', 'FISCAL_CONFIGURAR', 'FISCAL_CERTIFICADO', 'FISCAL_CANCELAR'],
   },
   { label: 'Hora Técnica', to: '/hora-tecnica', icon: Calculator, group: 'gestao', permissions: ['HORA_TECNICA_GERENCIAR'] },
   // Tela própria, separada da Hora Técnica — permissão dedicada

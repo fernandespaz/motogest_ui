@@ -32,6 +32,14 @@ export type OrcamentoResponse = Schemas['OrcamentoResponse'];
 export type OrcamentoStatus = NonNullable<OrcamentoResponse['status']>;
 export type OrcamentoPublicoResponse = Schemas['OrcamentoPublicoResponse'];
 
+export type AvariaRequest = Schemas['AvariaRequest'];
+export type AvariaResponse = Schemas['AvariaResponse'];
+export type AvariaPublicaResponse = Schemas['AvariaPublicaResponse'];
+export type PosicaoAvaria = Schemas['PosicaoAvaria'];
+export type ZonaAvaria = NonNullable<AvariaRequest['zona']>;
+export type TipoAvaria = NonNullable<AvariaRequest['tipo']>;
+export type VistaAvaria = NonNullable<AvariaRequest['vista']>;
+
 export type ItemRequest = Schemas['ItemRequest'];
 export type ItemResponse = Schemas['ItemResponse'];
 export type TipoItem = NonNullable<ItemRequest['tipoItem']>;
@@ -297,6 +305,17 @@ export type ProdutividadeOficinaResponse = Schemas['ProdutividadeOficinaResponse
 export type ProdutividadeMecanicoDetalheResponse = Schemas['ProdutividadeMecanicoDetalheResponse'];
 export type OrdemServicoProdutividadeResponse = Schemas['OrdemServicoProdutividadeResponse'];
 export type ProdutividadeDiariaResponse = Schemas['ProdutividadeDiariaResponse'];
+
+export type ConfiguracaoFiscalRequest = Schemas['ConfiguracaoFiscalRequest'];
+export type ConfiguracaoFiscalResponse = Schemas['ConfiguracaoFiscalResponse'];
+export type CertificadoFiscalResponse = Schemas['CertificadoFiscalResponse'];
+export type RegimeTributarioResponse = Schemas['RegimeTributarioResponse'];
+export type CancelamentoNfseRequest = Schemas['CancelamentoNfseRequest'];
+export type NfseResponse = Schemas['DocumentoFiscalResponse'];
+export type NfseEventoResponse = Schemas['DocumentoFiscalEventoResponse'];
+export type RegimeTributario = NonNullable<ConfiguracaoFiscalRequest['regimeTributario']>;
+export type AmbienteFiscal = ConfiguracaoFiscalRequest['ambiente'];
+export type StatusNfse = NonNullable<NfseResponse['status']>;
 
 export interface PageResponse<T> {
   content: T[];

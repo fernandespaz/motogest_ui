@@ -9,6 +9,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orcamentoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { avariasParaExibicao } from '@/features/vistoria/avariasExibicao';
 
 export function OrcamentoPublicoPage() {
   const { token = '' } = useParams();
@@ -59,15 +60,16 @@ export function OrcamentoPublicoPage() {
   const acting = aprovar.isPending || rejeitar.isPending;
   const nomeOficina = orcamento.oficinaNomeFantasia || 'Oficina';
   const inicial = nomeOficina.trim().charAt(0).toUpperCase() || '?';
+  // Mesmo mapeamento (e tradução de região/tipo) usado no PDF — o cliente confere aqui o que foi registrado na entrada.
+  const avarias = avariasParaExibicao(orcamento.avarias);
 
   return (
     <div className="min-h-screen bg-graphite">
       {/*
-        Sem a logo real da oficina aqui — a rota pública (sem login) não tem
-        como buscá-la hoje: nem o schema OrcamentoPublicoResponse nem alguma
-        rota pública expõem a imagem, e /oficinas/atual/logo exige token de
-        staff (ver useOficina.ts). Até isso mudar no backend, um monograma com
-        a inicial do nome fantasia já dá alguma identidade visual da oficina.
+        A rota pública (sem login) não alcança /oficinas/atual/logo (exige JWT
+        de staff — ver useOficina.ts), então a logo vem embutida em
+        `logoBase64` no próprio payload público. Sem ela (oficina sem logo, ou
+        backend ainda sem o campo), cai num monograma com a inicial do nome.
       */}
       <div className="bg-graphite px-4 pb-16 pt-10 text-center text-white sm:pb-20 sm:pt-14">
         <motion.div
@@ -76,9 +78,17 @@ export function OrcamentoPublicoPage() {
           transition={{ duration: 0.35, ease: 'easeOut' }}
           className="mx-auto flex max-w-lg flex-col items-center"
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 font-display text-2xl font-bold shadow-[0_12px_30px_-8px_rgba(255,90,31,0.6)]">
-            {inicial}
-          </div>
+          {orcamento.logoBase64 ? (
+            <img
+              src={orcamento.logoBase64}
+              alt={`Logo ${nomeOficina}`}
+              className="h-20 max-w-[220px] rounded-xl bg-white object-contain p-2"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 font-display text-2xl font-bold shadow-[0_12px_30px_-8px_rgba(255,90,31,0.6)]">
+              {inicial}
+            </div>
+          )}
           <p className="mt-4 font-display text-xl font-bold tracking-tight">{nomeOficina}</p>
           <p className="mt-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
             <Wrench size={12} /> Orçamento de serviço
@@ -136,6 +146,22 @@ export function OrcamentoPublicoPage() {
               </div>
             ))}
           </div>
+
+          {avarias.length > 0 && (
+            <>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Avarias registradas na entrada</p>
+              <ul className="mb-4 divide-y divide-border rounded-lg border border-border">
+                {avarias.map((a, idx) => (
+                  <li key={idx} className="px-4 py-2.5 text-sm">
+                    <p className="text-ink">
+                      {a.regiao} <span className="text-ink-muted">· {a.tipo}</span>
+                    </p>
+                    {a.descricao && <p className="text-xs text-ink-muted">{a.descricao}</p>}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           {orcamento.observacoes && (
             <div className="mb-4 rounded-lg bg-surface-alt p-3 text-sm text-ink-muted">{orcamento.observacoes}</div>

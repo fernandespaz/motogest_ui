@@ -78,9 +78,17 @@ export function OrdemServicoPublicoPage() {
           transition={{ duration: 0.35, ease: 'easeOut' }}
           className="mx-auto flex max-w-lg flex-col items-center"
         >
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 font-display text-2xl font-bold shadow-[0_12px_30px_-8px_rgba(255,90,31,0.6)]">
-            {inicial}
-          </div>
+          {os.logoBase64 ? (
+            <img
+              src={os.logoBase64}
+              alt={`Logo ${nomeOficina}`}
+              className="h-20 max-w-[220px] rounded-xl bg-white object-contain p-2"
+            />
+          ) : (
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600 font-display text-2xl font-bold shadow-[0_12px_30px_-8px_rgba(255,90,31,0.6)]">
+              {inicial}
+            </div>
+          )}
           <p className="mt-4 font-display text-xl font-bold tracking-tight">{nomeOficina}</p>
           <p className="mt-1 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-400">
             <Wrench size={12} /> Ordem de serviço

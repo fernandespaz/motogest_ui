@@ -14,6 +14,8 @@ interface ModalProps {
   /** Rendered in a bar pinned to the modal's bottom, outside the scrollable body — for
    *  long forms whose Salvar/Cancelar buttons would otherwise scroll out of view. */
   footer?: ReactNode;
+  /** Mantém o modal no centro da tela também no celular (por padrão vira bottom sheet abaixo de `sm`). */
+  centered?: boolean;
 }
 
 const sizeStyles = {
@@ -23,7 +25,7 @@ const sizeStyles = {
   xl: 'max-w-4xl',
 };
 
-export function Modal({ open, onClose, title, children, size = 'md', footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md', footer, centered }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -38,7 +40,12 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
+        <div
+          className={clsx(
+            'fixed inset-0 z-50 flex justify-center sm:items-center sm:p-4',
+            centered ? 'items-center p-4' : 'items-end',
+          )}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -52,7 +59,8 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }: M
             exit={{ opacity: 0, y: 12, scale: 0.98, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={clsx(
-              'relative z-10 flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-surface shadow-xl sm:rounded-2xl',
+              'relative z-10 flex max-h-[92vh] w-full flex-col bg-surface shadow-xl sm:rounded-2xl',
+              centered ? 'rounded-2xl' : 'rounded-t-2xl',
               sizeStyles[size],
             )}
           >

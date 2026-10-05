@@ -50,6 +50,15 @@ export const ordemServicoStatusMeta: Record<string, { label: string; tone: Tone 
   ENTREGUE: meta('Entregue', 'concluido'),
 };
 
+export const nfseStatusMeta: Record<string, { label: string; tone: Tone }> = {
+  PENDENTE: meta('Pendente', 'aguardando'),
+  PROCESSANDO: meta('Aguardando governo', 'andamento'),
+  AUTORIZADA: meta('Autorizada', 'concluido'),
+  REJEITADA: meta('Rejeitada', 'cancelado'),
+  ERRO: meta('Erro', 'cancelado'),
+  CANCELADA: meta('Cancelada', 'neutro'),
+};
+
 export const contaStatusMeta: Record<string, { label: string; tone: Tone }> = {
   PENDENTE: meta('Pendente', 'aguardando'),
   PAGO: meta('Pago', 'concluido'),

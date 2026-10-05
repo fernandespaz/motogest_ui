@@ -29,7 +29,16 @@ import type { FormaPagamento, OrdemServicoResponse } from '@/api/types';
  * tabela é quem avança pra escolha da forma de pagamento, pra faturar não
  * disparar sozinho num clique acidental na linha.
  */
-export function FaturarOSModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function FaturarOSModal({
+  open,
+  onClose,
+  onFaturada,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Chamado assim que o faturamento é confirmado (antes do recibo) — ex.: oferecer a emissão de NFS-e. */
+  onFaturada?: (os: { id: number; numero?: string }) => void;
+}) {
   const [documentoInput, setDocumentoInput] = useState('');
   const [documentoBuscado, setDocumentoBuscado] = useState('');
   const [osSelecionada, setOsSelecionada] = useState<OrdemServicoResponse | null>(null);

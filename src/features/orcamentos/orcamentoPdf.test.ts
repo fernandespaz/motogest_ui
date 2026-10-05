@@ -51,3 +51,39 @@ describe('calcularValidade', () => {
     expect(calcularValidade({ createdAt: '2026-09-01T12:00:00' })).toBeUndefined();
   });
 });
+
+describe('buildOrcamentoPdfBlob — avarias da vistoria de entrada', () => {
+  it('traduz região e tipo pra português e não manda linha sem zona ou tipo', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+    const orcamento = {
+      id: 6,
+      status: 'RASCUNHO',
+      clienteNome: 'Carlos Eduardo',
+      itens: [],
+      avarias: [
+        { id: 1, zona: 'PORTA_DIANTEIRA_ESQ', tipo: 'AMASSADO', descricao: '  amassado fundo ' },
+        { id: 2, zona: 'CAPO', tipo: 'ARRANHAO' },
+        { id: 3, tipo: 'OUTRO' },
+      ],
+    } as OrcamentoResponse;
+
+    await buildOrcamentoPdfBlob(orcamento);
+
+    expect(renderOSDocumentPdf).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        avarias: [
+          { regiao: 'Porta dianteira esquerda', tipo: 'Amassado', descricao: 'amassado fundo' },
+          { regiao: 'Capô', tipo: 'Arranhão', descricao: undefined },
+        ],
+      }),
+    );
+  });
+
+  it('manda lista vazia (e portanto nenhuma seção no PDF) quando não há avarias', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+    await buildOrcamentoPdfBlob({ id: 7, status: 'RASCUNHO', itens: [] } as OrcamentoResponse);
+    expect(renderOSDocumentPdf).toHaveBeenLastCalledWith(expect.objectContaining({ avarias: [] }));
+  });
+});

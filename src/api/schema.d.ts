@@ -207,6 +207,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fiscal/configuracao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuracao fiscal da oficina, com as pendencias que ainda impedem a emissao */
+        get: operations["consultar"];
+        /** Salva a configuracao fiscal (pode ficar incompleta; habilitar a emissao exige completa) */
+        put: operations["atualizar_8"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/certificado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metadados do certificado da oficina (validade, titular, situacao) — nunca o arquivo nem a senha */
+        get: operations["consultar_1"];
+        /** Envia (ou substitui) o e-CNPJ A1 da oficina: multipart com 'arquivo' (.pfx/.p12) e 'senha' */
+        put: operations["enviar"];
+        post?: never;
+        /** Remove o certificado da oficina (a emissao fica bloqueada ate enviar outro) */
+        delete: operations["remover"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/configuracao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuracao fiscal da oficina, com as pendencias que ainda impedem a emissao */
+        get: operations["consultar"];
+        /** Salva a configuracao fiscal (pode ficar incompleta; habilitar a emissao exige completa) */
+        put: operations["atualizar_8"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/certificado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metadados do certificado da oficina (validade, titular, situacao) — nunca o arquivo nem a senha */
+        get: operations["consultar_1"];
+        /** Envia (ou substitui) o e-CNPJ A1 da oficina: multipart com 'arquivo' (.pfx/.p12) e 'senha' */
+        put: operations["enviar"];
+        post?: never;
+        /** Remove o certificado da oficina (a emissao fica bloqueada ate enviar outro) */
+        delete: operations["remover"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/financeiro/hora-tecnica": {
         parameters: {
             query?: never;
@@ -215,9 +289,11 @@ export interface paths {
             cookie?: never;
         };
         /** Lista a hora tecnica configurada para cada categoria (A/B/C) */
-        get: operations["consultar"];
+        get: operations["consultar_2"];
+        get: operations["consultar_2"];
         /** Define o valor da hora tecnica das 3 categorias (A/B/C) e o arredondamento comercial (auditado) */
-        put: operations["atualizar_8"];
+        put: operations["atualizar_9"];
+        put: operations["atualizar_9"];
         post?: never;
         delete?: never;
         options?: never;
@@ -233,9 +309,11 @@ export interface paths {
             cookie?: never;
         };
         /** Capacidade produtiva atual da oficina e HP calculado */
-        get: operations["consultar_1"];
+        get: operations["consultar_3"];
+        get: operations["consultar_3"];
         /** Define numero de mecanicos, horas/dia, dias uteis e eficiencia (auditado) */
-        put: operations["atualizar_9"];
+        put: operations["atualizar_10"];
+        put: operations["atualizar_10"];
         post?: never;
         delete?: never;
         options?: never;
@@ -253,7 +331,8 @@ export interface paths {
         /** Busca uma conta a receber pelo id */
         get: operations["buscarPorId_9"];
         /** Atualiza uma conta a receber pendente */
-        put: operations["atualizar_10"];
+        put: operations["atualizar_11"];
+        put: operations["atualizar_11"];
         post?: never;
         delete?: never;
         options?: never;
@@ -271,7 +350,8 @@ export interface paths {
         /** Busca uma conta a pagar pelo id */
         get: operations["buscarPorId_10"];
         /** Atualiza uma conta a pagar pendente */
-        put: operations["atualizar_11"];
+        put: operations["atualizar_12"];
+        put: operations["atualizar_12"];
         post?: never;
         delete?: never;
         options?: never;
@@ -289,7 +369,8 @@ export interface paths {
         /** Busca um cliente pelo id */
         get: operations["buscarPorId_11"];
         /** Atualiza um cliente existente */
-        put: operations["atualizar_12"];
+        put: operations["atualizar_13"];
+        put: operations["atualizar_13"];
         post?: never;
         /** Remove um cliente */
         delete: operations["excluir_8"];
@@ -308,7 +389,8 @@ export interface paths {
         /** Busca um agendamento pelo id */
         get: operations["buscarPorId_13"];
         /** Atualiza um agendamento existente */
-        put: operations["atualizar_13"];
+        put: operations["atualizar_14"];
+        put: operations["atualizar_14"];
         post?: never;
         /** Remove um agendamento */
         delete: operations["excluir_9"];
@@ -332,6 +414,26 @@ export interface paths {
         put?: never;
         /** Cadastra um novo veiculo vinculado a um cliente */
         post: operations["criar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/veiculos/{veiculoId}/avaria-fotos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Envia a foto de uma avaria do veiculo
+         * @description Campo multipart 'arquivo' (PNG ou JPEG, ate 5MB). Mantem a proporcao, reduz para no maximo 1280px e recomprime em JPEG (EXIF descartado). A foto expira 30 dias apos o upload. Use o 'id' retornado em AvariaRequest.fotoId (so vale para orcamentos do MESMO veiculo).
+         */
+        post: operations["enviar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -828,7 +930,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Envia o orcamento ao cliente (RASCUNHO -> ENVIADO) */
-        post: operations["enviar"];
+        post: operations["enviar_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -901,6 +1003,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fiscal/nfse/{id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela uma NFS-e autorizada (justificativa obrigatoria) */
+        post: operations["cancelar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}/atualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Consulta o provedor e atualiza o status da nota (resolve emissao PROCESSANDO) */
+        post: operations["atualizar_15"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/ordens-servico/{ordemServicoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emite a NFS-e dos servicos de uma OS faturada (pode voltar PROCESSANDO; use /atualizar) */
+        post: operations["emitir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}/cancelar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancela uma NFS-e autorizada (justificativa obrigatoria) */
+        post: operations["cancelar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}/atualizar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Consulta o provedor e atualiza o status da nota (resolve emissao PROCESSANDO) */
+        post: operations["atualizar_15"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/ordens-servico/{ordemServicoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Emite a NFS-e dos servicos de uma OS faturada (pode voltar PROCESSANDO; use /atualizar) */
+        post: operations["emitir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -912,7 +1116,8 @@ export interface paths {
          * Lista solicitacoes de desconto da oficina corrente
          * @description Filtra por origem (origemTipo + origemId) ou por status; sem filtros, lista todas
          */
-        get: operations["listar_12"];
+        get: operations["listar_13"];
+        get: operations["listar_13"];
         put?: never;
         /**
          * Solicita desconto num item de Orcamento/OS
@@ -967,7 +1172,8 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a receber da oficina corrente */
-        get: operations["listar_13"];
+        get: operations["listar_14"];
+        get: operations["listar_14"];
         put?: never;
         /** Cadastra uma nova conta a receber */
         post: operations["criar_10"];
@@ -1004,7 +1210,8 @@ export interface paths {
         get?: never;
         put?: never;
         /** Cancela uma conta a receber pendente */
-        post: operations["cancelar"];
+        post: operations["cancelar_1"];
+        post: operations["cancelar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1019,7 +1226,8 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a pagar da oficina corrente */
-        get: operations["listar_14"];
+        get: operations["listar_15"];
+        get: operations["listar_15"];
         put?: never;
         /** Cadastra uma nova conta a pagar */
         post: operations["criar_11"];
@@ -1056,7 +1264,8 @@ export interface paths {
         get?: never;
         put?: never;
         /** Cancela uma conta a pagar pendente */
-        post: operations["cancelar_1"];
+        post: operations["cancelar_2"];
+        post: operations["cancelar_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1074,7 +1283,8 @@ export interface paths {
          * Lista os clientes da oficina corrente
          * @description Filtro opcional por nome, ou por 'busca' (nome, CPF/CNPJ ou placa de qualquer veiculo vinculado — tem prioridade sobre 'nome' quando os dois sao informados)
          */
-        get: operations["listar_15"];
+        get: operations["listar_16"];
+        get: operations["listar_16"];
         put?: never;
         /**
          * Cadastra um novo cliente (PF ou PJ)
@@ -1098,7 +1308,8 @@ export interface paths {
          * Lista sessoes de caixa
          * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR ve apenas as proprias sessoes; CAIXA_GERENCIAR ve todas as sessoes da oficina
          */
-        get: operations["listar_16"];
+        get: operations["listar_17"];
+        get: operations["listar_17"];
         put?: never;
         /**
          * Abre uma nova sessao de caixa (turno)
@@ -1162,7 +1373,8 @@ export interface paths {
          * Lista os lancamentos de caixa da oficina corrente
          * @description Requer FINANCEIRO_READ
          */
-        get: operations["listar_17"];
+        get: operations["listar_18"];
+        get: operations["listar_18"];
         put?: never;
         /**
          * Registra um lancamento manual de caixa (exige caixa aberto)
@@ -1237,7 +1449,8 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_18"];
+        get: operations["listar_19"];
+        get: operations["listar_19"];
         put?: never;
         /** Cria um novo agendamento */
         post: operations["criar_13"];
@@ -1258,7 +1471,8 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_19"];
+        get: operations["listar_20"];
+        get: operations["listar_20"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
@@ -1306,6 +1520,26 @@ export interface paths {
         head?: never;
         /** Atualiza apenas o status do agendamento */
         patch: operations["atualizarStatus_1"];
+        trace?: never;
+    };
+    "/api/v1/veiculos/{veiculoId}/avaria-fotos/{fotoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Baixa a foto de uma avaria (JPEG)
+         * @description Exige o JWT no header Authorization — no front, busque via fetch e use um blob URL. 404 quando a foto nao existe, e' de outro veiculo/oficina ou ja expirou.
+         */
+        get: operations["baixar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/usuarios/tecnicos": {
@@ -1379,6 +1613,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/public/ordens-servico/{token}/avarias/{avariaId}/foto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Foto (JPEG) de uma avaria da OS, pelo token do link publico
+         * @description 404 quando a avaria nao tem foto ou a foto expirou (retencao de 30 dias).
+         */
+        get: operations["fotoAvaria"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/orcamentos/{token}": {
         parameters: {
             query?: never;
@@ -1388,6 +1642,26 @@ export interface paths {
         };
         /** Consulta um orçamento pelo token do link público */
         get: operations["buscar_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/orcamentos/{token}/avarias/{avariaId}/foto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Foto (JPEG) de uma avaria do orçamento, pelo token do link público
+         * @description 404 quando a avaria não tem foto ou a foto expirou (retenção de 30 dias).
+         */
+        get: operations["fotoAvaria_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1607,6 +1881,142 @@ export interface paths {
         };
         /** Retorna o status da licenca/trial da oficina do usuario autenticado */
         get: operations["buscarAtual_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/regimes-tributarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opcoes de regime tributario que a oficina pode escolher */
+        get: operations["regimes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista as NFS-e da oficina (mais recentes primeiro), opcionalmente de uma OS */
+        get: operations["listar_12"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhe de uma NFS-e, com a trilha de eventos */
+        get: operations["buscar_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}/xml": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Baixa o XML da NFS-e autorizada */
+        get: operations["xml"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/regimes-tributarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opcoes de regime tributario que a oficina pode escolher */
+        get: operations["regimes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista as NFS-e da oficina (mais recentes primeiro), opcionalmente de uma OS */
+        get: operations["listar_12"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhe de uma NFS-e, com a trilha de eventos */
+        get: operations["buscar_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fiscal/nfse/{id}/xml": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Baixa o XML da NFS-e autorizada */
+        get: operations["xml"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2160,6 +2570,21 @@ export interface components {
             observacoes?: string;
             itens: components["schemas"]["ItemRequest"][];
         };
+        AvariaResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            zona?: "PARA_CHOQUE_DIANTEIRO" | "PARA_CHOQUE_TRASEIRO" | "CAPO" | "TETO" | "PORTA_MALAS" | "GRADE" | "PARALAMA_DIANTEIRO_ESQ" | "PARALAMA_DIANTEIRO_DIR" | "PARALAMA_TRASEIRO_ESQ" | "PARALAMA_TRASEIRO_DIR" | "PORTA_DIANTEIRA_ESQ" | "PORTA_DIANTEIRA_DIR" | "PORTA_TRASEIRA_ESQ" | "PORTA_TRASEIRA_DIR" | "SOLEIRA_ESQ" | "SOLEIRA_DIR" | "PARABRISA" | "VIDRO_TRASEIRO" | "VIDRO_LATERAL_ESQ" | "VIDRO_LATERAL_DIR" | "FAROL_ESQ" | "FAROL_DIR" | "LANTERNA_ESQ" | "LANTERNA_DIR" | "RETROVISOR_ESQ" | "RETROVISOR_DIR" | "RODA_DIANTEIRA_ESQ" | "RODA_DIANTEIRA_DIR" | "RODA_TRASEIRA_ESQ" | "RODA_TRASEIRA_DIR" | "INTERIOR" | "OUTRA";
+            /** @enum {string} */
+            tipo?: "ARRANHAO" | "AMASSADO" | "TRINCA" | "FALTANDO" | "OUTRO";
+            descricao?: string;
+            /** @enum {string} */
+            vista?: "ESQ" | "DIR" | "FRENTE" | "TRAS" | "TOPO";
+            posicao?: components["schemas"]["PosicaoAvaria"];
+            /** Format: int64 */
+            fotoId?: number;
+            fotoUrl?: string;
+        };
         ItemResponse: {
             /** Format: int64 */
             id?: number;
@@ -2226,6 +2651,29 @@ export interface components {
             /** Format: int64 */
             consultorId?: number;
             consultorNome?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
+            avarias?: components["schemas"]["AvariaResponse"][];
+        };
+        PosicaoAvaria: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+            /** Format: double */
+            z: number;
+        };
+        AvariaRequest: {
+            /** @enum {string} */
+            zona: "PARA_CHOQUE_DIANTEIRO" | "PARA_CHOQUE_TRASEIRO" | "CAPO" | "TETO" | "PORTA_MALAS" | "GRADE" | "PARALAMA_DIANTEIRO_ESQ" | "PARALAMA_DIANTEIRO_DIR" | "PARALAMA_TRASEIRO_ESQ" | "PARALAMA_TRASEIRO_DIR" | "PORTA_DIANTEIRA_ESQ" | "PORTA_DIANTEIRA_DIR" | "PORTA_TRASEIRA_ESQ" | "PORTA_TRASEIRA_DIR" | "SOLEIRA_ESQ" | "SOLEIRA_DIR" | "PARABRISA" | "VIDRO_TRASEIRO" | "VIDRO_LATERAL_ESQ" | "VIDRO_LATERAL_DIR" | "FAROL_ESQ" | "FAROL_DIR" | "LANTERNA_ESQ" | "LANTERNA_DIR" | "RETROVISOR_ESQ" | "RETROVISOR_DIR" | "RODA_DIANTEIRA_ESQ" | "RODA_DIANTEIRA_DIR" | "RODA_TRASEIRA_ESQ" | "RODA_TRASEIRA_DIR" | "INTERIOR" | "OUTRA";
+            /** @enum {string} */
+            tipo: "ARRANHAO" | "AMASSADO" | "TRINCA" | "FALTANDO" | "OUTRO";
+            descricao?: string;
+            /** @enum {string} */
+            vista?: "ESQ" | "DIR" | "FRENTE" | "TRAS" | "TOPO";
+            posicao?: components["schemas"]["PosicaoAvaria"];
+            /** Format: int64 */
+            fotoId?: number;
         };
         OrcamentoRequest: {
             /** Format: int64 */
@@ -2240,6 +2688,9 @@ export interface components {
             itens: components["schemas"]["ItemRequest"][];
             /** Format: date-time */
             dataEntradaVeiculo?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
+            avarias?: components["schemas"]["AvariaRequest"][];
         };
         OrcamentoResponse: {
             /** Format: int64 */
@@ -2273,6 +2724,9 @@ export interface components {
             dataEmissao?: string;
             /** Format: date-time */
             dataAprovacao?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
+            avarias?: components["schemas"]["AvariaResponse"][];
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -2321,6 +2775,112 @@ export interface components {
             marca?: string;
             modelo?: string;
             imagemBase64?: string;
+        };
+        ConfiguracaoFiscalRequest: {
+            emissaoHabilitada: boolean;
+            /** @enum {string} */
+            ambiente: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            regimeTributario?: "MEI" | "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+            inscricaoMunicipal?: string;
+            codigoMunicipioIbge?: string;
+            codigoServico?: string;
+            codigoServicoMunicipal?: string;
+            cnae?: string;
+            aliquotaIss?: number;
+            aliquotaSimplesNacional?: number;
+            issRetido?: boolean;
+            provedorEmpresaRef?: string;
+        };
+        ConfiguracaoFiscalResponse: {
+            configurada?: boolean;
+            emissaoHabilitada?: boolean;
+            /** @enum {string} */
+            ambiente?: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            regimeTributario?: "MEI" | "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+            inscricaoMunicipal?: string;
+            codigoMunicipioIbge?: string;
+            codigoServico?: string;
+            codigoServicoMunicipal?: string;
+            cnae?: string;
+            aliquotaIss?: number;
+            aliquotaSimplesNacional?: number;
+            issRetido?: boolean;
+            provedorEmpresaRef?: string;
+            pendencias?: string[];
+            prontaParaEmitir?: boolean;
+            provedorDisponivel?: boolean;
+        };
+        CertificadoFiscalResponse: {
+            enviado?: boolean;
+            cnpj?: string;
+            titular?: string;
+            numeroSerie?: string;
+            fingerprintSha256?: string;
+            /** Format: date-time */
+            validoDe?: string;
+            /** Format: date-time */
+            validoAte?: string;
+            /** Format: int64 */
+            diasParaVencer?: number;
+            /** @enum {string} */
+            situacao?: "VALIDO" | "VENCE_EM_BREVE" | "VENCIDO";
+            /** Format: date-time */
+            enviadoEm?: string;
+        };
+        ConfiguracaoFiscalRequest: {
+            emissaoHabilitada: boolean;
+            /** @enum {string} */
+            ambiente: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            regimeTributario?: "MEI" | "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+            inscricaoMunicipal?: string;
+            codigoMunicipioIbge?: string;
+            codigoServico?: string;
+            codigoServicoMunicipal?: string;
+            cnae?: string;
+            aliquotaIss?: number;
+            aliquotaSimplesNacional?: number;
+            issRetido?: boolean;
+            provedorEmpresaRef?: string;
+        };
+        ConfiguracaoFiscalResponse: {
+            configurada?: boolean;
+            emissaoHabilitada?: boolean;
+            /** @enum {string} */
+            ambiente?: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            regimeTributario?: "MEI" | "SIMPLES_NACIONAL" | "LUCRO_PRESUMIDO" | "LUCRO_REAL";
+            inscricaoMunicipal?: string;
+            codigoMunicipioIbge?: string;
+            codigoServico?: string;
+            codigoServicoMunicipal?: string;
+            cnae?: string;
+            aliquotaIss?: number;
+            aliquotaSimplesNacional?: number;
+            issRetido?: boolean;
+            provedorEmpresaRef?: string;
+            pendencias?: string[];
+            prontaParaEmitir?: boolean;
+            provedorDisponivel?: boolean;
+        };
+        CertificadoFiscalResponse: {
+            enviado?: boolean;
+            cnpj?: string;
+            titular?: string;
+            numeroSerie?: string;
+            fingerprintSha256?: string;
+            /** Format: date-time */
+            validoDe?: string;
+            /** Format: date-time */
+            validoAte?: string;
+            /** Format: int64 */
+            diasParaVencer?: number;
+            /** @enum {string} */
+            situacao?: "VALIDO" | "VENCE_EM_BREVE" | "VENCIDO";
+            /** Format: date-time */
+            enviadoEm?: string;
         };
         CategoriaHoraTecnicaItemRequest: {
             /** @enum {string} */
@@ -2489,11 +3049,31 @@ export interface components {
             id?: number;
             nome?: string;
         };
+        AvariaFotoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            veiculoId?: number;
+            url?: string;
+            /** Format: date-time */
+            expiraEm?: string;
+        };
         ImportacaoCatalogoResponse: {
             /** Format: int32 */
             servicosCriados?: number;
             /** Format: int32 */
             servicosIgnorados?: number;
+        };
+        AvariaPublicaResponse: {
+            /** @enum {string} */
+            zona?: "PARA_CHOQUE_DIANTEIRO" | "PARA_CHOQUE_TRASEIRO" | "CAPO" | "TETO" | "PORTA_MALAS" | "GRADE" | "PARALAMA_DIANTEIRO_ESQ" | "PARALAMA_DIANTEIRO_DIR" | "PARALAMA_TRASEIRO_ESQ" | "PARALAMA_TRASEIRO_DIR" | "PORTA_DIANTEIRA_ESQ" | "PORTA_DIANTEIRA_DIR" | "PORTA_TRASEIRA_ESQ" | "PORTA_TRASEIRA_DIR" | "SOLEIRA_ESQ" | "SOLEIRA_DIR" | "PARABRISA" | "VIDRO_TRASEIRO" | "VIDRO_LATERAL_ESQ" | "VIDRO_LATERAL_DIR" | "FAROL_ESQ" | "FAROL_DIR" | "LANTERNA_ESQ" | "LANTERNA_DIR" | "RETROVISOR_ESQ" | "RETROVISOR_DIR" | "RODA_DIANTEIRA_ESQ" | "RODA_DIANTEIRA_DIR" | "RODA_TRASEIRA_ESQ" | "RODA_TRASEIRA_DIR" | "INTERIOR" | "OUTRA";
+            /** @enum {string} */
+            tipo?: "ARRANHAO" | "AMASSADO" | "TRINCA" | "FALTANDO" | "OUTRO";
+            descricao?: string;
+            /** @enum {string} */
+            vista?: "ESQ" | "DIR" | "FRENTE" | "TRAS" | "TOPO";
+            posicao?: components["schemas"]["PosicaoAvaria"];
+            fotoUrl?: string;
         };
         OrdemServicoPublicoResponse: {
             /** Format: int64 */
@@ -2509,6 +3089,10 @@ export interface components {
             itens?: components["schemas"]["ItemResponse"][];
             /** Format: date-time */
             dataAbertura?: string;
+            logoBase64?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
+            avarias?: components["schemas"]["AvariaPublicaResponse"][];
         };
         OrcamentoPublicoResponse: {
             /** Format: int64 */
@@ -2525,6 +3109,10 @@ export interface components {
             itens?: components["schemas"]["ItemResponse"][];
             /** Format: date-time */
             createdAt?: string;
+            logoBase64?: string;
+            /** Format: int32 */
+            nivelCombustivel?: number;
+            avarias?: components["schemas"]["AvariaPublicaResponse"][];
         };
         ReservarEstoqueRequest: {
             quantidade: number;
@@ -2643,6 +3231,92 @@ export interface components {
         };
         PausarOrdemServicoRequest: {
             motivo: string;
+        };
+        CancelamentoNfseRequest: {
+            justificativa: string;
+        };
+        DocumentoFiscalEventoResponse: {
+            /** @enum {string} */
+            tipo?: "SOLICITADA" | "RESULTADO_EMISSAO" | "FALHA_COMUNICACAO" | "CONSULTA" | "CANCELAMENTO_SOLICITADO" | "CANCELAMENTO_RESULTADO";
+            /** @enum {string} */
+            statusResultante?: "PENDENTE" | "PROCESSANDO" | "AUTORIZADA" | "REJEITADA" | "ERRO" | "CANCELADA";
+            /** Format: int64 */
+            usuarioId?: number;
+            /** Format: date-time */
+            ocorridoEm?: string;
+            mensagem?: string;
+        };
+        DocumentoFiscalResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            ordemServicoId?: number;
+            ordemServicoNumero?: string;
+            /** @enum {string} */
+            tipo?: "NFSE";
+            /** @enum {string} */
+            ambiente?: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            status?: "PENDENTE" | "PROCESSANDO" | "AUTORIZADA" | "REJEITADA" | "ERRO" | "CANCELADA";
+            numero?: string;
+            codigoVerificacao?: string;
+            chaveAcesso?: string;
+            protocolo?: string;
+            linkPdf?: string;
+            valorServicos?: number;
+            mensagem?: string;
+            /** Format: date-time */
+            dataSolicitacao?: string;
+            /** Format: date-time */
+            dataAutorizacao?: string;
+            /** Format: date-time */
+            dataCancelamento?: string;
+            justificativaCancelamento?: string;
+            possuiXml?: boolean;
+            eventos?: components["schemas"]["DocumentoFiscalEventoResponse"][];
+        };
+        CancelamentoNfseRequest: {
+            justificativa: string;
+        };
+        DocumentoFiscalEventoResponse: {
+            /** @enum {string} */
+            tipo?: "SOLICITADA" | "RESULTADO_EMISSAO" | "FALHA_COMUNICACAO" | "CONSULTA" | "CANCELAMENTO_SOLICITADO" | "CANCELAMENTO_RESULTADO";
+            /** @enum {string} */
+            statusResultante?: "PENDENTE" | "PROCESSANDO" | "AUTORIZADA" | "REJEITADA" | "ERRO" | "CANCELADA";
+            /** Format: int64 */
+            usuarioId?: number;
+            /** Format: date-time */
+            ocorridoEm?: string;
+            mensagem?: string;
+        };
+        DocumentoFiscalResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            ordemServicoId?: number;
+            ordemServicoNumero?: string;
+            /** @enum {string} */
+            tipo?: "NFSE";
+            /** @enum {string} */
+            ambiente?: "HOMOLOGACAO" | "PRODUCAO";
+            /** @enum {string} */
+            status?: "PENDENTE" | "PROCESSANDO" | "AUTORIZADA" | "REJEITADA" | "ERRO" | "CANCELADA";
+            numero?: string;
+            codigoVerificacao?: string;
+            chaveAcesso?: string;
+            protocolo?: string;
+            linkPdf?: string;
+            valorServicos?: number;
+            mensagem?: string;
+            /** Format: date-time */
+            dataSolicitacao?: string;
+            /** Format: date-time */
+            dataAutorizacao?: string;
+            /** Format: date-time */
+            dataCancelamento?: string;
+            justificativaCancelamento?: string;
+            possuiXml?: boolean;
+            eventos?: components["schemas"]["DocumentoFiscalEventoResponse"][];
         };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
@@ -3100,6 +3774,38 @@ export interface components {
         };
         PageResponseModeloVeiculoResponse: {
             content?: components["schemas"]["ModeloVeiculoResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        RegimeTributarioResponse: {
+            codigo?: string;
+            descricao?: string;
+        };
+        PageResponseDocumentoFiscalResponse: {
+            content?: components["schemas"]["DocumentoFiscalResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
+        };
+        RegimeTributarioResponse: {
+            codigo?: string;
+            descricao?: string;
+        };
+        PageResponseDocumentoFiscalResponse: {
+            content?: components["schemas"]["DocumentoFiscalResponse"][];
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
@@ -3982,12 +4688,235 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                    "*/*": components["schemas"]["ConfiguracaoFiscalResponse"];
+                    "*/*": components["schemas"]["ConfiguracaoFiscalResponse"];
                 };
             };
         };
     };
     atualizar_8: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfiguracaoFiscalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfiguracaoFiscalResponse"];
+                };
+            };
+        };
+    };
+    consultar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CertificadoFiscalResponse"];
+                };
+            };
+        };
+    };
+    enviar: {
+        parameters: {
+            query: {
+                senha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    arquivo: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CertificadoFiscalResponse"];
+                };
+            };
+        };
+    };
+    remover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    consultar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    atualizar_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfiguracaoFiscalRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfiguracaoFiscalResponse"];
+                };
+            };
+        };
+    };
+    consultar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CertificadoFiscalResponse"];
+                };
+            };
+        };
+    };
+    enviar: {
+        parameters: {
+            query: {
+                senha: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    arquivo: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CertificadoFiscalResponse"];
+                };
+            };
+        };
+    };
+    remover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    consultar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    atualizar_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -4011,7 +4940,8 @@ export interface operations {
             };
         };
     };
-    consultar_1: {
+    consultar_3: {
+    consultar_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -4031,7 +4961,8 @@ export interface operations {
             };
         };
     };
-    atualizar_9: {
+    atualizar_10: {
+    atualizar_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -4077,7 +5008,8 @@ export interface operations {
             };
         };
     };
-    atualizar_10: {
+    atualizar_11: {
+    atualizar_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -4125,7 +5057,8 @@ export interface operations {
             };
         };
     };
-    atualizar_11: {
+    atualizar_12: {
+    atualizar_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -4173,7 +5106,8 @@ export interface operations {
             };
         };
     };
-    atualizar_12: {
+    atualizar_13: {
+    atualizar_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -4241,7 +5175,8 @@ export interface operations {
             };
         };
     };
-    atualizar_13: {
+    atualizar_14: {
+    atualizar_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -4329,6 +5264,35 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["VeiculoResponse"];
+                };
+            };
+        };
+    };
+    enviar_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                veiculoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    arquivo: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AvariaFotoResponse"];
                 };
             };
         };
@@ -5169,7 +6133,7 @@ export interface operations {
             };
         };
     };
-    enviar: {
+    enviar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5333,7 +6297,148 @@ export interface operations {
             };
         };
     };
-    listar_12: {
+    cancelar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelamentoNfseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    atualizar_15: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    emitir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ordemServicoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    listar_13: {
+    cancelar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelamentoNfseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    atualizar_15: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    emitir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ordemServicoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    listar_13: {
         parameters: {
             query: {
                 origemTipo?: "ORCAMENTO" | "ORDEM_SERVICO";
@@ -5430,7 +6535,8 @@ export interface operations {
             };
         };
     };
-    listar_13: {
+    listar_14: {
+    listar_14: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5498,7 +6604,8 @@ export interface operations {
             };
         };
     };
-    cancelar: {
+    cancelar_1: {
+    cancelar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5520,7 +6627,8 @@ export interface operations {
             };
         };
     };
-    listar_14: {
+    listar_15: {
+    listar_15: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5588,7 +6696,8 @@ export interface operations {
             };
         };
     };
-    cancelar_1: {
+    cancelar_2: {
+    cancelar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5610,7 +6719,8 @@ export interface operations {
             };
         };
     };
-    listar_15: {
+    listar_16: {
+    listar_16: {
         parameters: {
             query: {
                 nome?: string;
@@ -5658,7 +6768,8 @@ export interface operations {
             };
         };
     };
-    listar_16: {
+    listar_17: {
+    listar_17: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5756,7 +6867,8 @@ export interface operations {
             };
         };
     };
-    listar_17: {
+    listar_18: {
+    listar_18: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5870,7 +6982,8 @@ export interface operations {
             };
         };
     };
-    listar_18: {
+    listar_19: {
+    listar_19: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -5916,7 +7029,8 @@ export interface operations {
             };
         };
     };
-    listar_19: {
+    listar_20: {
+    listar_20: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6010,6 +7124,29 @@ export interface operations {
             };
         };
     };
+    baixar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                veiculoId: number;
+                fotoId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
     listarTecnicos: {
         parameters: {
             query?: never;
@@ -6094,6 +7231,29 @@ export interface operations {
             };
         };
     };
+    fotoAvaria: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                avariaId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
     buscar_1: {
         parameters: {
             query?: never;
@@ -6112,6 +7272,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OrcamentoPublicoResponse"];
+                };
+            };
+        };
+    };
+    fotoAvaria_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+                avariaId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
                 };
             };
         };
@@ -6399,6 +7582,180 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["LicencaResponse"];
+                };
+            };
+        };
+    };
+    regimes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RegimeTributarioResponse"][];
+                };
+            };
+        };
+    };
+    listar_12: {
+        parameters: {
+            query: {
+                ordemServicoId?: number;
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseDocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    buscar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    xml: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
+                };
+            };
+        };
+    };
+    regimes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RegimeTributarioResponse"][];
+                };
+            };
+        };
+    };
+    listar_12: {
+        parameters: {
+            query: {
+                ordemServicoId?: number;
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseDocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    buscar_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DocumentoFiscalResponse"];
+                };
+            };
+        };
+    };
+    xml: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string[];
                 };
             };
         };

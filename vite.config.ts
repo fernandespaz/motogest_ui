@@ -34,8 +34,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         // O fundo da tela de login (~2,6MB) não precisa estar disponível
         // offline nem atrasar a instalação do service worker — o navegador
-        // busca ele normal na hora, como qualquer imagem comum.
-        globIgnores: ['**/login-bg.png'],
+        // busca ele normal na hora, como qualquer imagem comum. Idem pro viewer
+        // 3D da vistoria (three.js, ~925KB): só carrega ao abrir a seção, e
+        // pré-cachear isso faria todo deploy rebaixar quase 1MB a cada cliente.
+        globIgnores: ['**/login-bg.png', '**/VistoriaViewer-*.js'],
         navigateFallbackDenylist: [/^\/api\//],
       },
     }),
