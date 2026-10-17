@@ -8,10 +8,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Atualiza o service worker sozinho a cada novo deploy — sem isso, um
-      // usuário que instalou o "app" podia ficar preso num bundle JS antigo
-      // indefinidamente, sem nem saber que existe uma versão nova.
-      registerType: 'autoUpdate',
+      // 'prompt': o service worker novo fica esperando e o app mostra o aviso
+      // "Nova versão disponível" (components/ui/UpdatePrompt.tsx). Com
+      // 'autoUpdate' o SW novo assumia sozinho, mas a aba aberta seguia
+      // rodando o JS antigo até o usuário recarregar na mão — e a oficina
+      // deixa o sistema aberto o dia todo. Recarregar sozinho perderia
+      // formulário em preenchimento, por isso quem decide é o usuário.
+      registerType: 'prompt',
       manifest: {
         name: 'MotoGest — Gestão de Oficinas',
         short_name: 'MotoGest',
