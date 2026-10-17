@@ -13,6 +13,7 @@ import type { AgendamentoResponse, ClienteResponse, ServicoResponse, VeiculoResp
 import { toDateTimeLocalValue } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
+import { useAuthStore } from '@/store/authStore';
 
 const FORM_ID = 'agendamento-form';
 
@@ -31,12 +32,16 @@ export function AgendamentoFormModal({
   onClose,
   agendamento,
   defaultDate,
+  onSalvoParaOrcamento,
 }: {
   open: boolean;
   onClose: () => void;
   agendamento?: AgendamentoResponse | null;
   defaultDate?: string;
+  /** Chamado com o id do agendamento recém-criado quando o usuário escolhe "Criar orçamento". */
+  onSalvoParaOrcamento?: (agendamentoId: number) => void;
 }) {
+  const podeCriarOrcamento = useAuthStore((s) => s.hasPermission('ORCAMENTO_WRITE')) && !!onSalvoParaOrcamento;
   const isEditing = !!agendamento;
   const [buscaCliente, setBuscaCliente] = useState('');
   const { data: clientes } = useClientes({ size: 50, nome: buscaCliente || undefined });
@@ -73,15 +78,20 @@ export function AgendamentoFormModal({
     }
   }, [open, agendamento, defaultDate, reset]);
 
-  async function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues, abrirOrcamento = false) {
     try {
       const payload = { ...values, dataHora: new Date(values.dataHora).toISOString() };
       if (isEditing && agendamento?.id != null) {
         await updateMutation.mutateAsync({ id: agendamento.id, payload });
         toast.success('Agendamento atualizado.');
       } else {
-        await createMutation.mutateAsync(payload);
+        const criado = await createMutation.mutateAsync(payload);
         toast.success('Agendamento criado.');
+        if (abrirOrcamento && criado.id != null) {
+          onClose();
+          onSalvoParaOrcamento?.(criado.id);
+          return;
+        }
       }
       onClose();
     } catch (error) {
@@ -102,13 +112,18 @@ export function AgendamentoFormModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
+          {!isEditing && podeCriarOrcamento && (
+            <Button type="button" variant="outline" loading={saving} onClick={handleSubmit((v) => onSubmit(v, true))}>
+              Criar orçamento
+            </Button>
+          )}
           <Button type="submit" form={FORM_ID} loading={saving}>
             Salvar
           </Button>
         </>
       }
     >
-      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+      <form id={FORM_ID} onSubmit={handleSubmit((v) => onSubmit(v))} className="flex flex-col gap-4" noValidate>
         <Controller
           control={control}
           name="clienteId"

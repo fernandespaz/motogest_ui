@@ -23,7 +23,11 @@ function meta(label: string, semantic: Semantic) {
 export const agendamentoStatusMeta: Record<string, { label: string; tone: Tone }> = {
   AGENDADO: meta('Agendado', 'aguardando'),
   CONFIRMADO: meta('Confirmado', 'aguardando'),
+  // Não existe no backend: status efetivo da Agenda quando já há OS esperando o técnico (inclui cliente sem agendamento).
+  NA_FILA: meta('Na fila', 'aguardando'),
   EM_ANDAMENTO: meta('Em andamento', 'andamento'),
+  // Não existe no backend: é o status efetivo da Agenda quando a OS do veículo está aguardando peça.
+  AGUARDANDO_PECAS: meta('Aguardando peças', 'andamento'),
   CONCLUIDO: meta('Concluído', 'concluido'),
   CANCELADO: meta('Cancelado', 'cancelado'),
 };

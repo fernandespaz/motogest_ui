@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { FormProvider, useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, MessageCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -17,6 +17,7 @@ import { useVeiculosDoCliente } from '@/hooks/useClientes';
 import type { ClienteResponse, OrcamentoResponse } from '@/api/types';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useAgendamento } from '@/hooks/useAgenda';
 import {
   ItemsEditor,
   MENSAGEM_SERVICO_SEM_TEMPO,
@@ -54,6 +55,8 @@ const itemSchema = z.object({
 const schema = z.object({
   clienteId: z.coerce.number().positive('Selecione o cliente'),
   veiculoId: z.coerce.number().positive('Selecione o veículo'),
+  // Vínculo com a Agenda. Não é editável aqui, mas PRECISA ir de volta no PUT: o backend grava null quando falta.
+  agendamentoId: z.number().optional(),
   validadeDias: z.coerce.number().optional(),
   // "yyyy-MM-ddTHH:mm" local, sem fuso — o backend guarda LocalDateTime e
   // compara com o próprio relógio. Base do "tempo médio de resposta" do
@@ -125,6 +128,10 @@ function OrcamentoFormContent() {
   }, [redirecionandoForaDeOrcamento, hasPermission, perfil, navigate]);
 
   const { data: orcamento, isLoading } = useOrcamento(orcamentoId);
+  // "Criar orçamento" na Agenda abre /orcamentos/novo?agendamentoId=N: cliente, veículo e vínculo já vêm preenchidos.
+  const [searchParams] = useSearchParams();
+  const agendamentoOrigemId = isEditing ? undefined : Number(searchParams.get('agendamentoId')) || undefined;
+  const { data: agendamentoOrigem } = useAgendamento(agendamentoOrigemId);
   // Mesmo atalho de UX do redirecionamento acima, não controle de acesso de
   // verdade (ver comentário em OrcamentosPage sobre o gap real: ORCAMENTO_READ
   // não distingue "ver os próprios" de "ver todos" no backend) — evita que um
@@ -155,7 +162,9 @@ function OrcamentoFormContent() {
 
   const methods = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { itens: [], avarias: [], validadeDias: 7, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
+    // agendamentoId vem do parâmetro da URL (não do GET do agendamento): se o GET falhar (sem AGENDA_READ, rede),
+    // o vínculo com a Agenda não pode se perder em silêncio.
+    defaultValues: { itens: [], avarias: [], validadeDias: 7, agendamentoId: agendamentoOrigemId, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
   });
   const {
     control,
@@ -182,10 +191,23 @@ function OrcamentoFormContent() {
   const imagemVeiculo = useModeloVeiculoImagem(selectedVeiculo?.marca, selectedVeiculo?.modelo);
 
   useEffect(() => {
+    if (!agendamentoOrigem || isEditing) return;
+    reset({
+      ...getValues(),
+      clienteId: agendamentoOrigem.clienteId ?? 0,
+      veiculoId: agendamentoOrigem.veiculoId ?? 0,
+      observacoes: agendamentoOrigem.observacoes ?? '',
+    });
+    // só reaplica quando o agendamento de origem chega.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agendamentoOrigem]);
+
+  useEffect(() => {
     if (orcamento) {
       reset({
         clienteId: orcamento.clienteId ?? 0,
         veiculoId: orcamento.veiculoId ?? 0,
+        agendamentoId: orcamento.agendamentoId ?? undefined,
         validadeDias: orcamento.validadeDias ?? 7,
         dataEntradaVeiculo: toDateTimeLocalValue(orcamento.dataEntradaVeiculo),
         nivelCombustivel: ehNivelCombustivel(orcamento.nivelCombustivel) ? orcamento.nivelCombustivel : undefined,
@@ -204,8 +226,9 @@ function OrcamentoFormContent() {
   // The client list above is a searched/paginated subset — when editing an
   // existing orçamento, its client may not be in it, which would otherwise
   // blank out the combobox's label for a value that's actually set.
-  if (clienteId && orcamento?.clienteNome && !clienteOptions.some((o) => o.value === clienteId)) {
-    clienteOptions.unshift({ value: clienteId, label: orcamento.clienteNome });
+  const nomeClienteConhecido = orcamento?.clienteNome ?? agendamentoOrigem?.clienteNome;
+  if (clienteId && nomeClienteConhecido && !clienteOptions.some((o) => o.value === clienteId)) {
+    clienteOptions.unshift({ value: clienteId, label: nomeClienteConhecido });
   }
 
   const veiculoOptions: ComboboxOption[] = (veiculos ?? [])
@@ -284,6 +307,7 @@ function OrcamentoFormContent() {
       reset({
         clienteId: criado.clienteId ?? valores.clienteId,
         veiculoId: criado.veiculoId ?? valores.veiculoId,
+        agendamentoId: criado.agendamentoId ?? valores.agendamentoId,
         validadeDias: criado.validadeDias ?? valores.validadeDias,
         dataEntradaVeiculo: toDateTimeLocalValue(criado.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
         nivelCombustivel: ehNivelCombustivel(criado.nivelCombustivel) ? criado.nivelCombustivel : valores.nivelCombustivel,
@@ -349,6 +373,23 @@ function OrcamentoFormContent() {
           </div>
         }
       />
+
+      {agendamentoOrigem && (
+        <div className="mb-4 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-ink dark:border-brand-800 dark:bg-brand-900/30">
+          <p className="font-medium">
+            Orçamento do agendamento de {formatDateTime(agendamentoOrigem.dataHora)} — {agendamentoOrigem.veiculoPlaca}
+          </p>
+          <p className="text-ink-muted">
+            Serviços agendados: {agendamentoOrigem.servicos?.map((s) => s.nome).join(', ') || '—'}. Adicione-os como itens abaixo.
+            Depois de aprovado, gere a OS pela Agenda ou pela lista de orçamentos.
+          </p>
+        </div>
+      )}
+      {isEditing && orcamento?.agendamentoId != null && hasPermission('AGENDA_READ') && (
+        <p className="mb-4 text-sm text-ink-muted">
+          Vinculado a um agendamento da <Link to="/agenda" className="text-brand-700 underline underline-offset-2 dark:text-brand-300">Agenda</Link>.
+        </p>
+      )}
 
       <FormProvider {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
