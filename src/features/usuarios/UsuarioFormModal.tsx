@@ -1,47 +1,34 @@
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
+import type { FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Checkbox } from '@/components/ui/Field';
-import { useCreateUsuario, useUpdateUsuario } from '@/hooks/useUsuarios';
+import { TabPanel, Tabs } from '@/components/ui/Tabs';
+import { useCreateUsuario, useUpdateUsuario, useUsuario } from '@/hooks/useUsuarios';
 import { usePerfis } from '@/hooks/usePerfis';
-import type { UsuarioResponse } from '@/api/types';
+import { useCepLookup } from '@/hooks/useCepLookup';
+import type { UsuarioRequest, UsuarioResponse } from '@/api/types';
 import { toast } from '@/store/toastStore';
-import { isSenhaForte, SENHA_FRACA_MSG, SENHA_HINT, SENHA_NAO_CONFERE_MSG } from '@/lib/senha';
+import { useAuthStore } from '@/store/authStore';
+import { preventEnterSubmit } from '@/lib/preventEnterSubmit';
 import { extractErrorMessage, getBusinessErrorCode, mensagemSeguraParaUsuario } from '@/api/client';
+import { abasComErro, formParaColaborador, primeiraAbaComErro } from './colaborador';
+import type { AbaUsuario } from './colaborador';
+import { createSchema, editSchema, valoresIniciais } from './usuarioFormSchema';
+import type { FormValues } from './usuarioFormSchema';
+import { AbaAcesso, AbaContato, AbaContratacao, AbaPessoais } from './UsuarioFormAbas';
 
 const FORM_ID = 'usuario-form';
 
-const baseSchema = {
-  nome: z.string().min(1, 'Informe o nome'),
-  email: z.string().email('E-mail inválido'),
-  perfilId: z.coerce.number().positive('Selecione o perfil'),
-  ativo: z.boolean().optional(),
-};
-
-// Na criação a senha é obrigatória e forte; na edição é opcional, mas quando
-// preenchida segue a mesma regra e precisa bater com a confirmação.
-const confirmacaoConfere = (v: { senha?: string; confirmacaoSenha?: string }) =>
-  !v.senha || v.senha === v.confirmacaoSenha;
-
-const createSchema = z
-  .object({
-    ...baseSchema,
-    senha: z.string().min(1, 'Informe a senha').refine(isSenhaForte, SENHA_FRACA_MSG),
-    confirmacaoSenha: z.string().optional(),
-  })
-  .refine(confirmacaoConfere, { message: SENHA_NAO_CONFERE_MSG, path: ['confirmacaoSenha'] });
-const editSchema = z
-  .object({
-    ...baseSchema,
-    senha: z.string().optional().refine((v) => !v || isSenhaForte(v), SENHA_FRACA_MSG),
-    confirmacaoSenha: z.string().optional(),
-  })
-  .refine(confirmacaoConfere, { message: SENHA_NAO_CONFERE_MSG, path: ['confirmacaoSenha'] });
+const ABAS: { key: AbaUsuario; label: string }[] = [
+  { key: 'acesso', label: 'Acesso' },
+  { key: 'pessoais', label: 'Dados pessoais' },
+  { key: 'contato', label: 'Contato e endereço' },
+  { key: 'contratacao', label: 'Contratação' },
+];
 
 export function UsuarioFormModal({
   open,
@@ -56,40 +43,62 @@ export function UsuarioFormModal({
   const createMutation = useCreateUsuario();
   const updateMutation = useUpdateUsuario();
   const { data: perfis } = usePerfis();
+  // A lista não traz os dados de RH (LGPD) — só o GET /usuarios/{id}. Salvar
+  // antes disso chegar enviaria o cadastro "vazio" e apagaria o que já existe.
+  const detalhe = useUsuario(open ? usuario?.id : undefined);
   const navigate = useNavigate();
+  // Dado de RH (CPF, salário...) só pra quem pode gravar usuários.
+  const podeVerRh = useAuthStore((s) => s.hasPermission)('USUARIO_WRITE');
+  const { buscando: buscandoCep, buscar: buscarCep } = useCepLookup();
   const [limiteExcedidoMsg, setLimiteExcedidoMsg] = useState<string | null>(null);
+  const [aba, setAba] = useState<AbaUsuario>('acesso');
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<z.infer<typeof createSchema>>({
+  const methods = useForm<FormValues>({
     resolver: zodResolver(isEditing ? editSchema : createSchema),
     defaultValues: { ativo: true },
   });
+  const { handleSubmit, reset, setValue, formState } = methods;
 
+  const detalheId = detalhe.data?.id;
   useEffect(() => {
     if (open) {
       setLimiteExcedidoMsg(null);
-      reset(
-        usuario
-          ? {
-              nome: usuario.nome ?? '',
-              email: usuario.email ?? '',
-              perfilId: usuario.perfilId ?? 0,
-              ativo: usuario.ativo ?? true,
-              senha: '',
-              confirmacaoSenha: '',
-            }
-          : { ativo: true },
-      );
+      setAba('acesso');
+      reset(valoresIniciais(detalhe.data ?? usuario));
     }
-  }, [open, usuario, reset]);
+    // detalhe.data entra só pelo id: um refetch em segundo plano não pode
+    // sobrescrever o que o usuário já digitou.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, usuario, detalheId, reset]);
 
-  async function onSubmit(values: z.infer<typeof createSchema>) {
+  async function handleCepBlur(cep: string) {
+    const endereco = await buscarCep(cep);
+    if (!endereco) return;
+    setValue('logradouro', endereco.logradouro, { shouldDirty: true });
+    setValue('bairro', endereco.bairro, { shouldDirty: true });
+    setValue('cidade', endereco.cidade, { shouldDirty: true });
+    setValue('uf', endereco.uf, { shouldDirty: true });
+  }
+
+  // Campos das outras abas não estão montados: sem isso o "Salvar" parecia
+  // não fazer nada quando o erro estava numa aba escondida.
+  function irParaPrimeiroErro(erros: FieldErrors<FormValues>) {
+    const primeira = primeiraAbaComErro(Object.keys(erros));
+    if (primeira) setAba(primeira);
+  }
+
+  async function onSubmit(values: FormValues) {
     try {
-      const payload = values.senha ? values : { ...values, senha: undefined, confirmacaoSenha: undefined };
+      const { senha, confirmacaoSenha, nome, email, perfilId, ativo } = values;
+      const payload: UsuarioRequest = {
+        nome,
+        email,
+        perfilId,
+        ativo,
+        senha: senha || undefined,
+        confirmacaoSenha: senha ? confirmacaoSenha : undefined,
+        ...(podeVerRh ? formParaColaborador(values, { limparVazios: isEditing }) : {}),
+      };
       if (isEditing && usuario?.id != null) {
         await updateMutation.mutateAsync({ id: usuario.id, payload });
         toast.success('Usuário atualizado.');
@@ -106,6 +115,11 @@ export function UsuarioFormModal({
         );
         return;
       }
+      if (businessError?.codigo === 'CPF_JA_CADASTRADO') {
+        setAba('pessoais');
+        methods.setError('cpf', { message: 'Já existe um colaborador com este CPF' });
+        return;
+      }
       toast.error(extractErrorMessage(error, 'Não foi possível salvar o usuário.'));
     }
   }
@@ -116,11 +130,16 @@ export function UsuarioFormModal({
   }
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const carregandoCadastro = isEditing && detalhe.isLoading;
+  const falhouCarregar = isEditing && detalhe.isError;
+  const comErro = abasComErro(Object.keys(formState.errors));
+  const abas = ABAS.map((a) => ({ ...a, invalid: comErro.has(a.key) }));
 
   return (
     <Modal
       open={open}
       onClose={onClose}
+      size="xl"
       title={isEditing ? 'Editar usuário' : 'Novo usuário'}
       footer={
         limiteExcedidoMsg ? (
@@ -132,7 +151,7 @@ export function UsuarioFormModal({
             <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" form={FORM_ID} loading={saving}>
+            <Button type="submit" form={FORM_ID} loading={saving} disabled={carregandoCadastro || falhouCarregar}>
               Salvar
             </Button>
           </>
@@ -148,34 +167,40 @@ export function UsuarioFormModal({
           <p className="text-sm text-ink-muted">{limiteExcedidoMsg}</p>
         </div>
       ) : (
-        <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-          <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
-          <Input label="E-mail" type="email" required error={errors.email?.message} {...register('email')} />
-          <Select label="Perfil de acesso" required error={errors.perfilId?.message} {...register('perfilId')}>
-            <option value={0}>Selecione...</option>
-            {perfis?.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </Select>
-          <Input
-            label={isEditing ? 'Nova senha' : 'Senha'}
-            type="password"
-            hint={isEditing ? 'Deixe em branco para manter a senha atual' : SENHA_HINT}
-            error={errors.senha?.message}
-            required={!isEditing}
-            {...register('senha')}
-          />
-          <Input
-            label={isEditing ? 'Confirmar nova senha' : 'Confirmar senha'}
-            type="password"
-            error={errors.confirmacaoSenha?.message}
-            required={!isEditing}
-            {...register('confirmacaoSenha')}
-          />
-          {isEditing && <Checkbox label="Usuário ativo" {...register('ativo')} />}
-        </form>
+        <>
+          {podeVerRh && <Tabs tabs={abas} active={aba} onChange={(k) => setAba(k as AbaUsuario)} />}
+          {falhouCarregar && (
+            <p role="alert" className="mb-3 text-sm text-danger">
+              Não foi possível carregar o cadastro completo. Feche e abra novamente para editar.
+            </p>
+          )}
+          {carregandoCadastro ? (
+            <p className="py-8 text-center text-sm text-ink-muted">Carregando cadastro...</p>
+          ) : (
+            <FormProvider {...methods}>
+              <form
+                id={FORM_ID}
+                onSubmit={handleSubmit(onSubmit, irParaPrimeiroErro)}
+                onKeyDown={preventEnterSubmit}
+                className="flex flex-col gap-5"
+                noValidate
+              >
+                <TabPanel hidden={aba !== 'acesso'}>
+                  <AbaAcesso isEditing={isEditing} perfis={perfis} />
+                </TabPanel>
+                <TabPanel hidden={!podeVerRh || aba !== 'pessoais'}>
+                  <AbaPessoais />
+                </TabPanel>
+                <TabPanel hidden={!podeVerRh || aba !== 'contato'}>
+                  <AbaContato buscandoCep={buscandoCep} onCepBlur={handleCepBlur} />
+                </TabPanel>
+                <TabPanel hidden={!podeVerRh || aba !== 'contratacao'}>
+                  <AbaContratacao />
+                </TabPanel>
+              </form>
+            </FormProvider>
+          )}
+        </>
       )}
     </Modal>
   );

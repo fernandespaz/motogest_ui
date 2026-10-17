@@ -4,6 +4,8 @@ import clsx from 'clsx';
 interface Tab {
   key: string;
   label: string;
+  /** Marca a aba com um ponto vermelho — erro de validação dentro dela. */
+  invalid?: boolean;
 }
 
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
@@ -20,6 +22,9 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
           )}
         >
           {tab.label}
+          {tab.invalid && (
+            <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-danger align-middle" role="img" aria-label="com erro" />
+          )}
           {active === tab.key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-600" />}
         </button>
       ))}

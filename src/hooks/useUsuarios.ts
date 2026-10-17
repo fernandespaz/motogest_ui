@@ -21,10 +21,12 @@ export function useUsuarios() {
 }
 
 export function useUsuario(id: number | undefined) {
+  // O detalhe traz dado de RH (CPF, salário): só quem grava usuários consulta.
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   return useQuery({
     queryKey: usuariosKeys.detail(id!),
     queryFn: () => usuariosApi.get(id!),
-    enabled: !!id,
+    enabled: !!id && hasPermission('USUARIO_WRITE'),
   });
 }
 
