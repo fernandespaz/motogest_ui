@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import { MENSAGEM_SEM_PERMISSAO } from '@/lib/permissaoNegada';
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
@@ -39,8 +40,11 @@ apiClient.interceptors.request.use((config) => {
 });
 
 export class ApiForbiddenError extends Error {
-  constructor() {
-    super('Você não tem permissão para executar esta ação.');
+  constructor(
+    readonly metodo?: string,
+    readonly url?: string,
+  ) {
+    super(MENSAGEM_SEM_PERMISSAO);
     this.name = 'ApiForbiddenError';
   }
 }
@@ -60,7 +64,8 @@ apiClient.interceptors.response.use(
         forceReauth(error.config?.url);
         return Promise.reject(error);
       }
-      return Promise.reject(new ApiForbiddenError());
+      // O diálogo de permissão negada é aberto pelos caches de queries/mutations (lib/queryClient), que respeitam `silentError`.
+      return Promise.reject(new ApiForbiddenError(error.config?.method, error.config?.url));
     }
     return Promise.reject(error);
   },

@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import clsx from 'clsx';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
+import { DataTable } from '@/components/ui/DataTable';
+import { Badge } from '@/components/ui/Badge';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Pagination } from '@/components/ui/Pagination';
@@ -177,6 +180,117 @@ function ProdutoCard({ produto, podeEditar, onOpen, onMovimentar, onRemover }: P
   );
 }
 
+type Visualizacao = 'cards' | 'lista';
+const VISUALIZACAO_STORAGE_KEY = 'produtos:visualizacao';
+
+// Preferência por navegador: só uma conveniência, então qualquer falha no storage cai pro padrão (cards).
+function lerVisualizacao(): Visualizacao {
+  try {
+    return localStorage.getItem(VISUALIZACAO_STORAGE_KEY) === 'lista' ? 'lista' : 'cards';
+  } catch {
+    return 'cards';
+  }
+}
+
+function ProdutosLista({
+  produtos,
+  podeEditar,
+  onOpen,
+  onMovimentar,
+  onRemover,
+}: {
+  produtos: ProdutoResponse[];
+  podeEditar: boolean;
+  onOpen: (p: ProdutoResponse) => void;
+  onMovimentar: (p: ProdutoResponse) => void;
+  onRemover: (p: ProdutoResponse) => void;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <DataTable<ProdutoResponse>
+        rows={produtos}
+        rowKey={(p) => p.id!}
+        onRowClick={podeEditar ? onOpen : undefined}
+        columns={[
+          {
+            header: 'Produto',
+            render: (p) => {
+              const CategoriaIcon = produtoCategoriaIcon(p.categoria);
+              return (
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
+                    <ProdutoImagem
+                      produtoId={p.id}
+                      imagemUrl={p.imagemUrl}
+                      alt={`Foto de ${p.nome}`}
+                      fallback={<CategoriaIcon size={24} weight="duotone" aria-hidden />}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-ink">{p.nome}</p>
+                    <p className="text-xs text-ink-muted">{p.codigo}</p>
+                  </div>
+                </div>
+              );
+            },
+          },
+          { header: 'Categoria', render: (p) => produtoCategoriaLabel(p.categoria), hideBelow: 'md' },
+          { header: 'Preço', render: (p) => formatCurrency(p.precoVenda) },
+          {
+            header: 'Disponível',
+            render: (p) => (
+              <span className={clsx('font-semibold', p.abaixoDoMinimo ? 'text-danger' : 'text-success')}>
+                {p.quantidadeDisponivel ?? 0}
+              </span>
+            ),
+          },
+          { header: 'Em estoque', render: (p) => p.quantidadeEstoque ?? 0, hideBelow: 'sm' },
+          {
+            header: 'Situação',
+            render: (p) => <Badge tone={p.abaixoDoMinimo ? 'danger' : 'success'}>{p.abaixoDoMinimo ? 'Abaixo do mínimo' : 'OK'}</Badge>,
+            hideBelow: 'lg',
+          },
+          {
+            header: '',
+            render: (p) =>
+              podeEditar && (
+                <div className="flex justify-end gap-1">
+                  <IconActionButton
+                    icon={ArrowsLeftRight}
+                    label="Movimentar estoque"
+                    tone="brand"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMovimentar(p);
+                    }}
+                  />
+                  <IconActionButton
+                    icon={PencilSimple}
+                    label="Editar"
+                    tone="brand"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpen(p);
+                    }}
+                  />
+                  <IconActionButton
+                    icon={Trash}
+                    label="Remover"
+                    tone="danger"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemover(p);
+                    }}
+                  />
+                </div>
+              ),
+          },
+        ]}
+      />
+    </Card>
+  );
+}
+
 function ProdutoCardSkeleton() {
   return <div className="h-72 animate-pulse rounded-2xl border border-border bg-surface-alt" />;
 }
@@ -190,6 +304,7 @@ export function ProdutosPage() {
   const [deleting, setDeleting] = useState<ProdutoResponse | null>(null);
   const [somenteAbaixoDoMinimo, setSomenteAbaixoDoMinimo] = useState(false);
   const [outrosAberto, setOutrosAberto] = useState(false);
+  const [visualizacao, setVisualizacao] = useState<Visualizacao>(lerVisualizacao);
   const categoriaSecundariaAtiva = categoria !== '' && PRODUTO_CATEGORIAS_SECUNDARIAS.includes(categoria);
 
   // Ver a lista é ESTOQUE_READ (já exigido pra abrir esta rota — ver nav.ts);
@@ -204,6 +319,15 @@ export function ProdutosPage() {
   const deleteMutation = useDeleteProduto();
 
   const rows = somenteAbaixoDoMinimo ? abaixoDoMinimo ?? [] : data?.content ?? [];
+
+  function mudarVisualizacao(nova: Visualizacao) {
+    setVisualizacao(nova);
+    try {
+      localStorage.setItem(VISUALIZACAO_STORAGE_KEY, nova);
+    } catch {
+      /* sem storage: a escolha vale só nesta sessão */
+    }
+  }
 
   function selecionarCategoria(novaCategoria: ProdutoCategoria) {
     setCategoria((atual) => (atual === novaCategoria ? '' : novaCategoria));
@@ -307,13 +431,25 @@ export function ProdutosPage() {
         )}
       </div>
 
-      <div className="mb-3 flex items-center gap-2 text-ink">
-        {somenteAbaixoDoMinimo ? (
-          <Warning size={20} weight="fill" className="text-danger" />
-        ) : (
-          <SquaresFour size={20} weight="fill" className="text-brand-600" />
-        )}
-        <h2 className="text-base font-semibold">{somenteAbaixoDoMinimo ? 'Abaixo do estoque mínimo' : 'Todos os produtos'}</h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-ink">
+          {somenteAbaixoDoMinimo ? (
+            <Warning size={20} weight="fill" className="text-danger" />
+          ) : (
+            <SquaresFour size={20} weight="fill" className="text-brand-600" />
+          )}
+          <h2 className="text-base font-semibold">{somenteAbaixoDoMinimo ? 'Abaixo do estoque mínimo' : 'Todos os produtos'}</h2>
+        </div>
+        <div aria-label="Modo de exibição">
+          <SegmentedControl
+            value={visualizacao}
+            onChange={mudarVisualizacao}
+            options={[
+              { value: 'cards', label: 'Cards' },
+              { value: 'lista', label: 'Lista' },
+            ]}
+          />
+        </div>
       </div>
 
       {isLoading ? (
@@ -326,6 +462,14 @@ export function ProdutosPage() {
         <Card>
           <EmptyState icon={Package} title="Nenhum produto cadastrado" />
         </Card>
+      ) : visualizacao === 'lista' ? (
+        <ProdutosLista
+          produtos={rows}
+          podeEditar={podeEditar}
+          onOpen={setModalProduto}
+          onMovimentar={setMovProduto}
+          onRemover={setDeleting}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {rows.map((row) => (

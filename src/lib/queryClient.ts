@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
-import { extractErrorMessage } from '@/api/client';
+import { ApiForbiddenError, extractErrorMessage } from '@/api/client';
+import { abrirPermissaoNegada } from '@/lib/permissaoNegada';
 import { toast } from '@/store/toastStore';
 
 /**
@@ -9,6 +10,7 @@ import { toast } from '@/store/toastStore';
  */
 function reportQueryError(error: unknown, silent: boolean | undefined) {
   if (silent) return;
+  if (error instanceof ApiForbiddenError) abrirPermissaoNegada(error.metodo, error.url);
   toast.error(extractErrorMessage(error, 'Não foi possível carregar os dados.'));
 }
 
@@ -29,6 +31,8 @@ export const queryClient = new QueryClient({
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
       if (mutation.meta?.silentError) return;
+      // Mesmo com tratamento local do erro (toast próprio), um 403 abre o diálogo que explica a permissão que falta.
+      if (error instanceof ApiForbiddenError) abrirPermissaoNegada(error.metodo, error.url);
       // Mutations are expected to handle their own error toast at the call
       // site (they need the specific action's wording); this only catches
       // the ones that don't, so nothing fails silently.

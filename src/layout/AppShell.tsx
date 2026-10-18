@@ -5,6 +5,7 @@ import { MobileNav } from './MobileNav';
 import { TrialBanner } from './TrialBanner';
 import { TrialExpiredDialog } from './TrialExpiredDialog';
 import { VencidasDialog } from './VencidasDialog';
+import { PermissaoNegadaDialog } from './PermissaoNegadaDialog';
 import { PageTransition } from '@/components/ui/PageTransition';
 import { useAutoConversaoOrcamentosAprovados } from '@/hooks/useAutoConversaoOrcamentos';
 
@@ -23,6 +24,7 @@ export function AppShell() {
         <TrialBanner />
         <TrialExpiredDialog />
         <VencidasDialog />
+        <PermissaoNegadaDialog />
         <main className="flex-1 overflow-y-auto px-4 pb-24 pt-5 sm:px-6 lg:pb-6">
           {/* Sem AnimatePresence mode="wait": com cliques rápidos no menu a página
               que está saindo podia ficar presa na animação de saída e a nova nunca

@@ -191,6 +191,57 @@ describe('ProdutosPage', () => {
     expect(screen.getByText('Nenhum produto cadastrado')).toBeInTheDocument();
   });
 
+  describe('modo de exibição', () => {
+    beforeEach(() => localStorage.removeItem('produtos:visualizacao'));
+
+    it('shows cards by default and switches to a table, remembering the choice', async () => {
+      const { unmount } = render(<ProdutosPage />);
+      expect(screen.getAllByTestId('produto-card')).toHaveLength(2);
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+
+      expect(screen.queryByTestId('produto-card')).not.toBeInTheDocument();
+      const linhas = within(screen.getByRole('table')).getAllByRole('row');
+      expect(linhas).toHaveLength(3);
+      expect(within(linhas[1]).getByText('Óleo Motor 10W30')).toBeInTheDocument();
+      expect(within(linhas[1]).getByText('R$ 32,00')).toBeInTheDocument();
+      expect(within(linhas[2]).getByText('Abaixo do mínimo')).toBeInTheDocument();
+
+      unmount();
+      render(<ProdutosPage />);
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    it('keeps row actions working in the list without also opening the edit modal', async () => {
+      render(<ProdutosPage />);
+      await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+
+      await userEvent.click(screen.getAllByLabelText('Movimentar estoque')[0]);
+
+      expect(screen.getByText('Movimentar estoque — Óleo Motor 10W30')).toBeInTheDocument();
+      expect(screen.queryByText('Editar produto')).not.toBeInTheDocument();
+    });
+
+    it('opens the edit modal when a list row is clicked', async () => {
+      render(<ProdutosPage />);
+      await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+
+      await userEvent.click(screen.getByText('Óleo Motor 10W30'));
+
+      expect(screen.getByText('Editar produto')).toBeInTheDocument();
+    });
+
+    it('hides write actions in the list for a read-only profile', async () => {
+      useAuthStore.setState({ permissoes: ['ESTOQUE_READ'] });
+      render(<ProdutosPage />);
+      await userEvent.click(screen.getByRole('radio', { name: 'Lista' }));
+
+      expect(screen.queryByLabelText('Editar')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Remover')).not.toBeInTheDocument();
+    });
+  });
+
   describe('com apenas ESTOQUE_READ (ex.: Consultor Técnico, sem ESTOQUE_WRITE)', () => {
     beforeEach(() => {
       useAuthStore.setState({ permissoes: ['ESTOQUE_READ'] });

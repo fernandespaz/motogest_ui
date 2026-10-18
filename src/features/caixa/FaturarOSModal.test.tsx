@@ -100,6 +100,49 @@ describe('FaturarOSModal', () => {
     expect(screen.getByText('Nenhuma OS concluída encontrada para este documento')).toBeInTheDocument();
   });
 
+  it('busca pelo número da OS, sem enviar o documento, e lista o resultado', async () => {
+    vi.mocked(useOrdensServico).mockReturnValue({ data: { content: [osConcluida] }, isFetching: false } as never);
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    render(<FaturarOSModal open onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Nº da OS' }));
+    expect(screen.queryByLabelText('CPF/CNPJ do cliente')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Número da OS'), ' OS-000042 ');
+    await userEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+
+    expect(screen.getByText('OS-000042', { selector: 'td' })).toBeInTheDocument();
+    expect(useOrdensServico).toHaveBeenLastCalledWith(
+      expect.objectContaining({ numero: 'OS-000042', clienteDocumento: undefined, status: 'CONCLUIDA' }),
+      expect.objectContaining({ enabled: true }),
+    );
+  });
+
+  it('mostra a mensagem de vazio específica da busca por número', async () => {
+    vi.mocked(useOrdensServico).mockReturnValue(mockListaVazia());
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    render(<FaturarOSModal open onClose={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Nº da OS' }));
+    await userEvent.type(screen.getByLabelText('Número da OS'), '999');
+    await userEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+
+    expect(screen.getByText('Nenhuma OS concluída encontrada com este número')).toBeInTheDocument();
+  });
+
+  it('limpa os resultados ao trocar o modo de busca', async () => {
+    vi.mocked(useOrdensServico).mockReturnValue({ data: { content: [osConcluida] }, isFetching: false } as never);
+    vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    render(<FaturarOSModal open onClose={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText('CPF/CNPJ do cliente'), '12345678901');
+    await userEvent.click(screen.getByRole('button', { name: /Buscar/ }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Nº da OS' }));
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
   it('não consulta status ENTREGUE — só CONCLUIDA é considerada faturável', async () => {
     vi.mocked(useOrdensServico).mockReturnValue({ data: { content: [osConcluida] }, isFetching: false } as never);
     vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);

@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
 import { ApiForbiddenError, apiClient, extractErrorMessage, getBusinessErrorCode, mensagemSeguraParaUsuario } from './client';
 
-function makeAxiosError(data: unknown, status = 400, url = '/api/v1/clientes'): AxiosError {
+function makeAxiosError(data: unknown, status = 400, url = '/api/v1/clientes', method = 'get'): AxiosError {
   const error = new AxiosError('Request failed');
   error.response = { data, status, statusText: '', headers: {}, config: error.config! } as never;
-  error.config = { url } as never;
+  error.config = { url, method } as never;
   return error;
 }
 
@@ -170,6 +170,14 @@ describe('session-expiry handling', () => {
     useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
     await expect(responseInterceptorRejection()(makeAxiosError({}, 403))).rejects.toBeInstanceOf(ApiForbiddenError);
     expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
+  it('carries method and url on the 403 error so the caches can explain the missing permission', async () => {
+    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
+
+    await expect(
+      responseInterceptorRejection()(makeAxiosError({}, 403, '/api/v1/produtos/3/movimentacoes', 'post')),
+    ).rejects.toMatchObject({ metodo: 'post', url: '/api/v1/produtos/3/movimentacoes' });
   });
 
   it('treats a 403 as an expired session when our own record says it should be', async () => {

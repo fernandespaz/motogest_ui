@@ -6,12 +6,17 @@ describe('categoriaDaPermissao', () => {
     expect(categoriaDaPermissao('OFICINA_READ')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('USUARIO_WRITE')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('PERFIL_READ')).toBe('GERENCIAL');
-    expect(categoriaDaPermissao('FINANCEIRO_READ')).toBe('GERENCIAL');
-    expect(categoriaDaPermissao('CAIXA_OPERAR')).toBe('GERENCIAL');
-    expect(categoriaDaPermissao('CAIXA_GERENCIAR')).toBe('GERENCIAL');
+    expect(categoriaDaPermissao('FISCAL_EMITIR')).toBe('GERENCIAL');
+    expect(categoriaDaPermissao('FISCAL_CERTIFICADO')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('HORA_TECNICA_GERENCIAR')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('CAPACIDADE_PRODUTIVA_GERENCIAR')).toBe('GERENCIAL');
     expect(categoriaDaPermissao('DESCONTO_APROVAR')).toBe('GERENCIAL');
+  });
+
+  it('groups money and cashier permissions together as Financeiro e Caixa', () => {
+    for (const codigo of ['FINANCEIRO_READ', 'FINANCEIRO_WRITE', 'FINANCEIRO_FECHAR', 'CAIXA_OPERAR', 'CAIXA_GERENCIAR']) {
+      expect(categoriaDaPermissao(codigo), codigo).toBe('FINANCEIRO');
+    }
   });
 
   it('categorizes customer-facing resources as Comercial', () => {
@@ -19,6 +24,7 @@ describe('categoriaDaPermissao', () => {
     expect(categoriaDaPermissao('VEICULO_WRITE')).toBe('COMERCIAL');
     expect(categoriaDaPermissao('AGENDA_READ')).toBe('COMERCIAL');
     expect(categoriaDaPermissao('ORCAMENTO_WRITE')).toBe('COMERCIAL');
+    expect(categoriaDaPermissao('VEICULO_MODELO_WRITE')).toBe('COMERCIAL');
   });
 
   it('categorizes shop-floor execution resources as Técnico', () => {
@@ -69,6 +75,14 @@ describe('categoriaDaPermissao', () => {
       'PRODUTIVIDADE_READ',
       'DESCONTO_APROVAR',
       'DASHBOARD_READ',
+      'VEICULO_MODELO_READ',
+      'VEICULO_MODELO_WRITE',
+      'FINANCEIRO_WRITE',
+      'FINANCEIRO_FECHAR',
+      'FISCAL_CONFIGURAR',
+      'FISCAL_EMITIR',
+      'FISCAL_CANCELAR',
+      'FISCAL_CERTIFICADO',
     ];
     for (const codigo of codigosConhecidos) {
       expect(categoriaDaPermissao(codigo), codigo).not.toBe('OUTROS');

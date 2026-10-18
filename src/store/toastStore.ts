@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { MENSAGEM_SEM_PERMISSAO, usePermissaoNegadaStore } from '@/lib/permissaoNegada';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -17,6 +18,8 @@ interface ToastState {
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
   push: (message, variant = 'info') => {
+    // O diálogo de permissão negada já explica o 403 — o toast genérico por cima só duplicaria o aviso.
+    if (message === MENSAGEM_SEM_PERMISSAO && usePermissaoNegadaStore.getState().negada) return;
     const id = crypto.randomUUID();
     set((state) => ({ toasts: [...state.toasts, { id, message, variant }] }));
     setTimeout(() => {

@@ -3127,6 +3127,15 @@ export interface components {
             /** Format: int64 */
             referenciaId: number;
         };
+        ContaPagarDaCompraRequest: {
+            fornecedor: string;
+            valor: number;
+            /** Format: date */
+            dataVencimento: string;
+            /** Format: int64 */
+            categoriaId?: number;
+            documento?: string;
+        };
         MovimentacaoEstoqueRequest: {
             /** @enum {string} */
             tipo: "ENTRADA" | "SAIDA" | "RESERVA" | "LIBERACAO_RESERVA" | "AJUSTE";
@@ -3135,6 +3144,7 @@ export interface components {
             /** Format: int64 */
             referenciaId?: number;
             observacao?: string;
+            contaPagar?: components["schemas"]["ContaPagarDaCompraRequest"];
         };
         MovimentacaoEstoqueResponse: {
             /** Format: int64 */
@@ -3151,6 +3161,8 @@ export interface components {
             observacao?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: int64 */
+            contaPagarId?: number;
         };
         IniciarPixRequest: {
             plano: string;

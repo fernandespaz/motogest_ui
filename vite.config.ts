@@ -58,6 +58,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Testes de formulário/modal com userEvent chegam a ~4s com a suíte inteira em paralelo; em máquina mais lenta ou
+    // carregada o limite padrão de 5s dava timeout aleatório (falha que some ao rodar o arquivo sozinho).
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

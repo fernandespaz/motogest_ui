@@ -246,7 +246,7 @@ describe('contas a pagar hooks', () => {
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
     const { result } = renderHook(() => usePagarConta(), { wrapper: wrapWithQueryClient(client) });
 
-    result.current.mutate(1);
+    result.current.mutate({ id: 1 });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: contasPagarKeys.all });
@@ -288,7 +288,7 @@ describe('contas a receber hooks', () => {
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries');
     const { result } = renderHook(() => useReceberConta(), { wrapper: wrapWithQueryClient(client) });
 
-    result.current.mutate(1);
+    result.current.mutate({ id: 1 });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: contasReceberKeys.all });

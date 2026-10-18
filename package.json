@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "gen:perms": "node scripts/gen-permissoes.cjs",
     "gen:api": "openapi-typescript ./openapi.json -o ./src/api/schema.d.ts"
   },
   "dependencies": {

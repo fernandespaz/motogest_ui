@@ -8,11 +8,19 @@ import {
   useRegistrarCaixa,
   useFecharCaixaSessao,
   useFaturarOrdemServico,
+  useCategoriasFinanceiras,
 } from '@/hooks/useFinanceiro';
+import { useVenderProdutos } from '@/hooks/useVendaCaixa';
 import { useOrdensServico } from '@/hooks/useOrdensServico';
 import { useVeiculo } from '@/hooks/useVeiculos';
+import { useProdutos } from '@/hooks/useProdutos';
+import { useAuthStore } from '@/store/authStore';
 import { MeuCaixaPage } from './MeuCaixaPage';
 
+vi.mock('@/hooks/useVendaCaixa', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/useVendaCaixa')>()),
+  useVenderProdutos: vi.fn(),
+}));
 vi.mock('@/hooks/useFinanceiro', () => ({
   useCaixaSessaoAberta: vi.fn(),
   useCaixaPeriodo: vi.fn(),
@@ -20,9 +28,12 @@ vi.mock('@/hooks/useFinanceiro', () => ({
   useRegistrarCaixa: vi.fn(),
   useFecharCaixaSessao: vi.fn(),
   useFaturarOrdemServico: vi.fn(),
+  useCategoriasFinanceiras: vi.fn(),
 }));
 vi.mock('@/hooks/useOrdensServico', () => ({ useOrdensServico: vi.fn() }));
 vi.mock('@/hooks/useVeiculos', () => ({ useVeiculo: vi.fn() }));
+vi.mock('@/hooks/useProdutos', () => ({ useProdutos: vi.fn() }));
+vi.mock('./ContasDoDiaCard', () => ({ ContasDoDiaCard: () => <div>Contas para baixar</div> }));
 
 const sessaoAberta = {
   id: 1,
@@ -54,6 +65,10 @@ describe('MeuCaixaPage', () => {
     vi.mocked(useRegistrarCaixa).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useFecharCaixaSessao).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useFaturarOrdemServico).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useVenderProdutos).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useCategoriasFinanceiras).mockReturnValue({ data: [] } as never);
+    vi.mocked(useProdutos).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
+    useAuthStore.setState({ permissoes: [] });
     vi.mocked(useOrdensServico).mockReturnValue({ data: { content: [] }, isFetching: false } as never);
     vi.mocked(useVeiculo).mockReturnValue({ data: undefined, isLoading: false } as never);
     vi.mocked(useCaixaPeriodo).mockReturnValue({ data: [], isLoading: false } as never);
@@ -86,6 +101,7 @@ describe('MeuCaixaPage', () => {
   });
 
   it('shows the shift balances and today’s movements when a session is open', () => {
+    useAuthStore.setState({ permissoes: ['FINANCEIRO_READ'] });
     vi.mocked(useCaixaSessaoAberta).mockReturnValue({
       data: sessaoAberta,
       isLoading: false,
@@ -104,6 +120,7 @@ describe('MeuCaixaPage', () => {
   // turno" — só existe filtro de período no backend, o filtro por sessão é
   // feito no cliente (ver comentário em MeuCaixaPage).
   it('filters out movimentos from a different caixa session in the same period window', () => {
+    useAuthStore.setState({ permissoes: ['FINANCEIRO_READ'] });
     vi.mocked(useCaixaSessaoAberta).mockReturnValue({
       data: sessaoAberta,
       isLoading: false,
@@ -170,5 +187,58 @@ describe('MeuCaixaPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Fechar caixa/ }));
     expect(screen.getByText('Fechar caixa', { selector: 'h2' })).toBeInTheDocument();
+  });
+
+  it('does not request the movement list for a cashier without FINANCEIRO_READ (the backend answers 403)', () => {
+    vi.mocked(useCaixaSessaoAberta).mockReturnValue({
+      data: sessaoAberta,
+      isLoading: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    } as never);
+    render(<MeuCaixaPage />);
+
+    expect(useCaixaPeriodo).toHaveBeenCalledWith('', expect.any(String));
+    expect(screen.getByText('R$ 360,00')).toBeInTheDocument();
+    expect(screen.queryByText('Venda balcão')).not.toBeInTheDocument();
+    expect(screen.getByText(/FINANCEIRO_READ/)).toBeInTheDocument();
+  });
+
+  describe('permission gating', () => {
+    beforeEach(() => {
+      vi.mocked(useCaixaSessaoAberta).mockReturnValue({
+        data: sessaoAberta,
+        isLoading: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      } as never);
+    });
+
+    it('shows only the cashier operations to a profile without estoque/financeiro access', () => {
+      render(<MeuCaixaPage />);
+
+      expect(screen.getByRole('button', { name: /Nova saída/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Vender produtos/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Contas para baixar')).not.toBeInTheDocument();
+    });
+
+    it('hides sale and bills when the profile can only read (the backend would answer 403)', () => {
+      useAuthStore.setState({ permissoes: ['ESTOQUE_READ', 'FINANCEIRO_READ'] });
+      render(<MeuCaixaPage />);
+
+      expect(screen.queryByRole('button', { name: /Vender produtos/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('Contas para baixar')).not.toBeInTheDocument();
+    });
+
+    it('offers product sales with ESTOQUE_READ and the bills to settle with FINANCEIRO_READ', async () => {
+      useAuthStore.setState({
+        permissoes: ['ESTOQUE_READ', 'ESTOQUE_WRITE', 'FINANCEIRO_READ', 'FINANCEIRO_WRITE'],
+      });
+      render(<MeuCaixaPage />);
+
+      expect(screen.getByText('Contas para baixar')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Vender produtos/ }));
+      expect(screen.getByText('Vender produtos', { selector: 'h2' })).toBeInTheDocument();
+    });
   });
 });
