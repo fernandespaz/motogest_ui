@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  balancoDoMes,
   diasParaVencimento,
   filtrarContas,
+  gastosPorCategoria,
   ordenarPorVencimento,
   periodoDeFechamento,
   previaDoLote,
@@ -138,5 +140,32 @@ describe('periodoDeFechamento', () => {
     // fechamento dia 31: janeiro fecha dia 31, fevereiro/2027 fecha dia 28, e o período de março começa em 01/03
     expect(periodoDeFechamento(31, new Date(2027, 1, 10))).toEqual({ inicio: '2027-02-01', fim: '2027-02-28' });
     expect(periodoDeFechamento(31, new Date(2027, 2, 5))).toEqual({ inicio: '2027-03-01', fim: '2027-03-31' });
+  });
+});
+
+describe('balancoDoMes e gastosPorCategoria', () => {
+  const pagar = [
+    { valor: 100, status: 'PAGO', valorPago: 110, categoriaId: 1, categoriaNome: 'Aluguel' },
+    { valor: 50, status: 'PENDENTE', dataVencimento: '2099-01-01', categoriaId: 1, categoriaNome: 'Aluguel' },
+    { valor: 50, status: 'CANCELADO', categoriaId: 2, categoriaNome: 'Marketing' },
+    { valor: 50, status: 'PENDENTE', dataVencimento: '2099-01-01' },
+  ];
+
+  it('ignores canceled accounts and uses the amount actually paid as realized', () => {
+    const b = balancoDoMes([{ valor: 500, status: 'RECEBIDO' }], pagar);
+    expect(b.despesas).toEqual({ previsto: 200, realizado: 110 });
+    expect(b.receitas).toEqual({ previsto: 500, realizado: 500 });
+    expect(b.resultadoPrevisto).toBe(300);
+    expect(b.resultadoRealizado).toBe(390);
+  });
+
+  it('groups spending by category, biggest first, with the uncategorized bucket', () => {
+    const g = gastosPorCategoria(pagar);
+    expect(g.map((x) => [x.nome, x.valor])).toEqual([['Aluguel', 150], ['Sem categoria', 50]]);
+    expect(g[0].percentual).toBeCloseTo(75);
+  });
+
+  it('returns nothing when there are no expenses', () => {
+    expect(gastosPorCategoria([])).toEqual([]);
   });
 });
