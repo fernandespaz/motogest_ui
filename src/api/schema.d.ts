@@ -1044,6 +1044,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/fechamentos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Historico de fechamentos (inclusive os reabertos), do mais recente para o mais antigo */
+        get: operations["listar_13"];
+        put?: never;
+        /**
+         * Fecha o proximo periodo
+         * @description Requer FINANCEIRO_FECHAR. So' fecha depois do dia de fechamento; com contas em aberto exige confirmarPendencias=true.
+         */
+        post: operations["fechar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/fechamentos/{id}/reabrir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reabre o ultimo fechamento, com motivo
+         * @description Requer FINANCEIRO_FECHAR. So' o fechamento mais recente pode ser reaberto.
+         */
+        post: operations["reabrir"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -1055,7 +1096,7 @@ export interface paths {
          * Lista solicitacoes de desconto da oficina corrente
          * @description Filtra por origem (origemTipo + origemId) ou por status; sem filtros, lista todas
          */
-        get: operations["listar_13"];
+        get: operations["listar_14"];
         put?: never;
         /**
          * Solicita desconto num item de Orcamento/OS
@@ -1110,7 +1151,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a receber da oficina corrente */
-        get: operations["listar_14"];
+        get: operations["listar_15"];
         put?: never;
         /** Cadastra uma nova conta a receber */
         post: operations["criar_10"];
@@ -1182,7 +1223,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a pagar da oficina corrente */
-        get: operations["listar_15"];
+        get: operations["listar_16"];
         put?: never;
         /** Cadastra uma nova conta a pagar */
         post: operations["criar_11"];
@@ -1257,7 +1298,7 @@ export interface paths {
          * Lista os clientes da oficina corrente
          * @description Filtro opcional por nome, ou por 'busca' (nome, CPF/CNPJ ou placa de qualquer veiculo vinculado — tem prioridade sobre 'nome' quando os dois sao informados)
          */
-        get: operations["listar_16"];
+        get: operations["listar_17"];
         put?: never;
         /**
          * Cadastra um novo cliente (PF ou PJ)
@@ -1281,7 +1322,7 @@ export interface paths {
          * Lista as categorias financeiras da oficina
          * @description Por padrao so' as ativas; use incluirInativas=true para a tela de gestao. Filtra por tipo (DESPESA/RECEITA).
          */
-        get: operations["listar_17"];
+        get: operations["listar_18"];
         put?: never;
         /** Cadastra uma categoria financeira */
         post: operations["criar_13"];
@@ -1302,7 +1343,7 @@ export interface paths {
          * Lista sessoes de caixa
          * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR ve apenas as proprias sessoes; CAIXA_GERENCIAR ve todas as sessoes da oficina
          */
-        get: operations["listar_18"];
+        get: operations["listar_19"];
         put?: never;
         /**
          * Abre uma nova sessao de caixa (turno)
@@ -1328,7 +1369,7 @@ export interface paths {
          * Reabre uma sessao de caixa ja fechada (correcao de erro, fica registrado no historico)
          * @description Requer CAIXA_GERENCIAR
          */
-        post: operations["reabrir"];
+        post: operations["reabrir_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1348,7 +1389,7 @@ export interface paths {
          * Fecha uma sessao de caixa com conferencia de valores
          * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR
          */
-        post: operations["fechar"];
+        post: operations["fechar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1366,7 +1407,7 @@ export interface paths {
          * Lista os lancamentos de caixa da oficina corrente
          * @description Requer FINANCEIRO_READ
          */
-        get: operations["listar_19"];
+        get: operations["listar_20"];
         put?: never;
         /**
          * Registra um lancamento manual de caixa (exige caixa aberto)
@@ -1441,7 +1482,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_20"];
+        get: operations["listar_21"];
         put?: never;
         /** Cria um novo agendamento */
         post: operations["criar_14"];
@@ -1462,7 +1503,7 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_21"];
+        get: operations["listar_22"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
@@ -1956,6 +1997,23 @@ export interface paths {
         };
         /** Historico de alteracoes da hora tecnica por categoria (mais recentes primeiro) */
         get: operations["auditoria"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/fechamentos/situacao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Data muro vigente, proximo periodo a fechar e o checklist dele */
+        get: operations["situacao"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3204,6 +3262,36 @@ export interface components {
             possuiXml?: boolean;
             eventos?: components["schemas"]["DocumentoFiscalEventoResponse"][];
         };
+        FechamentoRequest: {
+            confirmarPendencias?: boolean;
+            observacao?: string;
+        };
+        FechamentoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: date */
+            periodoInicio?: string;
+            /** Format: date */
+            periodoFim?: string;
+            /** @enum {string} */
+            status?: "FECHADO" | "REABERTO";
+            totalReceitas?: number;
+            totalDespesas?: number;
+            resultado?: number;
+            /** Format: int32 */
+            contasPendentes?: number;
+            observacao?: string;
+            fechadoPorNome?: string;
+            /** Format: date-time */
+            fechadoEm?: string;
+            reabertoPorNome?: string;
+            /** Format: date-time */
+            reabertoEm?: string;
+            motivoReabertura?: string;
+        };
+        ReaberturaRequest: {
+            motivo: string;
+        };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
             origemTipo: "ORCAMENTO" | "ORDEM_SERVICO";
@@ -3733,6 +3821,30 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        Proximo: {
+            /** Format: date */
+            inicio?: string;
+            /** Format: date */
+            fim?: string;
+            podeFechar?: boolean;
+            /** Format: int64 */
+            diasParaFechar?: number;
+            totalReceitas?: number;
+            totalDespesas?: number;
+            resultado?: number;
+            /** Format: int32 */
+            contasPendentes?: number;
+            valorPendente?: number;
+            /** Format: int32 */
+            contasSemCategoria?: number;
+        };
+        SituacaoFechamentoResponse: {
+            /** Format: int32 */
+            diaFechamento?: number;
+            /** Format: date */
+            dataMuro?: string;
+            proximo?: components["schemas"]["Proximo"];
         };
         PageResponseSolicitacaoDescontoResponse: {
             content?: components["schemas"]["SolicitacaoDescontoResponse"][];
@@ -6212,6 +6324,76 @@ export interface operations {
     };
     listar_13: {
         parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FechamentoResponse"][];
+                };
+            };
+        };
+    };
+    fechar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FechamentoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FechamentoResponse"];
+                };
+            };
+        };
+    };
+    reabrir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReaberturaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["FechamentoResponse"];
+                };
+            };
+        };
+    };
+    listar_14: {
+        parameters: {
             query: {
                 origemTipo?: "ORCAMENTO" | "ORDEM_SERVICO";
                 origemId?: number;
@@ -6307,7 +6489,7 @@ export interface operations {
             };
         };
     };
-    listar_14: {
+    listar_15: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6425,7 +6607,7 @@ export interface operations {
             };
         };
     };
-    listar_15: {
+    listar_16: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6543,7 +6725,7 @@ export interface operations {
             };
         };
     };
-    listar_16: {
+    listar_17: {
         parameters: {
             query: {
                 nome?: string;
@@ -6591,7 +6773,7 @@ export interface operations {
             };
         };
     };
-    listar_17: {
+    listar_18: {
         parameters: {
             query?: {
                 tipo?: "DESPESA" | "RECEITA";
@@ -6638,7 +6820,7 @@ export interface operations {
             };
         };
     };
-    listar_18: {
+    listar_19: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6684,7 +6866,7 @@ export interface operations {
             };
         };
     };
-    reabrir: {
+    reabrir_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -6710,7 +6892,7 @@ export interface operations {
             };
         };
     };
-    fechar: {
+    fechar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -6736,7 +6918,7 @@ export interface operations {
             };
         };
     };
-    listar_19: {
+    listar_20: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6850,7 +7032,7 @@ export interface operations {
             };
         };
     };
-    listar_20: {
+    listar_21: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6896,7 +7078,7 @@ export interface operations {
             };
         };
     };
-    listar_21: {
+    listar_22: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7557,6 +7739,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PageResponseAuditoriaParametroFinanceiroResponse"];
+                };
+            };
+        };
+    };
+    situacao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SituacaoFechamentoResponse"];
                 };
             };
         };

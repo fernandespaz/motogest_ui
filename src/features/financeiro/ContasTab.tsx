@@ -1,6 +1,6 @@
 ﻿import { useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { ArrowDownCircle, ArrowUpCircle, Plus } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Lock, Plus } from 'lucide-react';
 import { CheckCircle, PencilSimple, XCircle } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -17,11 +17,13 @@ import {
   useCategoriasFinanceiras,
   usePagarConta,
   useReceberConta,
+  useSituacaoFechamento,
   useTodasContasPagar,
   useTodasContasReceber,
 } from '@/hooks/useFinanceiro';
 import type { BaixaContaRequest, ContaPagarResponse, ContaReceberResponse } from '@/api/types';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
+import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { BaixaContaModal } from './BaixaContaModal';
@@ -137,6 +139,10 @@ export function ContasTab({ tipo, situacaoInicial = 'todas' }: { tipo: TipoConta
   const [cancelando, setCancelando] = useState<ContaTela | null>(null);
 
   const { contas, carregando, quitar, cancelar } = useContasDoTipo(tipo);
+  const podeVerFinanceiro = useAuthStore((s) => s.hasPermission('FINANCEIRO_READ'));
+  const dataMuro = useSituacaoFechamento({ enabled: podeVerFinanceiro }).data?.dataMuro;
+  // Conta de um período já fechado: o backend só aceita baixá-la; editar e cancelar ficam travados.
+  const travada = (conta: ContaTela) => !!dataMuro && !!conta.dataVencimento && conta.dataVencimento <= dataMuro;
   const { data: categorias } = useCategoriasFinanceiras(
     { tipo: tipo === 'pagar' ? 'DESPESA' : 'RECEITA', incluirInativas: true },
   );
@@ -295,7 +301,12 @@ export function ContasTab({ tipo, situacaoInicial = 'todas' }: { tipo: TipoConta
                 return (
                   <div className="flex items-center justify-end gap-1.5">
                     <IconActionButton icon={CheckCircle} label={textos.quitar} tone="success" onClick={() => setQuitando(row)} />
-                    {!row.deOrdemServico && (
+                    {travada(row) && (
+                      <span title={`Período fechado até ${formatDate(dataMuro)}`} className="inline-flex h-8 w-8 items-center justify-center text-ink-muted">
+                        <Lock size={16} aria-label="Período fechado" />
+                      </span>
+                    )}
+                    {!row.deOrdemServico && !travada(row) && (
                       <IconActionButton
                         icon={PencilSimple}
                         label="Editar"
@@ -306,7 +317,9 @@ export function ContasTab({ tipo, situacaoInicial = 'todas' }: { tipo: TipoConta
                         }}
                       />
                     )}
-                    <IconActionButton icon={XCircle} label="Cancelar" tone="danger" onClick={() => setCancelando(row)} />
+                    {!travada(row) && (
+                      <IconActionButton icon={XCircle} label="Cancelar" tone="danger" onClick={() => setCancelando(row)} />
+                    )}
                   </div>
                 );
               },
@@ -322,6 +335,7 @@ export function ContasTab({ tipo, situacaoInicial = 'todas' }: { tipo: TipoConta
         tipo={tipo}
         conta={editando?.original ?? null}
         open={formAberto}
+        fechadoAte={dataMuro}
         onClose={() => {
           setFormAberto(false);
           setEditando(null);
@@ -331,6 +345,7 @@ export function ContasTab({ tipo, situacaoInicial = 'todas' }: { tipo: TipoConta
       <BaixaContaModal
         tipo={tipo}
         conta={quitando ? { descricao: quitando.descricao, valor: quitando.valor } : null}
+        fechadoAte={dataMuro}
         loading={quitar.isPending}
         onConfirm={confirmarQuitacao}
         onClose={() => setQuitando(null)}

@@ -94,6 +94,11 @@ export const API_ROUTES = {
   },
   categoriasFinanceiras: { base: '/api/v1/categorias-financeiras' },
   parametrosFinanceiros: { base: '/api/v1/financeiro/parametros' },
+  fechamentosFinanceiros: {
+    base: '/api/v1/financeiro/fechamentos',
+    situacao: '/api/v1/financeiro/fechamentos/situacao',
+    reabrir: (id: number) => `/api/v1/financeiro/fechamentos/${id}/reabrir`,
+  },
   contasPagar: {
     base: '/api/v1/contas-pagar',
     lote: '/api/v1/contas-pagar/lote',

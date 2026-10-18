@@ -64,6 +64,20 @@ describe('BaixaContaModal', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it('refuses a payment date inside a closed period and offers only dates after it', async () => {
+    const onConfirm = vi.fn();
+    const muro = format(addDays(new Date(), -3), 'yyyy-MM-dd');
+    render(<BaixaContaModal tipo="pagar" conta={conta} fechadoAte={muro} onConfirm={onConfirm} onClose={vi.fn()} />);
+
+    expect(screen.getByLabelText(/^Data do pagamento/)).toHaveAttribute('min', format(addDays(new Date(), -2), 'yyyy-MM-dd'));
+    await userEvent.clear(screen.getByLabelText(/^Data do pagamento/));
+    await userEvent.type(screen.getByLabelText(/^Data do pagamento/), muro);
+    await userEvent.click(screen.getByRole('button', { name: 'Pagar' }));
+
+    expect(await screen.findByText(/O financeiro está fechado até/)).toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
   it('renders nothing while there is no account', () => {
     render(<BaixaContaModal tipo="pagar" conta={null} onConfirm={vi.fn()} onClose={vi.fn()} />);
     expect(screen.queryByText('Registrar pagamento')).not.toBeInTheDocument();

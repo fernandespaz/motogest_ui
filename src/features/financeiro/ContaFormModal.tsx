@@ -17,6 +17,7 @@ import {
   useUpdateContaReceber,
 } from '@/hooks/useFinanceiro';
 import { useClientes } from '@/hooks/useClientes';
+import { erroDePeriodoFechado, minimoAposMuro } from '@/lib/fechamento';
 import { formatCpfOuCnpj, formatCurrency, formatDate } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -59,12 +60,15 @@ export function ContaFormModal({
   tipo,
   conta,
   open,
+  fechadoAte,
   onClose,
 }: {
   tipo: TipoConta;
   /** Quando presente, é uma edição. */
   conta?: ContaEditavel | null;
   open: boolean;
+  /** Data muro do financeiro: o vencimento tem que ser depois dela. */
+  fechadoAte?: string;
   onClose: () => void;
 }) {
   const isEditing = !!conta;
@@ -89,6 +93,7 @@ export function ContaFormModal({
     handleSubmit,
     reset,
     watch,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: VAZIO });
 
@@ -144,6 +149,11 @@ export function ContaFormModal({
     atualizarReceber.isPending;
 
   async function onSubmit(values: FormValues) {
+    const erroMuro = erroDePeriodoFechado(values.dataVencimento, fechadoAte);
+    if (erroMuro) {
+      setError('dataVencimento', { message: erroMuro });
+      return;
+    }
     try {
       const base = {
         descricao: values.descricao,
@@ -271,6 +281,7 @@ export function ContaFormModal({
           label={repeticao === 'UNICA' ? 'Vencimento' : 'Primeiro vencimento'}
           type="date"
           required
+          min={minimoAposMuro(fechadoAte)}
           error={errors.dataVencimento?.message}
           {...register('dataVencimento')}
         />

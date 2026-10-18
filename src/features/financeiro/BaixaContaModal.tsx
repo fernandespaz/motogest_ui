@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Field';
 import { FORMAS_PAGAMENTO } from '@/lib/formaPagamento';
+import { erroDePeriodoFechado, minimoAposMuro } from '@/lib/fechamento';
 import { formatCurrency } from '@/lib/formatters';
 import type { BaixaContaRequest, FormaPagamento } from '@/api/types';
 import type { TipoConta } from './ContaFormModal';
@@ -34,12 +35,15 @@ const TEXTOS = {
 export function BaixaContaModal({
   tipo,
   conta,
+  fechadoAte,
   loading,
   onConfirm,
   onClose,
 }: {
   tipo: TipoConta;
   conta: { descricao: string; valor: number } | null;
+  /** Data muro do financeiro: a baixa não pode ter data até ela (inclusive). */
+  fechadoAte?: string;
   loading?: boolean;
   onConfirm: (baixa: BaixaContaRequest) => void;
   onClose: () => void;
@@ -50,6 +54,7 @@ export function BaixaContaModal({
     handleSubmit,
     reset,
     watch,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
@@ -86,20 +91,25 @@ export function BaixaContaModal({
         id={FORM_ID}
         noValidate
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-        onSubmit={handleSubmit((v) =>
+        onSubmit={handleSubmit((v) => {
+          const erroMuro = erroDePeriodoFechado(v.data, fechadoAte);
+          if (erroMuro) {
+            setError('data', { message: erroMuro });
+            return;
+          }
           onConfirm({
             data: v.data,
             formaPagamento: (v.formaPagamento || undefined) as FormaPagamento | undefined,
             valorEfetivo: v.valorEfetivo,
-          }),
-        )}
+          });
+        })}
       >
         <div className="rounded-xl bg-surface-alt px-4 py-3 sm:col-span-2">
           <p className="text-sm font-medium text-ink">{conta?.descricao}</p>
           <p className="text-sm text-ink-muted">Valor da conta: {formatCurrency(conta?.valor)}</p>
         </div>
 
-        <Input label={textos.data} type="date" required max={hojeIso()} error={errors.data?.message} {...register('data')} />
+        <Input label={textos.data} type="date" required max={hojeIso()} min={minimoAposMuro(fechadoAte)} error={errors.data?.message} {...register('data')} />
         <Select label="Forma de pagamento" {...register('formaPagamento')}>
           <option value="">Não informar</option>
           {FORMAS_PAGAMENTO.map((f) => (

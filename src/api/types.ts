@@ -223,6 +223,10 @@ export type TipoCategoriaFinanceira = NonNullable<CategoriaFinanceiraResponse['t
 export type TipoRepeticaoConta = NonNullable<RepeticaoContaRequest['tipo']>;
 export type ParametroFinanceiroRequest = Schemas['ParametroFinanceiroRequest'];
 export type ParametroFinanceiroResponse = Schemas['ParametroFinanceiroResponse'];
+export type FechamentoFinanceiroRequest = Schemas['FechamentoRequest'];
+export type FechamentoFinanceiroResponse = Schemas['FechamentoResponse'];
+export type ReaberturaFinanceiraRequest = Schemas['ReaberturaRequest'];
+export type SituacaoFechamentoResponse = Schemas['SituacaoFechamentoResponse'];
 
 export type ChecklistRequest = Schemas['ChecklistRequest'];
 export type ChecklistResponse = Schemas['ChecklistResponse'];

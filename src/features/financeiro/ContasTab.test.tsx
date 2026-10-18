@@ -8,6 +8,7 @@ import {
   useCategoriasFinanceiras,
   usePagarConta,
   useReceberConta,
+  useSituacaoFechamento,
   useTodasContasPagar,
   useTodasContasReceber,
 } from '@/hooks/useFinanceiro';
@@ -22,6 +23,7 @@ vi.mock('@/hooks/useFinanceiro', () => ({
   useCancelarContaPagar: vi.fn(),
   useCancelarContaReceber: vi.fn(),
   useCategoriasFinanceiras: vi.fn(),
+  useSituacaoFechamento: vi.fn(),
 }));
 vi.mock('./ContaFormModal', () => ({
   ContaFormModal: ({ open, conta }: { open: boolean; conta?: { descricao?: string } | null }) =>
@@ -46,6 +48,7 @@ describe('ContasTab', () => {
   let cancelarMutate: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.mocked(useSituacaoFechamento).mockReturnValue({ data: { dataMuro: undefined } } as never);
     pagarMutate = vi.fn().mockResolvedValue({});
     cancelarMutate = vi.fn().mockResolvedValue({});
     vi.mocked(useTodasContasPagar).mockReturnValue({ data: pagar, isLoading: false } as never);
@@ -142,6 +145,21 @@ describe('ContasTab', () => {
     render(<ContasTab tipo="pagar" />);
     const quitada = screen.getByText('Energia').closest('tr')!;
     expect(within(quitada).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('locks edit and cancel for accounts due inside a closed period, but still lets them be paid', () => {
+    vi.mocked(useSituacaoFechamento).mockReturnValue({ data: { dataMuro: dia(-2) } } as never);
+    render(<ContasTab tipo="pagar" />);
+
+    const fechada = screen.getByText('Aluguel').closest('tr')!; // vence há 4 dias, antes da data muro
+    expect(within(fechada).getByLabelText('Período fechado')).toBeInTheDocument();
+    expect(within(fechada).getByRole('button', { name: 'Pagar' })).toBeInTheDocument();
+    expect(within(fechada).queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(within(fechada).queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
+
+    const aberta = screen.getByText('Peças Veloz').closest('tr')!;
+    expect(within(aberta).getByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    expect(within(aberta).getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
   });
 
   it('opens the edit form for an account, but not for one that came from an OS billing', async () => {

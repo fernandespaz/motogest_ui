@@ -145,3 +145,12 @@ Seguindo o `CLAUDE.md` do projeto: migrações novas (nunca editar as aplicadas)
 **Observações para as próximas fases**
 - Contas antigas ficam "sem categoria" até alguém classificá-las; editar uma delas exige escolher a categoria.
 - O dia de fechamento já é gravado e exibido, mas ainda não bloqueia nada (Fase 3).
+
+## 8. Fases 2 e 3 — o que foi entregue
+
+**Fase 2 (front, sem endpoint novo)**: seletor de mês na Visão geral (competência = data de vencimento), balanço do mês (previsto × realizado, com o valor efetivo pago), ranking "Para onde foi o dinheiro" por categoria (com o balde "Sem categoria") e aviso de quantos dias faltam para o fechamento.
+
+**Fase 3 — fechamento (data muro)**
+- Backend: `V36` (permissão `FINANCEIRO_FECHAR`, dada ao Administrador, e tabela `fechamento_financeiro`). `GET /financeiro/fechamentos/situacao` (data muro, próximo período e checklist), `GET /financeiro/fechamentos` (histórico), `POST /financeiro/fechamentos` (fechar; com contas em aberto exige `confirmarPendencias`), `POST /{id}/reabrir` (só o último fechamento, com motivo).
+- Regra: com um período fechado, contas com vencimento até a data muro não podem ser criadas, editadas nem canceladas e nenhuma baixa pode ter data dentro dele; pagar/receber uma conta antiga com data de hoje continua permitido. O faturamento de OS não é barrado.
+- Front: aba **Fechamento** (checklist, fechar com aviso de pendências, histórico, reabrir com motivo); contas de período fechado mostram um cadeado e perdem Editar/Cancelar; os modais de conta e de baixa recusam datas dentro do período fechado.
