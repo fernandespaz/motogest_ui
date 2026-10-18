@@ -10,6 +10,7 @@ import { FinanceiroPage } from './FinanceiroPage';
 vi.mock('@/hooks/useFinanceiro', () => ({ useTodasContasPagar: vi.fn(), useTodasContasReceber: vi.fn() }));
 vi.mock('./CaixaAdminTab', () => ({ CaixaAdminTab: () => <p>aba-caixa</p> }));
 vi.mock('./FinanceiroAjustes', () => ({ FinanceiroAjustes: () => <p>aba-ajustes</p> }));
+vi.mock('./FinanceiroRelatorios', () => ({ FinanceiroRelatorios: () => <p>aba-relatorios</p> }));
 vi.mock('./FinanceiroFechamento', () => ({ FinanceiroFechamento: () => <p>aba-fechamento</p> }));
 vi.mock('./ContasTab', () => ({
   ContasTab: ({ tipo, situacaoInicial }: { tipo: string; situacaoInicial: string }) => (

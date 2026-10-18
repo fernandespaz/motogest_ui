@@ -3,6 +3,7 @@ import {
   balancoDoMes,
   diasParaVencimento,
   filtrarContas,
+  noPeriodo,
   gastosPorCategoria,
   ordenarPorVencimento,
   periodoDeFechamento,
@@ -167,5 +168,18 @@ describe('balancoDoMes e gastosPorCategoria', () => {
 
   it('returns nothing when there are no expenses', () => {
     expect(gastosPorCategoria([])).toEqual([]);
+  });
+});
+
+describe('noPeriodo', () => {
+  it('keeps accounts due between the dates, both ends included, and drops the ones with no date', () => {
+    const contas = [
+      { dataVencimento: '2026-09-30' },
+      { dataVencimento: '2026-10-01' },
+      { dataVencimento: '2026-10-18' },
+      { dataVencimento: '2026-10-19' },
+      {},
+    ];
+    expect(noPeriodo(contas, '2026-10-01', '2026-10-18')).toEqual([{ dataVencimento: '2026-10-01' }, { dataVencimento: '2026-10-18' }]);
   });
 });

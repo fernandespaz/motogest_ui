@@ -154,3 +154,9 @@ Seguindo o `CLAUDE.md` do projeto: migrações novas (nunca editar as aplicadas)
 - Backend: `V36` (permissão `FINANCEIRO_FECHAR`, dada ao Administrador, e tabela `fechamento_financeiro`). `GET /financeiro/fechamentos/situacao` (data muro, próximo período e checklist), `GET /financeiro/fechamentos` (histórico), `POST /financeiro/fechamentos` (fechar; com contas em aberto exige `confirmarPendencias`), `POST /{id}/reabrir` (só o último fechamento, com motivo).
 - Regra: com um período fechado, contas com vencimento até a data muro não podem ser criadas, editadas nem canceladas e nenhuma baixa pode ter data dentro dele; pagar/receber uma conta antiga com data de hoje continua permitido. O faturamento de OS não é barrado.
 - Front: aba **Fechamento** (checklist, fechar com aviso de pendências, histórico, reabrir com motivo); contas de período fechado mostram um cadeado e perdem Editar/Cancelar; os modais de conta e de baixa recusam datas dentro do período fechado.
+
+## 9. Fase 4 — caixas, auditoria e relatórios
+
+- Backend: `GET /api/v1/caixa/auditoria?inicio&fim` (CAIXA_GERENCIAR, até 366 dias): caixas abertos no período com entradas/saídas, divergência (contado − calculado, somando as 4 formas de pagamento) e justificativa, reaberturas com quem/quando/motivo e os movimentos sem sessão (baixas de contas).
+- Front: sub-aba **Caixa › Auditoria** (indicadores, tabela de caixas, reaberturas, movimentos sem caixa, CSV) e aba **Relatórios** do Financeiro (despesas por categoria, receitas por categoria e contas do período, por vencimento, com CSV para Excel).
+- Limite conhecido: os relatórios por categoria são calculados no navegador a partir das contas já carregadas; PDF/XLSX e relatórios por fornecedor/inadimplência por cliente ficam para quando o volume pedir um endpoint próprio.

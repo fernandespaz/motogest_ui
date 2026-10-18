@@ -78,6 +78,11 @@ export interface VendaProdutosPayload {
 
 export const VENDA_PRODUTO_REFERENCIA = 'VENDA_CAIXA';
 
+/** Total da venda em reais, arredondado ao centavo — a mesma conta vale pro valor exibido e pro lançado no caixa. */
+export function totalDaVenda(itens: Pick<VendaProdutosPayload['itens'][number], 'quantidade' | 'precoUnitario'>[]): number {
+  return Math.round(itens.reduce((soma, i) => soma + i.quantidade * i.precoUnitario, 0) * 100) / 100;
+}
+
 export function descricaoDaVenda(itens: VendaProdutosPayload['itens']): string {
   return `Venda de produtos: ${itens.map((i) => `${i.quantidade}x ${i.nome}`).join(', ')}`;
 }
@@ -105,17 +110,16 @@ export function useVenderProdutos() {
           });
           baixados.push(item);
         }
-        const total = itens.reduce((soma, i) => soma + i.quantidade * i.precoUnitario, 0);
         return await caixaApi.registrar({
           tipo: 'ENTRADA',
           categoria: 'OUTRO',
-          valor: Math.round(total * 100) / 100,
+          valor: totalDaVenda(itens),
           formaPagamento,
           descricao: descricaoDaVenda(itens),
           ...referencia,
         });
       } catch (error) {
-        await Promise.allSettled(
+        const estornos = await Promise.allSettled(
           baixados.map((i) =>
             estoqueApi.registrar(i.produtoId, {
               tipo: 'ENTRADA',
@@ -125,6 +129,15 @@ export function useVenderProdutos() {
             }),
           ),
         );
+        const naoEstornados = baixados.filter((_, idx) => estornos[idx].status === 'rejected');
+        if (naoEstornados.length > 0) {
+          // O estoque ficou baixado sem entrada no caixa: o operador precisa saber quais produtos acertar à mão.
+          throw new Error(
+            `A venda falhou e não foi possível devolver ao estoque: ${naoEstornados
+              .map((i) => `${i.quantidade}x ${i.nome}`)
+              .join(', ')}. Ajuste o estoque manualmente.`,
+          );
+        }
         throw error;
       }
     },
@@ -236,6 +249,14 @@ export function useRelatorioCaixaDiario(data: string, options?: { enabled?: bool
     queryKey: ['caixa', 'relatorios', 'diario', data] as const,
     queryFn: () => caixaApi.relatorios.diario(data),
     enabled: (options?.enabled ?? true) && !!data,
+  });
+}
+
+export function useAuditoriaCaixa(inicio: string, fim: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['caixa', 'auditoria', inicio, fim] as const,
+    queryFn: () => caixaApi.auditoria(inicio, fim),
+    enabled: (options?.enabled ?? true) && !!inicio && !!fim && inicio <= fim,
   });
 }
 
@@ -460,11 +481,12 @@ export const fechamentosKeys = {
   lista: ['fechamentos-financeiros', 'lista'] as const,
 };
 
-export function useSituacaoFechamento(options?: { enabled?: boolean }) {
+export function useSituacaoFechamento(options?: { enabled?: boolean; silentError?: boolean }) {
   return useQuery({
     queryKey: fechamentosKeys.situacao,
     queryFn: () => fechamentosFinanceirosApi.situacao(),
     enabled: options?.enabled,
+    meta: options?.silentError ? { silentError: true } : undefined,
   });
 }
 

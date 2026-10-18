@@ -2307,6 +2307,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caixa/auditoria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auditoria consolidada dos caixas de um periodo
+         * @description Requer CAIXA_GERENCIAR. Sessoes do periodo com divergencia, reaberturas com motivo e movimentos sem sessao (baixas de contas). Periodo de ate 366 dias.
+         */
+        get: operations["auditar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agendamentos/periodo": {
         parameters: {
             query?: never;
@@ -3977,6 +3997,61 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        AuditoriaCaixaResponse: {
+            /** Format: date */
+            inicio?: string;
+            /** Format: date */
+            fim?: string;
+            totais?: components["schemas"]["Totais"];
+            sessoes?: components["schemas"]["SessaoAuditada"][];
+            reaberturas?: components["schemas"]["Reabertura"][];
+            semSessao?: components["schemas"]["MovimentosSemSessao"];
+        };
+        MovimentosSemSessao: {
+            /** Format: int32 */
+            quantidade?: number;
+            entradas?: number;
+            saidas?: number;
+        };
+        Reabertura: {
+            /** Format: int64 */
+            sessaoId?: number;
+            identificador?: string;
+            usuarioNome?: string;
+            /** Format: date-time */
+            ocorridoEm?: string;
+            motivo?: string;
+        };
+        SessaoAuditada: {
+            /** Format: int64 */
+            id?: number;
+            identificador?: string;
+            turno?: string;
+            /** @enum {string} */
+            status?: "ABERTO" | "FECHADO";
+            abertoPorNome?: string;
+            /** Format: date-time */
+            abertoEm?: string;
+            fechadoPorNome?: string;
+            /** Format: date-time */
+            fechadoEm?: string;
+            entradas?: number;
+            saidas?: number;
+            divergencia?: number;
+            justificativaDivergencia?: string;
+            /** Format: int32 */
+            reaberturas?: number;
+        };
+        Totais: {
+            /** Format: int32 */
+            sessoes?: number;
+            /** Format: int32 */
+            sessoesComDivergencia?: number;
+            divergenciaLiquida?: number;
+            divergenciaAbsoluta?: number;
+            /** Format: int32 */
+            reaberturas?: number;
         };
         PageResponseAgendamentoResponse: {
             content?: components["schemas"]["AgendamentoResponse"][];
@@ -8097,6 +8172,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CaixaMovimentoResponse"][];
+                };
+            };
+        };
+    };
+    auditar: {
+        parameters: {
+            query: {
+                inicio: string;
+                fim: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuditoriaCaixaResponse"];
                 };
             };
         };

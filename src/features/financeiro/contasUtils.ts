@@ -101,6 +101,11 @@ export function doMes<T extends ContaBase>(contas: T[], anoMes: string): T[] {
   return contas.filter((c) => (c.dataVencimento ?? '').startsWith(anoMes));
 }
 
+/** Contas com vencimento entre `inicio` e `fim` (yyyy-MM-dd), ambos inclusive. */
+export function noPeriodo<T extends ContaBase>(contas: T[], inicio: string, fim: string): T[] {
+  return contas.filter((c) => !!c.dataVencimento && c.dataVencimento >= inicio && c.dataVencimento <= fim);
+}
+
 /** Mais antiga primeiro (as vencidas vêm no topo); sem data, por último. */
 export function ordenarPorVencimento<T extends ContaBase>(contas: T[]): T[] {
   return [...contas].sort((a, b) => (a.dataVencimento ?? '9999').localeCompare(b.dataVencimento ?? '9999'));

@@ -85,6 +85,7 @@ export const API_ROUTES = {
       reabrir: (id: number) => `/api/v1/caixa/sessoes/${id}/reabrir`,
       exportar: (id: number) => `/api/v1/caixa/sessoes/${id}/exportar`,
     },
+    auditoria: '/api/v1/caixa/auditoria',
     relatorios: {
       diario: '/api/v1/caixa/relatorios/diario',
       diarioExportar: '/api/v1/caixa/relatorios/diario/exportar',

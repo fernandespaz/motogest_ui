@@ -9,10 +9,11 @@ import { CaixaAdminTab } from './CaixaAdminTab';
 import { ContasTab } from './ContasTab';
 import { FinanceiroAjustes } from './FinanceiroAjustes';
 import { FinanceiroFechamento } from './FinanceiroFechamento';
+import { FinanceiroRelatorios } from './FinanceiroRelatorios';
 import { FinanceiroVisaoGeral, type DestinoFinanceiro } from './FinanceiroVisaoGeral';
 import { SITUACOES, resumirPorSituacao, type SituacaoConta } from './contasUtils';
 
-type Aba = 'geral' | 'pagar' | 'receber' | 'caixa' | 'fechamento' | 'ajustes';
+type Aba = 'geral' | 'pagar' | 'receber' | 'caixa' | 'fechamento' | 'relatorios' | 'ajustes';
 
 function situacaoDaUrl(valor: string | null): SituacaoConta | 'todas' {
   return SITUACOES.includes(valor as SituacaoConta) ? (valor as SituacaoConta) : 'todas';
@@ -54,6 +55,7 @@ export function FinanceiroPage() {
     },
     { key: 'caixa', label: 'Caixa', visivel: podeCaixaGerenciar },
     { key: 'fechamento', label: 'Fechamento', visivel: podeFinanceiro },
+    { key: 'relatorios', label: 'Relatórios', visivel: podeFinanceiro },
     { key: 'ajustes', label: 'Ajustes', visivel: podeFinanceiro },
   ];
   const visiveis = abas.filter((a) => a.visivel);
@@ -120,6 +122,9 @@ export function FinanceiroPage() {
       <TabPanel hidden={tab !== 'fechamento'}>
         {/* só monta com a aba aberta: o checklist é refeito a cada visita, sem ficar velho depois de pagar/criar contas */}
         {tab === 'fechamento' && <FinanceiroFechamento />}
+      </TabPanel>
+      <TabPanel hidden={tab !== 'relatorios'}>
+        {tab === 'relatorios' && <FinanceiroRelatorios />}
       </TabPanel>
       <TabPanel hidden={tab !== 'ajustes'}>
         <FinanceiroAjustes />
