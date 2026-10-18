@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { addMonths, format, startOfMonth } from 'date-fns';
+import { addMonths, differenceInCalendarDays, format, parseISO, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import clsx from 'clsx';
 import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Scale } from 'lucide-react';
@@ -7,14 +7,19 @@ import type { LucideIcon } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { DonutChart } from '@/components/ui/DonutChart';
 import { PageSpinner } from '@/components/ui/Spinner';
-import { useTodasContasPagar, useTodasContasReceber } from '@/hooks/useFinanceiro';
-import { formatCurrency } from '@/lib/formatters';
+import { useParametrosFinanceiros, useTodasContasPagar, useTodasContasReceber } from '@/hooks/useFinanceiro';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
+  balancoDoMes,
   doMes,
+  gastosPorCategoria,
+  periodoDeFechamento,
   ordenarPorVencimento,
   resumirPorSituacao,
   situacaoDaConta,
+  type BalancoDoMes,
   type ContaBase,
+  type GastoPorCategoria,
   type ResumoContas,
   type SituacaoConta,
 } from './contasUtils';
@@ -22,6 +27,7 @@ import { VencimentoInfo } from './VencimentoInfo';
 import type { TipoConta } from './ContaFormModal';
 
 const MAX_LINHAS = 8;
+const MAX_CATEGORIAS = 8;
 
 export type DestinoFinanceiro = { aba: TipoConta; situacao?: SituacaoConta };
 
@@ -34,6 +40,7 @@ function emAberto(resumo: ResumoContas) {
 export function FinanceiroVisaoGeral({ onIrPara }: { onIrPara: (destino: DestinoFinanceiro) => void }) {
   const pagar = useTodasContasPagar();
   const receber = useTodasContasReceber();
+  const parametros = useParametrosFinanceiros();
   const [mes, setMes] = useState(() => startOfMonth(new Date()));
   const anoMes = format(mes, 'yyyy-MM');
   const ehMesAtual = anoMes === format(new Date(), 'yyyy-MM');
@@ -42,6 +49,9 @@ export function FinanceiroVisaoGeral({ onIrPara }: { onIrPara: (destino: Destino
   const contasReceber = useMemo(() => doMes(receber.data ?? [], anoMes), [receber.data, anoMes]);
   const resumoPagar = useMemo(() => resumirPorSituacao(contasPagar), [contasPagar]);
   const resumoReceber = useMemo(() => resumirPorSituacao(contasReceber), [contasReceber]);
+
+  const balanco = useMemo(() => balancoDoMes(contasReceber, contasPagar), [contasReceber, contasPagar]);
+  const gastos = useMemo(() => gastosPorCategoria(contasPagar), [contasPagar]);
 
   const proximos = useMemo(() => {
     const doTipo = (tipo: TipoConta, contas: ContaBase[] & { descricao?: string }[]) =>
@@ -72,6 +82,8 @@ export function FinanceiroVisaoGeral({ onIrPara }: { onIrPara: (destino: Destino
   return (
     <div className="flex flex-col gap-5">
       <SeletorMes mes={mes} ehMesAtual={ehMesAtual} onChange={setMes} />
+      {ehMesAtual && parametros.data?.diaFechamento != null && <AvisoFechamento dia={parametros.data.diaFechamento} />}
+      <BalancoCard balanco={balanco} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Indicador
           icon={totalVencidas > 0 ? AlertTriangle : CheckCircle2}
@@ -110,6 +122,8 @@ export function FinanceiroVisaoGeral({ onIrPara }: { onIrPara: (destino: Destino
           tom={resultado < 0 ? 'danger' : 'success'}
         />
       </div>
+
+      <GastosPorCategoria gastos={gastos} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <GraficoContas tipo="pagar" titulo="Contas a pagar" resumo={resumoPagar} onIrPara={onIrPara} />
@@ -200,6 +214,83 @@ function SeletorMes({ mes, ehMesAtual, onChange }: { mes: Date; ehMesAtual: bool
       )}
       <span className="text-xs text-ink-muted">Contas com vencimento neste mês</span>
     </div>
+  );
+}
+
+function AvisoFechamento({ dia }: { dia: number }) {
+  const { inicio, fim } = periodoDeFechamento(dia);
+  const faltam = differenceInCalendarDays(parseISO(fim), new Date());
+  const quando = faltam === 0 ? 'hoje' : faltam === 1 ? 'amanhã' : `em ${faltam} dias`;
+  return (
+    <p className="flex items-center gap-2 rounded-xl border border-border bg-surface-alt px-4 py-2.5 text-sm text-ink-muted">
+      <CalendarDays size={16} className="shrink-0 text-brand-600" aria-hidden="true" />
+      <span>
+        Período de fechamento:{' '}
+        <strong className="text-ink">
+          {formatDate(inicio)} a {formatDate(fim)}
+        </strong>{' '}
+        — fecha {quando} (dia {dia}).
+      </span>
+    </p>
+  );
+}
+
+function BalancoCard({ balanco }: { balanco: BalancoDoMes }) {
+  return (
+    <Card>
+      <CardHeader title="Balanço do mês" subtitle="Previsto = tudo que vence no mês · Realizado = o que já foi pago ou recebido" />
+      <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <p className="text-sm text-ink-muted">Receitas</p>
+          <p className="text-xl font-bold text-ink">{formatCurrency(balanco.receitas.previsto)}</p>
+          <p className="text-sm text-ink-muted">{formatCurrency(balanco.receitas.realizado)} recebido</p>
+        </div>
+        <div>
+          <p className="text-sm text-ink-muted">Despesas</p>
+          <p className="text-xl font-bold text-ink">{formatCurrency(balanco.despesas.previsto)}</p>
+          <p className="text-sm text-ink-muted">{formatCurrency(balanco.despesas.realizado)} pago</p>
+        </div>
+        <div>
+          <p className="text-sm text-ink-muted">Resultado do mês</p>
+          <p className={clsx('text-xl font-bold', balanco.resultadoPrevisto < 0 ? 'text-danger' : 'text-success')}>
+            {formatCurrency(balanco.resultadoPrevisto)}
+          </p>
+          <p className="text-sm text-ink-muted">{formatCurrency(balanco.resultadoRealizado)} realizado</p>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+function GastosPorCategoria({ gastos }: { gastos: GastoPorCategoria[] }) {
+  return (
+    <Card>
+      <CardHeader title="Para onde foi o dinheiro" subtitle="Despesas do mês por categoria" />
+      <CardBody>
+        {gastos.length === 0 ? (
+          <p className="text-sm text-ink-muted">Nenhuma despesa com vencimento neste mês.</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {gastos.slice(0, MAX_CATEGORIAS).map((g) => (
+              <li key={g.categoriaId ?? 'sem'}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className={clsx('truncate', g.categoriaId == null ? 'text-warning' : 'text-ink')}>{g.nome}</span>
+                  <span className="shrink-0 font-semibold text-ink">
+                    {formatCurrency(g.valor)} <span className="font-normal text-ink-muted">· {Math.round(g.percentual)}%</span>
+                  </span>
+                </div>
+                <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-alt" aria-hidden="true">
+                  <div
+                    className={clsx('h-full rounded-full', g.categoriaId == null ? 'bg-warning' : 'bg-brand-500')}
+                    style={{ width: `${Math.max(g.percentual, 2)}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

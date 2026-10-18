@@ -162,3 +162,81 @@ export function periodoDeFechamento(diaFechamento: number, ref: Date = new Date(
   const fechamentoAnterior = fechamentoDoMes(fim.getFullYear(), fim.getMonth() - 1, diaFechamento);
   return { inicio: format(addDays(fechamentoAnterior, 1), 'yyyy-MM-dd'), fim: format(fim, 'yyyy-MM-dd') };
 }
+
+/** Campos extras que o balanço e o ranking de categorias leem. */
+export interface ContaFinanceira extends ContaBase {
+  categoriaNome?: string;
+  valorPago?: number;
+}
+
+export interface LadoDoBalanco {
+  /** Tudo que vence no mês, exceto canceladas. */
+  previsto: number;
+  /** O que já foi pago/recebido (valor efetivo, com juros ou desconto). */
+  realizado: number;
+}
+
+export interface BalancoDoMes {
+  receitas: LadoDoBalanco;
+  despesas: LadoDoBalanco;
+  resultadoPrevisto: number;
+  resultadoRealizado: number;
+}
+
+function arredondar(valor: number): number {
+  return Math.round(valor * 100) / 100;
+}
+
+function somarLado(contas: ContaFinanceira[]): LadoDoBalanco {
+  let previsto = 0;
+  let realizado = 0;
+  for (const c of contas) {
+    const situacao = situacaoDaConta(c);
+    if (situacao === 'cancelada') continue;
+    previsto += c.valor ?? 0;
+    if (situacao === 'quitada') realizado += c.valorPago ?? c.valor ?? 0;
+  }
+  return { previsto: arredondar(previsto), realizado: arredondar(realizado) };
+}
+
+/** Balanço de contas já filtradas pelo mês: previsto (o que vence) × realizado (o que já foi quitado). */
+export function balancoDoMes(receber: ContaFinanceira[], pagar: ContaFinanceira[]): BalancoDoMes {
+  const receitas = somarLado(receber);
+  const despesas = somarLado(pagar);
+  return {
+    receitas,
+    despesas,
+    resultadoPrevisto: arredondar(receitas.previsto - despesas.previsto),
+    resultadoRealizado: arredondar(receitas.realizado - despesas.realizado),
+  };
+}
+
+export interface GastoPorCategoria {
+  categoriaId: number | null;
+  nome: string;
+  valor: number;
+  /** 0–100, sobre o total do mês. */
+  percentual: number;
+}
+
+/** Onde o dinheiro vai: despesas do mês (exceto canceladas) somadas por categoria, da maior para a menor. */
+export function gastosPorCategoria(pagar: ContaFinanceira[]): GastoPorCategoria[] {
+  const grupos = new Map<number | null, { nome: string; valor: number }>();
+  let total = 0;
+  for (const c of pagar) {
+    if (situacaoDaConta(c) === 'cancelada') continue;
+    const chave = c.categoriaId ?? null;
+    const atual = grupos.get(chave) ?? { nome: c.categoriaNome ?? 'Sem categoria', valor: 0 };
+    atual.valor += c.valor ?? 0;
+    grupos.set(chave, atual);
+    total += c.valor ?? 0;
+  }
+  return [...grupos.entries()]
+    .map(([categoriaId, g]) => ({
+      categoriaId,
+      nome: g.nome,
+      valor: arredondar(g.valor),
+      percentual: total > 0 ? (g.valor / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.valor - a.valor);
+}
