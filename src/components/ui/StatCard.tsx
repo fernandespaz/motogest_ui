@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ChevronRight } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -12,6 +13,7 @@ export function StatCard({
   index,
   onClick,
   active,
+  navega,
 }: {
   icon: LucideIcon;
   label: string;
@@ -22,6 +24,8 @@ export function StatCard({
   // com `active` marcando visualmente qual estado do toggle está selecionado.
   onClick?: () => void;
   active?: boolean;
+  // O clique leva a outra tela (e não alterna um filtro) — mostra a seta.
+  navega?: boolean;
 }) {
   const toneClasses = {
     brand: 'bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300',
@@ -51,8 +55,9 @@ export function StatCard({
             : undefined
         }
         className={clsx(
-          'w-full text-left transition-shadow',
-          onClick && 'cursor-pointer hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-400',
+          'w-full text-left transition-[transform,box-shadow,border-color]',
+          onClick &&
+            'cursor-pointer hover:-translate-y-0.5 hover:border-brand-500/50 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-400',
           active && 'ring-2 ring-brand-500',
         )}
       >
@@ -60,10 +65,11 @@ export function StatCard({
           <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${toneClasses}`}>
             <Icon size={20} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-ink-muted">{label}</p>
             <p className="text-lg font-semibold text-ink">{value}</p>
           </div>
+          {onClick && navega && <ChevronRight size={18} className="shrink-0 text-ink-muted" aria-hidden="true" />}
         </CardBody>
       </Card>
     </motion.div>

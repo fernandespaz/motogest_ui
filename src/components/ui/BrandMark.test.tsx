@@ -26,7 +26,7 @@ describe('BrandMark', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
-  it.each(['sm', 'md', 'lg'] as const)('renders the %s size without crashing', (size) => {
+  it.each(['sm', 'md', 'lg', 'xl'] as const)('renders the %s size without crashing', (size) => {
     render(<BrandMark size={size} />);
     expect(screen.getByText('MG')).toBeInTheDocument();
   });

@@ -1,9 +1,39 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import type { ReactNode } from 'react';
+import clsx from 'clsx';
+import { AlertTriangle, Clock3 } from 'lucide-react';
 import { useLicencaAtual } from '@/hooks/useOficina';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/formatters';
 import { precisaRenovarLicencaManualmente } from '@/lib/licenca';
+
+// Dias restantes a partir dos quais o aviso deixa de ser discreto e vira o
+// laranja sólido da marca — antes disso ele só informa, sem competir com a tela.
+const DIAS_URGENTE = 2;
+
+function Faixa({ urgente, children }: { urgente: boolean; children: ReactNode }) {
+  const Icone = urgente ? AlertTriangle : Clock3;
+  return (
+    <div
+      role="status"
+      className={clsx(
+        'flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-1.5 text-center text-xs font-medium sm:text-sm',
+        urgente
+          ? 'bg-brand-600 text-white'
+          : 'border-b border-brand-600/30 bg-brand-600/10 text-ink',
+      )}
+    >
+      <Icone size={15} className={urgente ? undefined : 'text-brand-600'} />
+      {children}
+    </div>
+  );
+}
+
+function linkClasses(urgente: boolean) {
+  return urgente
+    ? 'font-semibold underline underline-offset-2'
+    : 'rounded-md bg-brand-600 px-2.5 py-0.5 font-semibold text-white transition-colors hover:bg-brand-700';
+}
 
 export function TrialBanner() {
   const { data: licenca } = useLicencaAtual();
@@ -15,15 +45,14 @@ export function TrialBanner() {
   // tem OFICINA_WRITE consegue pagar, então os demais veem só o aviso.
   if (licenca.emCarencia) {
     return (
-      <div className="flex items-center justify-center gap-2 bg-brand-600 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
-        <AlertTriangle size={15} />
+      <Faixa urgente>
         Pagamento pendente, regularize até {formatDate(licenca.dataExpiracao)}
         {hasPermission('OFICINA_WRITE') && (
-          <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">
+          <Link to="/oficina/licenca" className={linkClasses(true)}>
             Regularizar agora
           </Link>
         )}
-      </div>
+      </Faixa>
     );
   }
 
@@ -46,16 +75,14 @@ export function TrialBanner() {
       ? `Seu plano vence em ${dias} dia${dias === 1 ? '' : 's'} e não renova automaticamente.`
       : 'Seu plano vence hoje e não renova automaticamente.';
 
+  const urgente = dias <= DIAS_URGENTE;
+
   return (
-    // Laranja sólido igual ao dos botões do projeto (Button.tsx: bg-brand-600) —
-    // cor saturada única, sem precisar de variante dark: separada, fica igual
-    // nos dois temas.
-    <div className="flex items-center justify-center gap-2 bg-brand-600 px-4 py-2 text-center text-xs font-medium text-white sm:text-sm">
-      <AlertTriangle size={15} />
+    <Faixa urgente={urgente}>
       {mensagem}
-      <Link to="/oficina/licenca" className="font-semibold underline underline-offset-2">
+      <Link to="/oficina/licenca" className={linkClasses(urgente)}>
         {isTrial ? 'Ver planos' : 'Renovar agora'}
       </Link>
-    </div>
+    </Faixa>
   );
 }

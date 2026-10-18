@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import clsx from 'clsx';
 import { Mail } from 'lucide-react';
+import { buttonStyles } from '@/components/ui/Button';
 
 const CONTATO_EMAIL = 'contato@motogest.com.br';
 
@@ -31,7 +33,7 @@ export function RegisterOficinaPage() {
 
         <a
           href={`mailto:${CONTATO_EMAIL}?subject=${encodeURIComponent('Quero usar o MotoGest')}`}
-          className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 text-base font-medium text-white transition-colors hover:bg-brand-700"
+          className={clsx('mt-6', buttonStyles({ size: 'lg', fullWidth: true }))}
         >
           <Mail size={18} /> Falar com o time MotoGest
         </a>
