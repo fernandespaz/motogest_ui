@@ -34,7 +34,7 @@ describe('contasReceberApi', () => {
 
     const result = await contasReceberApi.receber(1);
 
-    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/contas-receber/1/receber');
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/contas-receber/1/receber', undefined);
     expect(result.status).toBe('RECEBIDA');
   });
 

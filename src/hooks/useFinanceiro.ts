@@ -2,7 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { caixaApi } from '@/api/endpoints/caixa';
 import { contasPagarApi } from '@/api/endpoints/contasPagar';
 import { contasReceberApi } from '@/api/endpoints/contasReceber';
+import { categoriasFinanceirasApi, type CategoriasFinanceirasParams } from '@/api/endpoints/categoriasFinanceiras';
+import { parametrosFinanceirosApi } from '@/api/endpoints/parametrosFinanceiros';
 import type {
+  BaixaContaRequest,
+  CategoriaFinanceiraRequest,
+  ContaPagarLoteRequest,
+  ContaReceberLoteRequest,
+  ParametroFinanceiroRequest,
   CaixaMovimentoRequest,
   CaixaSessaoAberturaRequest,
   CaixaSessaoFechamentoRequest,
@@ -13,6 +20,7 @@ import type {
   ContaReceberResponse,
   FaturamentoOrdemServicoRequest,
   PageParams,
+  PageResponse,
 } from '@/api/types';
 import { ordensServicoKeys } from './useOrdensServico';
 import { createCrudHooks } from './factory';
@@ -164,6 +172,26 @@ export function useRelatorioCaixaPeriodo(inicio: string, fim: string, options?: 
   });
 }
 
+
+const TAMANHO_PAGINA_TODAS = 200;
+
+/**
+ * GET /contas-pagar e /contas-receber só paginam — sem filtro de status, data
+ * ou busca no backend. Pra a tela de Financeiro separar vencidas / a vencer /
+ * pagas e somar cada grupo, busca todas as páginas uma vez (mesma solução de
+ * useTodosServicos) e filtra por cima no cliente.
+ */
+async function carregarTodasAsPaginas<T>(listar: (params: PageParams) => Promise<PageResponse<T>>): Promise<T[]> {
+  const params: PageParams = { page: 0, size: TAMANHO_PAGINA_TODAS, sort: 'dataVencimento,asc' };
+  const primeira = await listar(params);
+  const conteudo = [...(primeira.content ?? [])];
+  for (let pagina = 1; pagina < (primeira.totalPages ?? 1); pagina++) {
+    const proxima = await listar({ ...params, page: pagina });
+    conteudo.push(...(proxima.content ?? []));
+  }
+  return conteudo;
+}
+
 // Contas a pagar
 const contasPagarHooks = createCrudHooks<ContaPagarResponse, ContaPagarRequest, PageParams>(
   'contas-pagar',
@@ -176,6 +204,16 @@ export const useContaPagar = contasPagarHooks.useDetail;
 export const useCreateContaPagar = contasPagarHooks.useCreate;
 export const useUpdateContaPagar = contasPagarHooks.useUpdate;
 
+/** Todas as contas a pagar (todas as páginas), já ordenadas por vencimento. `enabled` liga a busca só pra quem pode lê-la. */
+export function useTodasContasPagar(options?: { enabled?: boolean; silentError?: boolean }) {
+  return useQuery({
+    queryKey: [...contasPagarKeys.all, 'todas'],
+    queryFn: () => carregarTodasAsPaginas<ContaPagarResponse>((p) => contasPagarApi.list(p)),
+    enabled: options?.enabled,
+    meta: options?.silentError ? { silentError: true } : undefined,
+  });
+}
+
 export function useContasPagarPendentes(inicio: string, fim: string) {
   return useQuery({
     queryKey: [...contasPagarKeys.all, 'pendentes', inicio, fim],
@@ -187,11 +225,22 @@ export function useContasPagarPendentes(inicio: string, fim: string) {
 export function usePagarConta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => contasPagarApi.pagar(id),
+    mutationFn: ({ id, baixa }: { id: number; baixa?: BaixaContaRequest }) => contasPagarApi.pagar(id, baixa),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: contasPagarKeys.all });
       qc.invalidateQueries({ queryKey: caixaKeys.all });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+/** "Repetir todo mês" / "Parcelar": cria várias contas a pagar de uma vez, ligadas por um grupo. */
+export function useCriarContasPagarEmLote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ContaPagarLoteRequest) => contasPagarApi.criarLote(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: contasPagarKeys.all }),
     meta: { hasLocalErrorHandling: true },
   });
 }
@@ -217,6 +266,16 @@ export const useContaReceber = contasReceberHooks.useDetail;
 export const useCreateContaReceber = contasReceberHooks.useCreate;
 export const useUpdateContaReceber = contasReceberHooks.useUpdate;
 
+/** Todas as contas a receber (todas as páginas), já ordenadas por vencimento. */
+export function useTodasContasReceber(options?: { enabled?: boolean; silentError?: boolean }) {
+  return useQuery({
+    queryKey: [...contasReceberKeys.all, 'todas'],
+    queryFn: () => carregarTodasAsPaginas<ContaReceberResponse>((p) => contasReceberApi.list(p)),
+    enabled: options?.enabled,
+    meta: options?.silentError ? { silentError: true } : undefined,
+  });
+}
+
 export function useContasReceberPendentes(inicio: string, fim: string) {
   return useQuery({
     queryKey: [...contasReceberKeys.all, 'pendentes', inicio, fim],
@@ -228,11 +287,22 @@ export function useContasReceberPendentes(inicio: string, fim: string) {
 export function useReceberConta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => contasReceberApi.receber(id),
+    mutationFn: ({ id, baixa }: { id: number; baixa?: BaixaContaRequest }) => contasReceberApi.receber(id, baixa),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: contasReceberKeys.all });
       qc.invalidateQueries({ queryKey: caixaKeys.all });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
     },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+/** "Repetir todo mês" / "Parcelar": cria várias contas a receber de uma vez, ligadas por um grupo. */
+export function useCriarContasReceberEmLote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ContaReceberLoteRequest) => contasReceberApi.criarLote(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: contasReceberKeys.all }),
     meta: { hasLocalErrorHandling: true },
   });
 }
@@ -242,6 +312,64 @@ export function useCancelarContaReceber() {
   return useMutation({
     mutationFn: (id: number) => contasReceberApi.cancelar(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: contasReceberKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+// Categorias financeiras — onde o dinheiro é aplicado (despesas) e de onde vem (receitas)
+export const categoriasFinanceirasKeys = {
+  all: ['categorias-financeiras'] as const,
+  list: (params?: CategoriasFinanceirasParams) => ['categorias-financeiras', 'list', params ?? {}] as const,
+};
+
+export function useCategoriasFinanceiras(params?: CategoriasFinanceirasParams, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: categoriasFinanceirasKeys.list(params),
+    queryFn: () => categoriasFinanceirasApi.listar(params),
+    enabled: options?.enabled,
+  });
+}
+
+export function useCriarCategoriaFinanceira() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CategoriaFinanceiraRequest) => categoriasFinanceirasApi.criar(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: categoriasFinanceirasKeys.all }),
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+export function useAtualizarCategoriaFinanceira() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: CategoriaFinanceiraRequest }) =>
+      categoriasFinanceirasApi.atualizar(id, payload),
+    // O nome da categoria vem embutido em cada conta — renomear tem que refrescar as listas de contas também.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: categoriasFinanceirasKeys.all });
+      qc.invalidateQueries({ queryKey: contasPagarKeys.all });
+      qc.invalidateQueries({ queryKey: contasReceberKeys.all });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
+}
+
+// Parâmetros financeiros da oficina (dia de fechamento mensal)
+export const parametrosFinanceirosKeys = { all: ['parametros-financeiros'] as const };
+
+export function useParametrosFinanceiros(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: parametrosFinanceirosKeys.all,
+    queryFn: () => parametrosFinanceirosApi.buscar(),
+    enabled: options?.enabled,
+  });
+}
+
+export function useAtualizarParametrosFinanceiros() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ParametroFinanceiroRequest) => parametrosFinanceirosApi.atualizar(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: parametrosFinanceirosKeys.all }),
     meta: { hasLocalErrorHandling: true },
   });
 }

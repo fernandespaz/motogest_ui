@@ -6,6 +6,8 @@ interface Tab {
   label: string;
   /** Marca a aba com um ponto vermelho — erro de validação dentro dela. */
   invalid?: boolean;
+  /** Contador ao lado do rótulo (ex.: contas vencidas). `danger` chama a atenção; `neutral` só informa. */
+  badge?: { texto: string; tone?: 'danger' | 'neutral' };
 }
 
 export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; onChange: (key: string) => void }) {
@@ -22,6 +24,16 @@ export function Tabs({ tabs, active, onChange }: { tabs: Tab[]; active: string; 
           )}
         >
           {tab.label}
+          {tab.badge && (
+            <span
+              className={clsx(
+                'ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold',
+                tab.badge.tone === 'danger' ? 'bg-danger text-white' : 'bg-surface-alt text-ink-muted',
+              )}
+            >
+              {tab.badge.texto}
+            </span>
+          )}
           {tab.invalid && (
             <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-danger align-middle" role="img" aria-label="com erro" />
           )}

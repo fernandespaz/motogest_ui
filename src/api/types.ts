@@ -213,6 +213,16 @@ export type ContaPagarResponse = Schemas['ContaPagarResponse'];
 export type ContaReceberRequest = Schemas['ContaReceberRequest'];
 export type ContaReceberResponse = Schemas['ContaReceberResponse'];
 export type StatusConta = NonNullable<ContaPagarResponse['status']>;
+export type ContaPagarLoteRequest = Schemas['ContaPagarLoteRequest'];
+export type ContaReceberLoteRequest = Schemas['ContaReceberLoteRequest'];
+export type RepeticaoContaRequest = Schemas['RepeticaoContaRequest'];
+export type BaixaContaRequest = Schemas['BaixaContaRequest'];
+export type CategoriaFinanceiraRequest = Schemas['CategoriaFinanceiraRequest'];
+export type CategoriaFinanceiraResponse = Schemas['CategoriaFinanceiraResponse'];
+export type TipoCategoriaFinanceira = NonNullable<CategoriaFinanceiraResponse['tipo']>;
+export type TipoRepeticaoConta = NonNullable<RepeticaoContaRequest['tipo']>;
+export type ParametroFinanceiroRequest = Schemas['ParametroFinanceiroRequest'];
+export type ParametroFinanceiroResponse = Schemas['ParametroFinanceiroResponse'];
 
 export type ChecklistRequest = Schemas['ChecklistRequest'];
 export type ChecklistResponse = Schemas['ChecklistResponse'];

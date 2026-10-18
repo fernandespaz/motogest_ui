@@ -244,6 +244,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/parametros": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta os parametros financeiros da oficina (dia de fechamento, padrao 20) */
+        get: operations["buscar_3"];
+        /** Atualiza os parametros financeiros da oficina */
+        put: operations["atualizar_9"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/financeiro/hora-tecnica": {
         parameters: {
             query?: never;
@@ -254,7 +272,7 @@ export interface paths {
         /** Lista a hora tecnica configurada para cada categoria (A/B/C) */
         get: operations["consultar_2"];
         /** Define o valor da hora tecnica das 3 categorias (A/B/C) e o arredondamento comercial (auditado) */
-        put: operations["atualizar_9"];
+        put: operations["atualizar_10"];
         post?: never;
         delete?: never;
         options?: never;
@@ -272,7 +290,7 @@ export interface paths {
         /** Capacidade produtiva atual da oficina e HP calculado */
         get: operations["consultar_3"];
         /** Define numero de mecanicos, horas/dia, dias uteis e eficiencia (auditado) */
-        put: operations["atualizar_10"];
+        put: operations["atualizar_11"];
         post?: never;
         delete?: never;
         options?: never;
@@ -290,7 +308,7 @@ export interface paths {
         /** Busca uma conta a receber pelo id */
         get: operations["buscarPorId_9"];
         /** Atualiza uma conta a receber pendente */
-        put: operations["atualizar_11"];
+        put: operations["atualizar_12"];
         post?: never;
         delete?: never;
         options?: never;
@@ -308,7 +326,7 @@ export interface paths {
         /** Busca uma conta a pagar pelo id */
         get: operations["buscarPorId_10"];
         /** Atualiza uma conta a pagar pendente */
-        put: operations["atualizar_12"];
+        put: operations["atualizar_13"];
         post?: never;
         delete?: never;
         options?: never;
@@ -326,10 +344,27 @@ export interface paths {
         /** Busca um cliente pelo id */
         get: operations["buscarPorId_11"];
         /** Atualiza um cliente existente */
-        put: operations["atualizar_13"];
+        put: operations["atualizar_14"];
         post?: never;
         /** Remove um cliente */
         delete: operations["excluir_8"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categorias-financeiras/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Renomeia, marca como fixa ou ativa/desativa uma categoria (o tipo nao muda; nao ha exclusao) */
+        put: operations["atualizar_15"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -345,7 +380,7 @@ export interface paths {
         /** Busca um agendamento pelo id */
         get: operations["buscarPorId_13"];
         /** Atualiza um agendamento existente */
-        put: operations["atualizar_14"];
+        put: operations["atualizar_16"];
         post?: never;
         /** Remove um agendamento */
         delete: operations["excluir_9"];
@@ -985,7 +1020,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** Consulta o provedor e atualiza o status da nota (resolve emissao PROCESSANDO) */
-        post: operations["atualizar_15"];
+        post: operations["atualizar_17"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1094,7 +1129,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Marca a conta como recebida e gera o lancamento de caixa correspondente */
+        /**
+         * Marca a conta como recebida e gera o lancamento de caixa correspondente
+         * @description O corpo e' opcional: data do recebimento (nao futura), forma de pagamento e valor efetivamente recebido.
+         */
         post: operations["receber_1"];
         delete?: never;
         options?: never;
@@ -1113,6 +1151,23 @@ export interface paths {
         put?: never;
         /** Cancela uma conta a receber pendente */
         post: operations["cancelar_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contas-receber/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cadastra varias contas a receber de uma vez (repetir todo mes ou parcelar) */
+        post: operations["criarEmLote"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1146,7 +1201,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Marca a conta como paga e gera o lancamento de caixa correspondente */
+        /**
+         * Marca a conta como paga e gera o lancamento de caixa correspondente
+         * @description O corpo e' opcional: data do pagamento (nao futura), forma de pagamento e valor efetivamente pago.
+         */
         post: operations["pagar"];
         delete?: never;
         options?: never;
@@ -1165,6 +1223,23 @@ export interface paths {
         put?: never;
         /** Cancela uma conta a pagar pendente */
         post: operations["cancelar_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contas-pagar/lote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cadastra varias contas a pagar de uma vez (repetir todo mes ou parcelar) */
+        post: operations["criarEmLote_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1195,6 +1270,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/categorias-financeiras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista as categorias financeiras da oficina
+         * @description Por padrao so' as ativas; use incluirInativas=true para a tela de gestao. Filtra por tipo (DESPESA/RECEITA).
+         */
+        get: operations["listar_17"];
+        put?: never;
+        /** Cadastra uma categoria financeira */
+        post: operations["criar_13"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caixa/sessoes": {
         parameters: {
             query?: never;
@@ -1206,7 +1302,7 @@ export interface paths {
          * Lista sessoes de caixa
          * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR ve apenas as proprias sessoes; CAIXA_GERENCIAR ve todas as sessoes da oficina
          */
-        get: operations["listar_17"];
+        get: operations["listar_18"];
         put?: never;
         /**
          * Abre uma nova sessao de caixa (turno)
@@ -1270,7 +1366,7 @@ export interface paths {
          * Lista os lancamentos de caixa da oficina corrente
          * @description Requer FINANCEIRO_READ
          */
-        get: operations["listar_18"];
+        get: operations["listar_19"];
         put?: never;
         /**
          * Registra um lancamento manual de caixa (exige caixa aberto)
@@ -1345,10 +1441,10 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_19"];
+        get: operations["listar_20"];
         put?: never;
         /** Cria um novo agendamento */
-        post: operations["criar_13"];
+        post: operations["criar_14"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1366,13 +1462,13 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_20"];
+        get: operations["listar_21"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
          * @description Requer o header X-Admin-Token. So o usuario root de plataforma cadastra novas oficinas.
          */
-        post: operations["criar_14"];
+        post: operations["criar_15"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2655,6 +2751,14 @@ export interface components {
             /** Format: date-time */
             enviadoEm?: string;
         };
+        ParametroFinanceiroRequest: {
+            /** Format: int32 */
+            diaFechamento: number;
+        };
+        ParametroFinanceiroResponse: {
+            /** Format: int32 */
+            diaFechamento?: number;
+        };
         CategoriaHoraTecnicaItemRequest: {
             /** @enum {string} */
             categoria: "A" | "B" | "C";
@@ -2699,6 +2803,10 @@ export interface components {
             valor: number;
             /** Format: date */
             dataVencimento: string;
+            /** Format: int64 */
+            categoriaId?: number;
+            observacao?: string;
+            documento?: string;
         };
         ContaReceberResponse: {
             /** Format: int64 */
@@ -2716,6 +2824,19 @@ export interface components {
             dataRecebimento?: string;
             /** @enum {string} */
             status?: "PENDENTE" | "PAGO" | "RECEBIDO" | "ATRASADO" | "CANCELADO";
+            /** Format: int64 */
+            categoriaId?: number;
+            categoriaNome?: string;
+            observacao?: string;
+            documento?: string;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+            valorRecebido?: number;
+            grupoId?: string;
+            /** Format: int32 */
+            parcelaNumero?: number;
+            /** Format: int32 */
+            parcelaTotal?: number;
         };
         ContaPagarRequest: {
             descricao: string;
@@ -2723,6 +2844,10 @@ export interface components {
             valor: number;
             /** Format: date */
             dataVencimento: string;
+            /** Format: int64 */
+            categoriaId?: number;
+            observacao?: string;
+            documento?: string;
         };
         ContaPagarResponse: {
             /** Format: int64 */
@@ -2736,6 +2861,19 @@ export interface components {
             dataPagamento?: string;
             /** @enum {string} */
             status?: "PENDENTE" | "PAGO" | "RECEBIDO" | "ATRASADO" | "CANCELADO";
+            /** Format: int64 */
+            categoriaId?: number;
+            categoriaNome?: string;
+            observacao?: string;
+            documento?: string;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+            valorPago?: number;
+            grupoId?: string;
+            /** Format: int32 */
+            parcelaNumero?: number;
+            /** Format: int32 */
+            parcelaTotal?: number;
         };
         ClienteRequest: {
             /** @enum {string} */
@@ -2790,6 +2928,22 @@ export interface components {
             observacoes?: string;
             ativo?: boolean;
             veiculos?: components["schemas"]["VeiculoResponse"][];
+        };
+        CategoriaFinanceiraRequest: {
+            nome: string;
+            /** @enum {string} */
+            tipo: "DESPESA" | "RECEITA";
+            fixa?: boolean;
+            ativo?: boolean;
+        };
+        CategoriaFinanceiraResponse: {
+            /** Format: int64 */
+            id?: number;
+            nome?: string;
+            /** @enum {string} */
+            tipo?: "DESPESA" | "RECEITA";
+            fixa?: boolean;
+            ativo?: boolean;
         };
         AgendamentoRequest: {
             /** Format: int64 */
@@ -3089,6 +3243,27 @@ export interface components {
         };
         RejeitarSolicitacaoDescontoRequest: {
             motivo?: string;
+        };
+        BaixaContaRequest: {
+            /** Format: date */
+            data?: string;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+            valorEfetivo?: number;
+        };
+        ContaReceberLoteRequest: {
+            conta: components["schemas"]["ContaReceberRequest"];
+            repeticao: components["schemas"]["RepeticaoContaRequest"];
+        };
+        RepeticaoContaRequest: {
+            /** @enum {string} */
+            tipo: "MENSAL" | "PARCELADO";
+            /** Format: int32 */
+            quantidade: number;
+        };
+        ContaPagarLoteRequest: {
+            conta: components["schemas"]["ContaPagarRequest"];
+            repeticao: components["schemas"]["RepeticaoContaRequest"];
         };
         CaixaSessaoAberturaRequest: {
             turno?: string;
@@ -4500,6 +4675,50 @@ export interface operations {
             };
         };
     };
+    buscar_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ParametroFinanceiroResponse"];
+                };
+            };
+        };
+    };
+    atualizar_9: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParametroFinanceiroRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ParametroFinanceiroResponse"];
+                };
+            };
+        };
+    };
     consultar_2: {
         parameters: {
             query?: never;
@@ -4520,7 +4739,7 @@ export interface operations {
             };
         };
     };
-    atualizar_9: {
+    atualizar_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -4564,7 +4783,7 @@ export interface operations {
             };
         };
     };
-    atualizar_10: {
+    atualizar_11: {
         parameters: {
             query?: never;
             header?: never;
@@ -4610,7 +4829,7 @@ export interface operations {
             };
         };
     };
-    atualizar_11: {
+    atualizar_12: {
         parameters: {
             query?: never;
             header?: never;
@@ -4658,7 +4877,7 @@ export interface operations {
             };
         };
     };
-    atualizar_12: {
+    atualizar_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -4706,7 +4925,7 @@ export interface operations {
             };
         };
     };
-    atualizar_13: {
+    atualizar_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -4752,6 +4971,32 @@ export interface operations {
             };
         };
     };
+    atualizar_15: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoriaFinanceiraRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaFinanceiraResponse"];
+                };
+            };
+        };
+    };
     buscarPorId_13: {
         parameters: {
             query?: never;
@@ -4774,7 +5019,7 @@ export interface operations {
             };
         };
     };
-    atualizar_14: {
+    atualizar_16: {
         parameters: {
             query?: never;
             header?: never;
@@ -5921,7 +6166,7 @@ export interface operations {
             };
         };
     };
-    atualizar_15: {
+    atualizar_17: {
         parameters: {
             query?: never;
             header?: never;
@@ -6117,7 +6362,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BaixaContaRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -6148,6 +6397,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ContaReceberResponse"];
+                };
+            };
+        };
+    };
+    criarEmLote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContaReceberLoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ContaReceberResponse"][];
                 };
             };
         };
@@ -6207,7 +6480,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BaixaContaRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -6238,6 +6515,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ContaPagarResponse"];
+                };
+            };
+        };
+    };
+    criarEmLote_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContaPagarLoteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ContaPagarResponse"][];
                 };
             };
         };
@@ -6291,6 +6592,53 @@ export interface operations {
         };
     };
     listar_17: {
+        parameters: {
+            query?: {
+                tipo?: "DESPESA" | "RECEITA";
+                incluirInativas?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaFinanceiraResponse"][];
+                };
+            };
+        };
+    };
+    criar_13: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoriaFinanceiraRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CategoriaFinanceiraResponse"];
+                };
+            };
+        };
+    };
+    listar_18: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6388,7 +6736,7 @@ export interface operations {
             };
         };
     };
-    listar_18: {
+    listar_19: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6502,7 +6850,7 @@ export interface operations {
             };
         };
     };
-    listar_19: {
+    listar_20: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6524,7 +6872,7 @@ export interface operations {
             };
         };
     };
-    criar_13: {
+    criar_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -6548,7 +6896,7 @@ export interface operations {
             };
         };
     };
-    listar_20: {
+    listar_21: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6570,7 +6918,7 @@ export interface operations {
             };
         };
     };
-    criar_14: {
+    criar_15: {
         parameters: {
             query?: never;
             header?: never;

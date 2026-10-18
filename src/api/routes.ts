@@ -92,14 +92,18 @@ export const API_ROUTES = {
       periodoExportar: '/api/v1/caixa/relatorios/periodo/exportar',
     },
   },
+  categoriasFinanceiras: { base: '/api/v1/categorias-financeiras' },
+  parametrosFinanceiros: { base: '/api/v1/financeiro/parametros' },
   contasPagar: {
     base: '/api/v1/contas-pagar',
+    lote: '/api/v1/contas-pagar/lote',
     pendentes: '/api/v1/contas-pagar/pendentes',
     pagar: (id: number) => `/api/v1/contas-pagar/${id}/pagar`,
     cancelar: (id: number) => `/api/v1/contas-pagar/${id}/cancelar`,
   },
   contasReceber: {
     base: '/api/v1/contas-receber',
+    lote: '/api/v1/contas-receber/lote',
     pendentes: '/api/v1/contas-receber/pendentes',
     receber: (id: number) => `/api/v1/contas-receber/${id}/receber`,
     cancelar: (id: number) => `/api/v1/contas-receber/${id}/cancelar`,
