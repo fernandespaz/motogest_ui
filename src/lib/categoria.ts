@@ -15,3 +15,10 @@ export const TOM_CATEGORIA_COMPLEXIDADE: Record<CategoriaComplexidade, 'success'
   B: 'brand',
   C: 'warning',
 };
+
+/** Cores do "selo" de categoria (tile maior que o Badge) — a mesma leitura A verde / B laranja / C âmbar em toda a tela. */
+export const ESTILO_CATEGORIA_COMPLEXIDADE: Record<CategoriaComplexidade, string> = {
+  A: 'border-green-500/50 bg-green-500/15 text-green-700 dark:text-green-300',
+  B: 'border-brand-500/50 bg-brand-500/15 text-brand-700 dark:text-brand-300',
+  C: 'border-amber-500/50 bg-amber-500/15 text-amber-700 dark:text-amber-300',
+};

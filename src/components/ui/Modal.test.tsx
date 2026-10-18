@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+﻿import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Modal } from './Modal';
@@ -55,5 +55,47 @@ describe('Modal', () => {
       </Modal>,
     );
     expect(screen.getByText('Conteúdo')).toBeInTheDocument();
+  });
+
+  it('keeps the stacking order when the lower modal re-renders with a new onClose', async () => {
+    const fecharDeCima = vi.fn();
+    const ui = (fecharBase: () => void) => (
+      <>
+        <Modal open onClose={fecharBase} title="Agendamento">
+          Base
+        </Modal>
+        <Modal open onClose={fecharDeCima} title="Novo cliente">
+          Por cima
+        </Modal>
+      </>
+    );
+    const fecharBase = vi.fn();
+    const { rerender } = render(ui(() => fecharBase()));
+    rerender(ui(() => fecharBase()));
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(fecharDeCima).toHaveBeenCalledTimes(1);
+    expect(fecharBase).not.toHaveBeenCalled();
+  });
+
+  it('closes only the topmost modal on Escape when one is open above another', async () => {
+    const fecharDeBaixo = vi.fn();
+    const fecharDeCima = vi.fn();
+    render(
+      <>
+        <Modal open onClose={fecharDeBaixo} title="Agendamento">
+          Base
+        </Modal>
+        <Modal open onClose={fecharDeCima} title="Novo cliente">
+          Por cima
+        </Modal>
+      </>,
+    );
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(fecharDeCima).toHaveBeenCalledTimes(1);
+    expect(fecharDeBaixo).not.toHaveBeenCalled();
   });
 });

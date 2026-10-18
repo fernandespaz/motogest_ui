@@ -100,10 +100,13 @@ export function ClienteFormModal({
   open,
   onClose,
   cliente,
+  onCriado,
 }: {
   open: boolean;
   onClose: () => void;
   cliente?: ClienteResponse | null;
+  /** Chamado com o cliente recém-cadastrado, antes de fechar — pra quem abriu o modal já selecioná-lo (ex.: no agendamento). */
+  onCriado?: (cliente: ClienteResponse) => void;
 }) {
   const isEditing = !!cliente;
   const qc = useQueryClient();
@@ -212,11 +215,12 @@ export function ClienteFormModal({
         }
         toast.success('Cliente atualizado com sucesso.');
       } else {
-        await createMutation.mutateAsync({
+        const criado = await createMutation.mutateAsync({
           ...payload,
           veiculos: veiculosNovos && veiculosNovos.length > 0 ? veiculosNovos : undefined,
         });
         toast.success('Cliente cadastrado com sucesso.');
+        onCriado?.(criado);
       }
       onClose();
     } catch (error) {

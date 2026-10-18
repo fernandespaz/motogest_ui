@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -10,7 +10,7 @@ interface ModalProps {
   onClose: () => void;
   title?: ReactNode;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   /** Rendered in a bar pinned to the modal's bottom, outside the scrollable body — for
    *  long forms whose Salvar/Cancelar buttons would otherwise scroll out of view. */
   footer?: ReactNode;
@@ -25,19 +25,38 @@ const sizeStyles = {
   xl: 'max-w-4xl',
   // Formulários de duas colunas (ex.: cliente) que não devem exigir rolagem em telas de desktop.
   '2xl': 'max-w-5xl',
+  // Telas de escolha com lista + filtros (ex.: agendamento), que precisam de largura pra respirar.
+  '3xl': 'max-w-6xl',
 };
 
+// Modais abertos, do mais antigo ao mais recente — com um modal aberto por
+// cima de outro (ex.: "Novo cliente" dentro do agendamento), o Esc só pode
+// fechar o de cima, e o scroll da página só volta quando o último fecha.
+const modaisAbertos: symbol[] = [];
+
 export function Modal({ open, onClose, title, children, size = 'md', footer, centered }: ModalProps) {
+  // `id` e `onClose` ficam em refs: o efeito só roda quando `open` muda — se ele
+  // refizesse o registro a cada render (onClose costuma ser uma arrow nova), o
+  // modal de baixo voltaria pro topo da pilha ao re-renderizar.
+  const idRef = useRef<symbol>(Symbol('modal'));
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const id = idRef.current;
+    modaisAbertos.push(id);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && modaisAbertos[modaisAbertos.length - 1] === id) onCloseRef.current();
+    };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      modaisAbertos.splice(modaisAbertos.indexOf(id), 1);
+      if (modaisAbertos.length === 0) document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return createPortal(
     <AnimatePresence>
