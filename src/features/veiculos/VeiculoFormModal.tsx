@@ -4,12 +4,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Textarea } from '@/components/ui/Field';
-import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
+import { Textarea } from '@/components/ui/Field';
+import { Combobox } from '@/components/ui/Combobox';
+import { FormSection } from '@/components/ui/FormSection';
+import { Car, UserRound } from 'lucide-react';
+import { VeiculoCampos } from '@/features/shared/VeiculoCampos';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
 import type { ClienteResponse, VeiculoRequest, VeiculoResponse } from '@/api/types';
-import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
+import { formatCpfOuCnpj } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -121,7 +124,7 @@ export function VeiculoFormModal({
       open={open}
       onClose={onClose}
       title={isEditing ? 'Editar veículo' : 'Novo veículo'}
-      size="lg"
+      size="xl"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
@@ -133,64 +136,42 @@ export function VeiculoFormModal({
         </>
       }
     >
-      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-        <Controller
-          control={control}
-          name="clienteId"
-          render={({ field }) => (
-            <div className="flex flex-col gap-1">
-              <Input placeholder="Buscar cliente pelo nome..." value={busca} onChange={(e) => setBusca(e.target.value)} />
-              <Select label="Cliente" required error={errors.clienteId?.message} value={field.value ?? 0} onChange={(e) => field.onChange(Number(e.target.value))}>
-                <option value={0}>Selecione um cliente</option>
-                {clientes?.content?.map((c: ClienteResponse) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-        />
+      <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
+        <FormSection title="Proprietário" icon={UserRound}>
+          <Controller
+            control={control}
+            name="clienteId"
+            render={({ field }) => (
+              <Combobox
+                label="Cliente"
+                required
+                placeholder="Buscar cliente pelo nome..."
+                error={errors.clienteId?.message}
+                value={field.value || undefined}
+                onChange={(id) => field.onChange(id)}
+                options={(clientes?.content ?? []).map((c: ClienteResponse) => ({
+                  value: c.id!,
+                  label: c.nome ?? '',
+                  sublabel: c.documento ? formatCpfOuCnpj(c.documento) : undefined,
+                }))}
+                query={busca}
+                onQueryChange={setBusca}
+              />
+            )}
+          />
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input label="Placa" required error={errors.placa?.message} {...register('placa')} />
-          <Input label="Marca" {...register('marca')} />
-          <Input label="Modelo" required error={errors.modelo?.message} {...register('modelo')} />
-          <ModeloVeiculoField
-            marca={watch('marca')}
-            modelo={watch('modelo')}
-            onSelecionar={({ marca, modelo }) => {
-              setValue('marca', marca, { shouldDirty: true });
-              setValue('modelo', modelo, { shouldDirty: true, shouldValidate: true });
-            }}
+        <FormSection title="Dados do veículo" icon={Car}>
+          <VeiculoCampos
+            register={register}
+            watch={watch}
+            setValue={setValue}
+            errors={errors}
+            estrito
+            categoriaVazia
           />
-          <Input label="Cor" required error={errors.cor?.message} {...register('cor')} />
-          <Input
-            label="Ano de fabricação"
-            type="number"
-            required
-            error={errors.anoFabricacao?.message}
-            {...register('anoFabricacao')}
-          />
-          <Input label="Ano do modelo" type="number" {...register('anoModelo')} />
-          <Input label="KM atual" type="number" {...register('kmAtual')} />
-          <Input label="Chassi" required error={errors.chassi?.message} {...register('chassi')} />
-          <Select
-            label="Categoria"
-            required
-            hint="Define a hora técnica aplicada aos serviços deste veículo"
-            error={errors.categoria?.message}
-            {...register('categoria')}
-          >
-            <option value="">Selecione a categoria</option>
-            {CATEGORIAS_COMPLEXIDADE.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <Textarea label="Observações" {...register('observacoes')} />
+          <Textarea label="Observações" rows={2} {...register('observacoes')} />
+        </FormSection>
       </form>
     </Modal>
   );

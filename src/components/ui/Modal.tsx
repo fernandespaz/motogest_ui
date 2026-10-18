@@ -10,7 +10,7 @@ interface ModalProps {
   onClose: () => void;
   title?: ReactNode;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** Rendered in a bar pinned to the modal's bottom, outside the scrollable body — for
    *  long forms whose Salvar/Cancelar buttons would otherwise scroll out of view. */
   footer?: ReactNode;
@@ -23,6 +23,8 @@ const sizeStyles = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  // Formulários de duas colunas (ex.: cliente) que não devem exigir rolagem em telas de desktop.
+  '2xl': 'max-w-5xl',
 };
 
 export function Modal({ open, onClose, title, children, size = 'md', footer, centered }: ModalProps) {
