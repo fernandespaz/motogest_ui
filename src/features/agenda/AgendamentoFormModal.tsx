@@ -190,37 +190,36 @@ export function AgendamentoFormModal({
     >
       <form id={FORM_ID} onSubmit={handleSubmit((v) => onSubmit(v))} className="flex flex-col gap-6" noValidate>
         <section aria-label="Cliente, veículo e data" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
-          <div className="flex flex-col gap-1 lg:col-span-4">
-            <Controller
-              control={control}
-              name="clienteId"
-              render={({ field }) => (
-                <Combobox
-                  label="Cliente"
-                  required
-                  placeholder="Buscar cliente pelo nome..."
-                  error={errors.clienteId?.message}
-                  value={field.value || undefined}
-                  onChange={(id) => {
-                    field.onChange(id);
-                    // O veículo escolhido antes pertencia a outro cliente.
-                    setValue('veiculoId', 0);
-                  }}
-                  options={opcoesCliente}
-                  query={buscaCliente}
-                  onQueryChange={setBuscaCliente}
-                  loading={buscandoClientes}
-                />
-              )}
-            />
+          <div className="flex items-start gap-3 sm:col-span-2 lg:col-span-5">
+            <div className="min-w-0 flex-1">
+              <Controller
+                control={control}
+                name="clienteId"
+                render={({ field }) => (
+                  <Combobox
+                    label="Cliente"
+                    required
+                    placeholder="Buscar cliente pelo nome..."
+                    error={errors.clienteId?.message}
+                    value={field.value || undefined}
+                    onChange={(id) => {
+                      field.onChange(id);
+                      // O veículo escolhido antes pertencia a outro cliente.
+                      setValue('veiculoId', 0);
+                    }}
+                    options={opcoesCliente}
+                    query={buscaCliente}
+                    onQueryChange={setBuscaCliente}
+                    loading={buscandoClientes}
+                  />
+                )}
+              />
+            </div>
             {podeCadastrarCliente && (
-              <button
-                type="button"
-                onClick={() => setNovoClienteAberto(true)}
-                className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-700 hover:underline dark:text-brand-300"
-              >
-                <UserPlus size={14} /> Novo cliente
-              </button>
+              // mt-6: alinha o botão com o campo, abaixo da linha do rótulo "Cliente".
+              <Button type="button" variant="outline" className="mt-6 shrink-0 text-base" onClick={() => setNovoClienteAberto(true)}>
+                <UserPlus size={18} /> Novo cliente
+              </Button>
             )}
           </div>
 
@@ -250,7 +249,7 @@ export function AgendamentoFormModal({
             />
           </div>
 
-          <div className="flex flex-col gap-1.5 lg:col-span-3">
+          <div className="flex flex-col gap-1.5 lg:col-span-2">
             <Input
               label="Data"
               type="date"
@@ -275,7 +274,7 @@ export function AgendamentoFormModal({
           </div>
 
           {errors.dataHora && (
-            <p className="text-xs font-medium text-danger sm:col-span-2 lg:col-span-12">{errors.dataHora.message}</p>
+            <p className="text-sm font-medium text-danger sm:col-span-2 lg:col-span-12">{errors.dataHora.message}</p>
           )}
           <input type="hidden" {...register('dataHora')} />
         </section>
@@ -306,9 +305,9 @@ export function AgendamentoFormModal({
             <button
               type="button"
               onClick={() => setObservacaoAberta(true)}
-              className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-700 hover:underline dark:text-brand-300"
+              className="inline-flex items-center gap-1.5 self-start text-base font-medium text-brand-700 hover:underline dark:text-brand-300"
             >
-              <MessageSquarePlus size={14} /> Adicionar observação
+              <MessageSquarePlus size={16} /> Adicionar observação
             </button>
           )}
         </section>
@@ -338,8 +337,8 @@ function AtalhoData({ rotulo, ativo, onClick }: { rotulo: string; ativo: boolean
       aria-pressed={ativo}
       className={
         ativo
-          ? 'rounded-full border border-brand-600 bg-brand-600 px-3 py-1 text-xs font-medium text-white'
-          : 'rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-ink-muted transition-colors hover:border-brand-300 hover:text-ink'
+          ? 'rounded-full border border-brand-600 bg-brand-600 px-3.5 py-1 text-sm font-medium text-white'
+          : 'rounded-full border border-border bg-surface px-3.5 py-1 text-sm font-medium text-ink-muted transition-colors hover:border-brand-300 hover:text-ink'
       }
     >
       {rotulo}

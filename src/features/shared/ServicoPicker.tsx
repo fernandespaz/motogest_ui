@@ -243,7 +243,7 @@ export function ServicoPicker({
                   <div
                     className={clsx(
                       GRADE_LINHA,
-                      'sticky top-0 z-10 border-b border-border bg-surface-alt px-3 py-2 text-xs font-semibold uppercase tracking-wide text-ink-muted',
+                      'sticky top-0 z-10 border-b border-border bg-surface-alt px-3 py-2 text-[13px] font-semibold uppercase tracking-wide text-ink-muted',
                     )}
                   >
                     <span />
@@ -269,7 +269,7 @@ export function ServicoPicker({
 
       <div className="rounded-xl bg-surface-alt px-4 py-3">
         {selecionados.length === 0 ? (
-          <p className="text-sm text-ink-muted">Nenhum serviço selecionado ainda.</p>
+          <p className="text-base text-ink-muted">Nenhum serviço selecionado ainda.</p>
         ) : (
           <>
             <div className="flex flex-wrap gap-1.5">
@@ -279,14 +279,14 @@ export function ServicoPicker({
                   type="button"
                   onClick={() => alternar(s.id!)}
                   aria-label={`Remover ${s.nome}`}
-                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 py-1 pl-3 pr-2 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 py-1 pl-3 pr-2 text-sm font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
                 >
                   <span className="truncate">{s.nome}</span>
                   <X size={12} aria-hidden="true" />
                 </button>
               ))}
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-base">
               <span className="font-semibold text-ink">
                 {selecionados.length} {selecionados.length === 1 ? 'serviço' : 'serviços'}
               </span>
@@ -347,7 +347,7 @@ function LinhaServico({
       <MarcaSelecao marcado={marcado} />
       <span className="min-w-0">
         <span className="block truncate font-medium text-ink">{servico.nome}</span>
-        <span className="flex items-center gap-2 truncate text-xs text-ink-muted">
+        <span className="flex items-center gap-2 truncate text-[13px] text-ink-muted">
           {/* No celular a coluna de categoria some, então o selo vai pra cá. */}
           {servico.categoria && <CategoriaTile categoria={servico.categoria} size="sm" className="sm:hidden" />}
           {servico.sistema}
@@ -389,7 +389,7 @@ function CartaoServico({
         <span className="line-clamp-2 min-w-0 flex-1 text-sm font-semibold leading-snug text-ink">{servico.nome}</span>
         {servico.categoria && <CategoriaTile categoria={servico.categoria} size="md" />}
       </span>
-      <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-8 text-xs text-ink-muted">
+      <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pl-8 text-[13px] text-ink-muted">
         <span className="inline-flex items-center gap-1">
           <Clock3 size={12} aria-hidden="true" /> {formatHoras(servico.tempoMinHoras, servico.tempoMaxHoras)}
         </span>
