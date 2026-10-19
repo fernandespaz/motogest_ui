@@ -73,7 +73,7 @@ export function LoginPage() {
               <span className="font-display text-lg font-bold tracking-tight">
                 {nomeFixado || (
                   <>
-                    MOTO<span className="text-brand-500">GEST</span>
+                    MOTOR<span className="text-brand-500">GEST</span>
                   </>
                 )}
               </span>

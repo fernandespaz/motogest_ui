@@ -2,6 +2,7 @@ import axios from 'axios';
 import { apiClient } from '../client';
 import { API_ROUTES } from '../routes';
 import type {
+  AuditoriaCaixaResponse,
   CaixaMovimentoRequest,
   CaixaMovimentoResponse,
   CaixaSessaoAberturaRequest,
@@ -68,6 +69,9 @@ export const caixaApi = {
         .get<Blob>(API_ROUTES.caixa.sessoes.exportar(id), { params: { formato }, responseType: 'blob' })
         .then((r) => r.data),
   },
+
+  auditoria: (inicio: string, fim: string) =>
+    apiClient.get<AuditoriaCaixaResponse>(API_ROUTES.caixa.auditoria, { params: { inicio, fim } }).then((r) => r.data),
 
   relatorios: {
     diario: (data: string) =>

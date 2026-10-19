@@ -4,6 +4,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Select, ReadOnlyField } from '@/components/ui/Field';
 import { DataTable } from '@/components/ui/DataTable';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Badge } from '@/components/ui/Badge';
 import { useOrdensServico } from '@/hooks/useOrdensServico';
 import { useVeiculo } from '@/hooks/useVeiculos';
@@ -29,6 +30,8 @@ import type { FormaPagamento, OrdemServicoResponse } from '@/api/types';
  * tabela é quem avança pra escolha da forma de pagamento, pra faturar não
  * disparar sozinho num clique acidental na linha.
  */
+type ModoBusca = 'documento' | 'numero';
+
 export function FaturarOSModal({
   open,
   onClose,
@@ -39,8 +42,11 @@ export function FaturarOSModal({
   /** Chamado assim que o faturamento é confirmado (antes do recibo) — ex.: oferecer a emissão de NFS-e. */
   onFaturada?: (os: { id: number; numero?: string }) => void;
 }) {
+  const [modo, setModo] = useState<ModoBusca>('documento');
   const [documentoInput, setDocumentoInput] = useState('');
-  const [documentoBuscado, setDocumentoBuscado] = useState('');
+  const [numeroInput, setNumeroInput] = useState('');
+  // Termo já enviado à busca (só muda ao clicar em Buscar/Enter, não a cada tecla); vazio = nada buscado ainda.
+  const [buscado, setBuscado] = useState<{ modo: ModoBusca; termo: string }>({ modo: 'documento', termo: '' });
   const [osSelecionada, setOsSelecionada] = useState<OrdemServicoResponse | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>('DINHEIRO');
@@ -55,8 +61,13 @@ export function FaturarOSModal({
   // veículo só é liberado depois de pago), então uma OS Entregue já é sempre
   // Faturada antes; não há razão pra buscar por ENTREGUE aqui.
   const concluidas = useOrdensServico(
-    { clienteDocumento: documentoBuscado, status: 'CONCLUIDA', size: 20 },
-    { enabled: !!documentoBuscado },
+    {
+      clienteDocumento: buscado.modo === 'documento' ? buscado.termo : undefined,
+      numero: buscado.modo === 'numero' ? buscado.termo : undefined,
+      status: 'CONCLUIDA',
+      size: 20,
+    },
+    { enabled: !!buscado.termo },
   );
   const faturar = useFaturarOrdemServico();
 
@@ -68,8 +79,10 @@ export function FaturarOSModal({
   const falhaNaBusca = concluidas.isError;
 
   function fechar() {
+    setModo('documento');
     setDocumentoInput('');
-    setDocumentoBuscado('');
+    setNumeroInput('');
+    setBuscado({ modo: 'documento', termo: '' });
     setOsSelecionada(null);
     setConfirmando(false);
     setFormaPagamento('DINHEIRO');
@@ -83,8 +96,20 @@ export function FaturarOSModal({
   function buscar() {
     setOsSelecionada(null);
     setConfirmando(false);
-    setDocumentoBuscado(onlyDigits(documentoInput));
+    setBuscado(
+      modo === 'documento'
+        ? { modo, termo: onlyDigits(documentoInput) }
+        : { modo, termo: numeroInput.trim() },
+    );
   }
+
+  function trocarModo(novo: ModoBusca) {
+    setModo(novo);
+    setOsSelecionada(null);
+    setBuscado({ modo: novo, termo: '' });
+  }
+
+  const termoDigitado = modo === 'documento' ? documentoInput.trim() : numeroInput.trim();
 
   function voltarParaBusca() {
     setConfirmando(false);
@@ -194,19 +219,38 @@ export function FaturarOSModal({
         ) : (
           <>
             <div className="flex flex-wrap items-end gap-3">
-              <Input
-                label="CPF/CNPJ do cliente"
-                placeholder="000.000.000-00"
-                value={documentoInput}
-                onChange={(e) => handleDocumentoChange(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && buscar()}
+              <SegmentedControl<ModoBusca>
+                label="Buscar por"
+                value={modo}
+                onChange={trocarModo}
+                options={[
+                  { value: 'documento', label: 'CPF/CNPJ' },
+                  { value: 'numero', label: 'Nº da OS' },
+                ]}
               />
-              <Button onClick={buscar} disabled={!documentoInput.trim()}>
+              {modo === 'documento' ? (
+                <Input
+                  label="CPF/CNPJ do cliente"
+                  placeholder="000.000.000-00"
+                  value={documentoInput}
+                  onChange={(e) => handleDocumentoChange(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && buscar()}
+                />
+              ) : (
+                <Input
+                  label="Número da OS"
+                  placeholder="OS-000042"
+                  value={numeroInput}
+                  onChange={(e) => setNumeroInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && buscar()}
+                />
+              )}
+              <Button onClick={buscar} disabled={!termoDigitado}>
                 <Search size={16} /> Buscar
               </Button>
             </div>
 
-            {!!documentoBuscado && (
+            {!!buscado.termo && (
               <>
                 <DataTable<OrdemServicoResponse>
                   loading={carregando}
@@ -217,7 +261,9 @@ export function FaturarOSModal({
                   emptyTitle={
                     falhaNaBusca
                       ? 'Não foi possível buscar as OS deste cliente'
-                      : 'Nenhuma OS concluída encontrada para este documento'
+                      : buscado.modo === 'numero'
+                        ? 'Nenhuma OS concluída encontrada com este número'
+                        : 'Nenhuma OS concluída encontrada para este documento'
                   }
                   emptyDescription={
                     falhaNaBusca

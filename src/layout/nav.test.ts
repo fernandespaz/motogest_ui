@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { filterNavByPermission, getLandingPath, navItems } from './nav';
+import { filterNavByPermission, getCurrentSection, getLandingPath, isNavItemActive, navItems } from './nav';
+
+describe('isNavItemActive / getCurrentSection', () => {
+  const dashboard = navItems.find((i) => i.to === '/')!;
+  const produtividade = navItems.find((i) => i.to === '/produtividade')!;
+
+  it('matches "/" only exactly, never as a prefix of every route', () => {
+    expect(isNavItemActive(dashboard, '/')).toBe(true);
+    expect(isNavItemActive(dashboard, '/clientes')).toBe(false);
+  });
+
+  it('matches sub-routes but not look-alike siblings', () => {
+    expect(isNavItemActive(produtividade, '/produtividade/mecanicos')).toBe(true);
+    expect(isNavItemActive(produtividade, '/minha-produtividade')).toBe(false);
+  });
+
+  it('resolves the group label and title for the current path, undefined outside the menu', () => {
+    expect(getCurrentSection('/financeiro')).toEqual({ group: 'Gestão', title: 'Financeiro' });
+    expect(getCurrentSection('/rota-inexistente')).toBeUndefined();
+  });
+});
 
 function permFrom(codigos: string[]) {
   return (codigo: string) => codigos.includes(codigo);

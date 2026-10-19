@@ -4,17 +4,18 @@
  * PerfilFormModal em vez de uma lista única de ~30 itens. Deriva a categoria
  * do prefixo do recurso no código (ex.: "ORDEM_SERVICO" de "ORDEM_SERVICO_WRITE").
  */
-export type PermissaoCategoria = 'GERENCIAL' | 'COMERCIAL' | 'TECNICO' | 'OUTROS';
+export type PermissaoCategoria = 'GERENCIAL' | 'FINANCEIRO' | 'COMERCIAL' | 'TECNICO' | 'OUTROS';
 
 export const PERMISSAO_CATEGORIA_LABELS: Record<PermissaoCategoria, string> = {
   GERENCIAL: 'Gerencial',
+  FINANCEIRO: 'Financeiro e Caixa',
   COMERCIAL: 'Comercial',
   TECNICO: 'Técnico',
   OUTROS: 'Outros',
 };
 
 /** Ordem de exibição das seções no formulário de perfil. */
-export const PERMISSAO_CATEGORIA_ORDEM: PermissaoCategoria[] = ['GERENCIAL', 'COMERCIAL', 'TECNICO', 'OUTROS'];
+export const PERMISSAO_CATEGORIA_ORDEM: PermissaoCategoria[] = ['GERENCIAL', 'FINANCEIRO', 'COMERCIAL', 'TECNICO', 'OUTROS'];
 
 const RECURSOS_POR_CATEGORIA: Record<Exclude<PermissaoCategoria, 'OUTROS'>, string[]> = {
   // Administração da oficina em si — não do atendimento ao cliente nem da
@@ -23,16 +24,17 @@ const RECURSOS_POR_CATEGORIA: Record<Exclude<PermissaoCategoria, 'OUTROS'>, stri
     'OFICINA',
     'USUARIO',
     'PERFIL',
-    'FINANCEIRO',
-    'CAIXA',
+    'FISCAL',
     'HORA_TECNICA',
     'CAPACIDADE_PRODUTIVA',
     'PRODUTIVIDADE',
     'DESCONTO',
     'DASHBOARD',
   ],
+  // Contas, fechamento e operação do caixa — separado do Gerencial pra quem monta um perfil de operador de caixa achar tudo num lugar só.
+  FINANCEIRO: ['FINANCEIRO', 'CAIXA'],
   // Atendimento/relacionamento com o cliente e o que é vendido a ele.
-  COMERCIAL: ['CLIENTE', 'VEICULO', 'AGENDA', 'ORCAMENTO', 'SERVICO'],
+  COMERCIAL: ['CLIENTE', 'VEICULO', 'VEICULO_MODELO', 'AGENDA', 'ORCAMENTO', 'SERVICO'],
   // Execução do serviço dentro da oficina.
   TECNICO: ['ORDEM_SERVICO', 'CHECKLIST', 'FOTO', 'ESTOQUE'],
 };
@@ -45,7 +47,7 @@ for (const [categoria, recursos] of Object.entries(RECURSOS_POR_CATEGORIA) as [
   for (const recurso of recursos) CATEGORIA_POR_RECURSO.set(recurso, categoria);
 }
 
-const SUFIXOS_ACAO = ['_READ', '_WRITE', '_GERENCIAR', '_APROVAR', '_RESERVAR', '_OPERAR'];
+const SUFIXOS_ACAO = ['_READ', '_WRITE', '_GERENCIAR', '_APROVAR', '_RESERVAR', '_OPERAR', '_CONFIGURAR', '_EMITIR', '_CANCELAR', '_CERTIFICADO', '_FECHAR'];
 
 /** "ORDEM_SERVICO_WRITE" → "ORDEM_SERVICO"; sem sufixo de ação reconhecido, devolve o código inteiro. */
 function recursoDoCodigo(codigo: string): string {

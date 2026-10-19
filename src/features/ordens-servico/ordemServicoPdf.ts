@@ -71,7 +71,7 @@ export async function buildOrdemServicoPdfBlob(
           nome: cliente.nome ?? '',
           documento: formatDocumento(cliente.documento ?? '', cliente.tipoPessoa === 'PJ' ? 'PJ' : 'PF'),
           tipoPessoa: cliente.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
-          endereco: [cliente.logradouro, cliente.numero].filter(Boolean).join(', '),
+          endereco: [cliente.logradouro, cliente.numero, cliente.complemento].filter(Boolean).join(', '),
           bairroCidadeUf: [cliente.bairro, [cliente.cidade, cliente.uf].filter(Boolean).join('/')]
             .filter(Boolean)
             .join(' · '),

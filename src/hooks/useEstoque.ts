@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { estoqueApi } from '@/api/endpoints/estoque';
 import { produtosKeys } from './useProdutos';
+import { contasPagarKeys } from './useFinanceiro';
 import type { MovimentacaoEstoqueRequest, PageParams } from '@/api/types';
 
 export const estoqueKeys = {
@@ -31,6 +32,11 @@ export function useRegistrarMovimentacao() {
       qc.invalidateQueries({ queryKey: estoqueKeys.all });
       qc.invalidateQueries({ queryKey: produtosKeys.all });
       qc.invalidateQueries({ queryKey: produtosKeys.detail(variables.produtoId) });
+      // uma entrada pode gerar a conta a pagar da compra
+      if (variables.payload.contaPagar) {
+        qc.invalidateQueries({ queryKey: contasPagarKeys.all });
+        qc.invalidateQueries({ queryKey: ['dashboard'] });
+      }
     },
     meta: { hasLocalErrorHandling: true },
   });

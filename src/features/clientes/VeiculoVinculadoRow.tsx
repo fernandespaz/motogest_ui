@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Check } from 'lucide-react';
 import { PencilSimple, Trash } from '@phosphor-icons/react';
-import { Input, Select } from '@/components/ui/Field';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
-import { ModeloVeiculoField, ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
-import { CATEGORIAS_COMPLEXIDADE, TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
+import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/ModeloVeiculoField';
+import { VeiculoCampos } from '@/features/shared/VeiculoCampos';
+import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 
 /**
  * A row in the client's "Veículos vinculados" list. Purely presentational —
@@ -18,7 +18,7 @@ import { CATEGORIAS_COMPLEXIDADE, TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categ
  */
 export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRemover: () => void }) {
   const [editing, setEditing] = useState(false);
-  const { control, register, formState, setValue } = useFormContext();
+  const { control, register, formState, setValue, watch } = useFormContext();
   const veiculo = useWatch({ control, name: `veiculosExistentes.${index}` });
   const rowErrors = (formState.errors as any)?.veiculosExistentes?.[index];
   // Chamado incondicionalmente (regra dos hooks) mesmo que o resultado só
@@ -30,43 +30,15 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
 
   if (editing) {
     return (
-      <div className="rounded-lg border border-brand-300 bg-brand-50/40 p-3 dark:border-brand-700 dark:bg-brand-900/20">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Input label="Placa" required error={rowErrors?.placa?.message} {...register(`veiculosExistentes.${index}.placa`)} />
-          <Input label="Marca" {...register(`veiculosExistentes.${index}.marca`)} />
-          <Input label="Modelo" error={rowErrors?.modelo?.message} {...register(`veiculosExistentes.${index}.modelo`)} />
-          <ModeloVeiculoField
-            marca={veiculo.marca}
-            modelo={veiculo.modelo}
-            onSelecionar={({ marca, modelo }) => {
-              setValue(`veiculosExistentes.${index}.marca`, marca, { shouldDirty: true });
-              setValue(`veiculosExistentes.${index}.modelo`, modelo, { shouldDirty: true });
-            }}
-          />
-          <Input label="Cor" error={rowErrors?.cor?.message} {...register(`veiculosExistentes.${index}.cor`)} />
-          <Input
-            label="Ano fabricação"
-            type="number"
-            error={rowErrors?.anoFabricacao?.message}
-            {...register(`veiculosExistentes.${index}.anoFabricacao`)}
-          />
-          <Input label="Ano modelo" type="number" {...register(`veiculosExistentes.${index}.anoModelo`)} />
-          <Input label="KM atual" type="number" {...register(`veiculosExistentes.${index}.kmAtual`)} />
-          <Input label="Chassi" error={rowErrors?.chassi?.message} {...register(`veiculosExistentes.${index}.chassi`)} />
-          <Select
-            label="Categoria"
-            required
-            error={rowErrors?.categoria?.message}
-            {...register(`veiculosExistentes.${index}.categoria`)}
-          >
-            <option value="">Selecione a categoria</option>
-            {CATEGORIAS_COMPLEXIDADE.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-        </div>
+      <div className="rounded-xl border border-brand-300 bg-brand-50/40 p-3 dark:border-brand-700 dark:bg-brand-900/20 md:col-span-2">
+        <VeiculoCampos
+          register={register}
+          watch={watch}
+          setValue={setValue}
+          prefix={`veiculosExistentes.${index}`}
+          errors={rowErrors}
+          categoriaVazia
+        />
         <div className="mt-2 flex justify-end">
           <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(false)}>
             <Check size={14} /> Concluir edição
@@ -77,7 +49,7 @@ export function VeiculoVinculadoRow({ index, onRemover }: { index: number; onRem
   }
 
   return (
-    <div className="rounded-lg border border-border p-3">
+    <div className="rounded-xl border border-border bg-surface-alt/40 p-3">
       <div className="mb-2 flex items-start justify-between">
         <div className="flex items-center gap-2.5">
           <ModeloVeiculoThumb base64={imagemResumo} />

@@ -2,14 +2,16 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useCreateUsuario, useUpdateUsuario } from '@/hooks/useUsuarios';
+import { useCreateUsuario, useUpdateUsuario, useUsuario } from '@/hooks/useUsuarios';
 import { usePerfis } from '@/hooks/usePerfis';
 import { toast } from '@/store/toastStore';
+import { useAuthStore } from '@/store/authStore';
 import { UsuarioFormModal } from './UsuarioFormModal';
 
 vi.mock('@/hooks/useUsuarios', () => ({
   useCreateUsuario: vi.fn(),
   useUpdateUsuario: vi.fn(),
+  useUsuario: vi.fn(),
 }));
 vi.mock('@/hooks/usePerfis', () => ({ usePerfis: vi.fn() }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -27,11 +29,13 @@ describe('UsuarioFormModal', () => {
   let updateMutateAsync: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    useAuthStore.setState({ permissoes: ['USUARIO_READ', 'USUARIO_WRITE'] });
     vi.mocked(usePerfis).mockReturnValue({ data: [{ id: 1, nome: 'Administrador' }] } as never);
     createMutateAsync = vi.fn().mockResolvedValue({ id: 1 });
     updateMutateAsync = vi.fn().mockResolvedValue({ id: 1 });
     vi.mocked(useCreateUsuario).mockReturnValue({ mutateAsync: createMutateAsync, isPending: false } as never);
     vi.mocked(useUpdateUsuario).mockReturnValue({ mutateAsync: updateMutateAsync, isPending: false } as never);
+    vi.mocked(useUsuario).mockReturnValue({ data: undefined, isLoading: false, isError: false } as never);
   });
 
   it('labels the password field as required "Senha" for a new usuário', () => {
@@ -150,6 +154,108 @@ describe('UsuarioFormModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('e-mail já cadastrado'));
+  });
+
+  describe('cadastro completo de colaborador (CLT)', () => {
+    async function preencherAcesso() {
+      await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
+      await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
+      await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
+      await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+      await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
+    }
+
+    it('envia CPF e telefone só com dígitos e omite o que ficou em branco', async () => {
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Dados pessoais' }));
+      await userEvent.type(screen.getByLabelText('CPF'), '52998224725');
+      expect(screen.getByLabelText('CPF')).toHaveValue('529.982.247-25');
+      await userEvent.click(screen.getByRole('button', { name: 'Contato e endereço' }));
+      await userEvent.type(screen.getByLabelText('Celular / WhatsApp'), '19999998888');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+      const payload = createMutateAsync.mock.calls[0][0];
+      expect(payload).toMatchObject({ cpf: '52998224725', celular: '19999998888' });
+      expect(payload).not.toHaveProperty('rg');
+      expect(payload).not.toHaveProperty('salario');
+    });
+
+    it('leva o usuário até a aba do erro quando o CPF é inválido', async () => {
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Dados pessoais' }));
+      await userEvent.type(screen.getByLabelText('CPF'), '11111111111');
+      await userEvent.click(screen.getByRole('button', { name: 'Acesso' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('CPF inválido')).toBeInTheDocument();
+      expect(createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('converte jornada e salário para número', async () => {
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Contratação' }));
+      await userEvent.type(screen.getByLabelText('Jornada semanal (horas)'), '44');
+      await userEvent.type(screen.getByLabelText('Salário (R$)'), '2800.5');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+      expect(createMutateAsync.mock.calls[0][0]).toMatchObject({ jornadaSemanalHoras: 44, salario: 2800.5 });
+    });
+
+    it('recusa jornada acima do limite da CLT', async () => {
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Contratação' }));
+      await userEvent.type(screen.getByLabelText('Jornada semanal (horas)'), '50');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Entre 1 e 44 horas (limite da CLT)')).toBeInTheDocument();
+      expect(createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('preenche o formulário de edição com o cadastro completo vindo do GET /usuarios/{id}', async () => {
+      vi.mocked(useUsuario).mockReturnValue({
+        data: { id: 5, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true, cpf: '52998224725', salario: 3000, dataAdmissao: '2024-02-01' },
+        isLoading: false,
+        isError: false,
+      } as never);
+      renderModal({ usuario: { id: 5, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true } as never });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Dados pessoais' }));
+      expect(screen.getByLabelText('CPF')).toHaveValue('529.982.247-25');
+      await userEvent.click(screen.getByRole('button', { name: 'Contratação' }));
+      expect(screen.getByLabelText('Salário (R$)')).toHaveValue(3000);
+      expect(screen.getByLabelText('Data de admissão')).toHaveValue('2024-02-01');
+    });
+
+    it('marca o CPF como erro na aba certa quando o backend recusa por CPF duplicado', async () => {
+      createMutateAsync.mockRejectedValueOnce({ isAxiosError: true, response: { status: 409, data: { codigo: 'CPF_JA_CADASTRADO', mensagem: 'x' } } });
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Já existe um colaborador com este CPF')).toBeInTheDocument();
+    });
+
+    it('mostra ponto vermelho na aba com erro', async () => {
+      renderModal();
+      await preencherAcesso();
+      await userEvent.click(screen.getByRole('button', { name: 'Contratação' }));
+      await userEvent.type(screen.getByLabelText('Jornada semanal (horas)'), '50');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByRole('img', { name: 'com erro' })).toBeInTheDocument();
+    });
+
+    it('bloqueia o Salvar enquanto o cadastro completo carrega (evita apagar dados de RH)', () => {
+      vi.mocked(useUsuario).mockReturnValue({ data: undefined, isLoading: true, isError: false } as never);
+      renderModal({ usuario: { id: 5, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true } as never });
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    });
   });
 
   describe('limite de usuários excedido (409 LIMITE_USUARIOS_EXCEDIDO)', () => {

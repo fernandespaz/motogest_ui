@@ -1,11 +1,10 @@
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { Plus } from 'lucide-react';
+import { Car, Plus } from 'lucide-react';
 import { Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
+import { FormSection } from '@/components/ui/FormSection';
 import { IconActionButton } from '@/components/ui/IconActionButton';
-import { Input, Select } from '@/components/ui/Field';
-import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
-import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
+import { VeiculoCampos } from '@/features/shared/VeiculoCampos';
 import type { CategoriaComplexidade } from '@/api/types';
 
 /** New vehicles to create alongside the client — matches VeiculoDoClienteRequest (no id: these are always creations, never edits of an existing vehicle). */
@@ -22,62 +21,35 @@ export interface VeiculoNovoFormValue {
   categoria: CategoriaComplexidade;
 }
 
-export function VeiculosEditor({ name }: { name: string }) {
+export function VeiculosEditor({ name, titulo = 'Veículos' }: { name: string; titulo?: string }) {
   const { control, register, watch, setValue } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-ink">Veículos</p>
+    <FormSection
+      title={titulo}
+      icon={Car}
+      action={
         <Button type="button" size="sm" variant="outline" onClick={() => append({ placa: '' } as VeiculoNovoFormValue)}>
           <Plus size={14} /> Adicionar veículo
         </Button>
-      </div>
-
-      {fields.length === 0 && (
-        <p className="text-sm text-ink-muted">Nenhum veículo novo adicionado. Use o botão acima para incluir um.</p>
-      )}
+      }
+    >
+      {fields.length === 0 && <p className="text-sm text-ink-muted">Nenhum veículo novo adicionado.</p>}
 
       <div className="flex flex-col gap-3">
         {fields.map((field, index) => (
-          <div key={field.id} className="rounded-lg border border-border p-3">
+          <div key={field.id} className="rounded-xl border border-border bg-surface-alt/40 p-3">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
                 Veículo {index + 1}
               </span>
               <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="col-span-2 sm:col-span-1">
-                <Input label="Placa" required {...register(`${name}.${index}.placa`)} />
-              </div>
-              <Input label="Marca" {...register(`${name}.${index}.marca`)} />
-              <Input label="Modelo" {...register(`${name}.${index}.modelo`)} />
-              <ModeloVeiculoField
-                marca={watch(`${name}.${index}.marca`)}
-                modelo={watch(`${name}.${index}.modelo`)}
-                onSelecionar={({ marca, modelo }) => {
-                  setValue(`${name}.${index}.marca`, marca, { shouldDirty: true });
-                  setValue(`${name}.${index}.modelo`, modelo, { shouldDirty: true });
-                }}
-              />
-              <Input label="Cor" {...register(`${name}.${index}.cor`)} />
-              <Input label="Ano fabricação" type="number" {...register(`${name}.${index}.anoFabricacao`)} />
-              <Input label="Ano modelo" type="number" {...register(`${name}.${index}.anoModelo`)} />
-              <Input label="KM atual" type="number" {...register(`${name}.${index}.kmAtual`)} />
-              <Input label="Chassi" {...register(`${name}.${index}.chassi`)} />
-              <Select label="Categoria" required {...register(`${name}.${index}.categoria`)}>
-                {CATEGORIAS_COMPLEXIDADE.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
+            <VeiculoCampos register={register} watch={watch} setValue={setValue} prefix={`${name}.${index}`} />
           </div>
         ))}
       </div>
-    </div>
+    </FormSection>
   );
 }

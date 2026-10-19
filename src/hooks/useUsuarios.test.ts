@@ -36,7 +36,14 @@ describe('useUsuario', () => {
     expect(result.current.fetchStatus).toBe('idle');
   });
 
+  it('stays disabled without USUARIO_WRITE (o detalhe traz dado de RH)', () => {
+    useAuthStore.setState({ permissoes: ['USUARIO_READ'] });
+    const { result } = renderHook(() => useUsuario(1), { wrapper: wrapWithQueryClient() });
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
   it('fetches a single usuário by id', async () => {
+    useAuthStore.setState({ permissoes: ['USUARIO_WRITE'] });
     vi.mocked(usuariosApi.get).mockResolvedValueOnce({ id: 1, nome: 'Diego' } as never);
     const { result } = renderHook(() => useUsuario(1), { wrapper: wrapWithQueryClient() });
 

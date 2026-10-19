@@ -46,6 +46,9 @@ export default {
       },
       boxShadow: {
         card: '0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 6px -1px rgb(0 0 0 / 0.06)',
+        // Sombra tingida da marca — botão primário e destaques (mesmo brilho do anel da logo).
+        brand: '0 4px 14px -4px rgb(var(--brand-600-channel) / 0.55)',
+        'brand-glow': '0 0 14px rgb(var(--brand-500-channel) / 0.5)',
       },
     },
   },

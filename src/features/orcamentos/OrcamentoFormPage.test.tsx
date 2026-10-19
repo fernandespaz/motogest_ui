@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/useOrcamentos';
 import { useClientes, useVeiculosDoCliente } from '@/hooks/useClientes';
+import { useAgendamento } from '@/hooks/useAgenda';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/store/toastStore';
 import { OrcamentoFormPage } from './OrcamentoFormPage';
@@ -13,6 +14,7 @@ vi.mock('@/hooks/useOrcamentos', () => ({
   useCreateOrcamento: vi.fn(),
   useUpdateOrcamento: vi.fn(),
 }));
+vi.mock('@/hooks/useAgenda', () => ({ useAgendamento: vi.fn(() => ({ data: undefined })) }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
@@ -195,6 +197,34 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
       { zona: 'CAPO', tipo: 'AMASSADO', descricao: 'amassado fundo', vista: 'TOPO', posicao: { x: 0, y: 0.9, z: 1.2 }, fotoId: undefined },
     ]);
     expect(payload.avarias[0]).not.toHaveProperty('id');
+  });
+
+  // O backend grava agendamento = null quando o PUT não traz agendamentoId: editar o orçamento não pode desfazer o vínculo com a Agenda.
+  it('preserva o vínculo com o agendamento ao salvar alterações', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: { ...orcamentoComAvaria, agendamentoId: 77 }, isLoading: false } as never);
+    renderPage('/orcamentos/5');
+    await waitFor(() => expect(screen.getByLabelText('Região da avaria 1')).toHaveValue('CAPO'));
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    expect(mutateAsync.mock.calls[0][0].payload.agendamentoId).toBe(77);
+  });
+
+  it('vindo da Agenda (?agendamentoId=) pré-preenche cliente/veículo, mostra a origem e envia o vínculo', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({ id: 9 });
+    vi.mocked(useCreateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: undefined, isLoading: false } as never);
+    vi.mocked(useAgendamento).mockReturnValue({
+      data: { id: 7, clienteId: 1, clienteNome: 'Ana', veiculoId: 2, veiculoPlaca: 'ABC1D23', dataHora: '2026-10-20T10:00:00', servicos: [{ id: 1, nome: 'Troca de óleo' }] },
+    } as never);
+    renderPage('/orcamentos/novo?agendamentoId=7');
+
+    expect(await screen.findByText(/Orçamento do agendamento de .* ABC1D23/)).toBeInTheDocument();
+    expect(screen.getByText(/Serviços agendados: Troca de óleo/)).toBeInTheDocument();
+    expect(useAgendamento).toHaveBeenCalledWith(7);
   });
 
   it('em orçamento que já saiu de rascunho, a vistoria fica só para consulta', async () => {

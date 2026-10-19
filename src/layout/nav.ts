@@ -121,6 +121,20 @@ export const groupLabels: Record<NavItem['group'], string> = {
   admin: 'Administração',
 };
 
+/** O item é o da rota atual? `/` só casa exato; os demais casam também subrotas (`/clientes/12`). */
+export function isNavItemActive(item: NavItem, pathname: string): boolean {
+  if (item.to === '/') return pathname === '/';
+  return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+/** Seção da rota atual (grupo + título do item), pra barra superior. `undefined` fora do menu. */
+export function getCurrentSection(pathname: string): { group: string; title: string } | undefined {
+  const item = navItems
+    .filter((i) => isNavItemActive(i, pathname))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+  return item ? { group: groupLabels[item.group], title: item.label } : undefined;
+}
+
 function isUnlocked(item: NavItem, hasPermission: (codigo: string) => boolean): boolean {
   return !item.permissions || item.permissions.some(hasPermission);
 }

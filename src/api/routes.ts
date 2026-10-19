@@ -85,6 +85,7 @@ export const API_ROUTES = {
       reabrir: (id: number) => `/api/v1/caixa/sessoes/${id}/reabrir`,
       exportar: (id: number) => `/api/v1/caixa/sessoes/${id}/exportar`,
     },
+    auditoria: '/api/v1/caixa/auditoria',
     relatorios: {
       diario: '/api/v1/caixa/relatorios/diario',
       diarioExportar: '/api/v1/caixa/relatorios/diario/exportar',
@@ -92,14 +93,23 @@ export const API_ROUTES = {
       periodoExportar: '/api/v1/caixa/relatorios/periodo/exportar',
     },
   },
+  categoriasFinanceiras: { base: '/api/v1/categorias-financeiras' },
+  parametrosFinanceiros: { base: '/api/v1/financeiro/parametros' },
+  fechamentosFinanceiros: {
+    base: '/api/v1/financeiro/fechamentos',
+    situacao: '/api/v1/financeiro/fechamentos/situacao',
+    reabrir: (id: number) => `/api/v1/financeiro/fechamentos/${id}/reabrir`,
+  },
   contasPagar: {
     base: '/api/v1/contas-pagar',
+    lote: '/api/v1/contas-pagar/lote',
     pendentes: '/api/v1/contas-pagar/pendentes',
     pagar: (id: number) => `/api/v1/contas-pagar/${id}/pagar`,
     cancelar: (id: number) => `/api/v1/contas-pagar/${id}/cancelar`,
   },
   contasReceber: {
     base: '/api/v1/contas-receber',
+    lote: '/api/v1/contas-receber/lote',
     pendentes: '/api/v1/contas-receber/pendentes',
     receber: (id: number) => `/api/v1/contas-receber/${id}/receber`,
     cancelar: (id: number) => `/api/v1/contas-receber/${id}/cancelar`,

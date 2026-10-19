@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Lock, ReceiptText, RefreshCw, Unlock, Wallet } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Lock, Package, ReceiptText, RefreshCw, Unlock, Wallet } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -18,16 +18,25 @@ import { AbrirCaixaModal } from './AbrirCaixaModal';
 import { RegistrarMovimentoModal } from './RegistrarMovimentoModal';
 import { FecharCaixaModal } from './FecharCaixaModal';
 import { FaturarOSModal } from './FaturarOSModal';
+import { VenderProdutoModal } from './VenderProdutoModal';
+import { ContasDoDiaCard } from './ContasDoDiaCard';
 import { OfertaEmissaoNfse } from '@/features/fiscal/OfertaEmissaoNfse';
 import { PERMISSAO_FISCAL_EMITIR } from '@/hooks/useFiscal';
 import { useAuthStore } from '@/store/authStore';
 
 export function MeuCaixaPage() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  // A venda dá saída no estoque (ESTOQUE_WRITE no backend) e a baixa de conta é FINANCEIRO_WRITE; só ver não basta, senão o botão aparece e dá 403.
+  const podeVenderProdutos = hasPermission('ESTOQUE_READ') && hasPermission('ESTOQUE_WRITE');
+  const podeBaixarContas = hasPermission('FINANCEIRO_READ') && hasPermission('FINANCEIRO_WRITE');
+  // A lista de lançamentos vem de /caixa/movimentos/periodo, que o backend só libera com FINANCEIRO_READ — o operador de caixa
+  // (só CAIXA_OPERAR) veria 403 a cada abertura da tela. Os totais do turno vêm da própria sessão e continuam visíveis.
+  const podeVerLancamentos = hasPermission('FINANCEIRO_READ');
   const [abrirAberto, setAbrirAberto] = useState(false);
   const [fecharAberto, setFecharAberto] = useState(false);
   const [movimentoTipo, setMovimentoTipo] = useState<CaixaTipo | null>(null);
   const [faturarAberto, setFaturarAberto] = useState(false);
+  const [venderAberto, setVenderAberto] = useState(false);
   // Convite pra emitir a NFS-e da OS recém-faturada; só existe pra quem tem FISCAL_EMITIR.
   const [osParaEmitir, setOsParaEmitir] = useState<{ id: number; numero?: string } | null>(null);
   // Janela da sessão atual, fixada no momento em que a tela monta — o botão
@@ -37,7 +46,7 @@ export function MeuCaixaPage() {
   const [agora, setAgora] = useState(() => new Date().toISOString());
 
   const { data: sessao, isLoading, isFetching, refetch } = useCaixaSessaoAberta({ enabled: true });
-  const { data: movimentosPeriodo, isLoading: carregandoMovimentos } = useCaixaPeriodo(sessao?.abertoEm ?? '', agora);
+  const { data: movimentosPeriodo, isLoading: carregandoMovimentos } = useCaixaPeriodo(podeVerLancamentos ? (sessao?.abertoEm ?? '') : '', agora);
   const movimentosDaSessao = (movimentosPeriodo ?? [])
     .filter((m) => m.caixaSessaoId === sessao?.id)
     .sort((a, b) => (b.dataMovimento ?? '').localeCompare(a.dataMovimento ?? ''));
@@ -121,13 +130,18 @@ export function MeuCaixaPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Button size="lg" variant="success" onClick={() => setMovimentoTipo('ENTRADA')}>
               <ArrowUpCircle size={20} /> Nova entrada
             </Button>
             <Button size="lg" variant="danger" onClick={() => setMovimentoTipo('SAIDA')}>
               <ArrowDownCircle size={20} /> Nova saída
             </Button>
+            {podeVenderProdutos && (
+              <Button size="lg" variant="secondary" onClick={() => setVenderAberto(true)}>
+                <Package size={20} /> Vender produtos
+              </Button>
+            )}
             <Button size="lg" variant="secondary" onClick={() => setFaturarAberto(true)}>
               <ReceiptText size={20} /> Faturar OS
             </Button>
@@ -145,6 +159,18 @@ export function MeuCaixaPage() {
             </CardBody>
           </Card>
 
+          {podeBaixarContas && <ContasDoDiaCard />}
+
+          {!podeVerLancamentos ? (
+            <Card>
+              <CardHeader title="Lançamentos do turno" />
+              <CardBody>
+                <p className="text-sm text-ink-muted">
+                  Para ver a lista de lançamentos, o perfil precisa da permissão "Visualizar contas e caixa" (FINANCEIRO_READ). Os totais acima refletem tudo o que foi lançado neste turno.
+                </p>
+              </CardBody>
+            </Card>
+          ) : (
           <Card>
             <CardHeader title="Lançamentos do turno" />
             <DataTable<CaixaMovimentoResponse>
@@ -165,6 +191,7 @@ export function MeuCaixaPage() {
               ]}
             />
           </Card>
+          )}
         </div>
       )}
 
@@ -173,6 +200,7 @@ export function MeuCaixaPage() {
         <RegistrarMovimentoModal open={!!movimentoTipo} tipo={movimentoTipo} onClose={() => setMovimentoTipo(null)} />
       )}
       <FecharCaixaModal open={fecharAberto} sessao={sessao} onClose={() => setFecharAberto(false)} />
+      {sessao && <VenderProdutoModal open={venderAberto} sessao={sessao} onClose={() => setVenderAberto(false)} />}
       <FaturarOSModal
         open={faturarAberto}
         onClose={() => setFaturarAberto(false)}

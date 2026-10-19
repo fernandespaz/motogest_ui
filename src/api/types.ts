@@ -213,6 +213,21 @@ export type ContaPagarResponse = Schemas['ContaPagarResponse'];
 export type ContaReceberRequest = Schemas['ContaReceberRequest'];
 export type ContaReceberResponse = Schemas['ContaReceberResponse'];
 export type StatusConta = NonNullable<ContaPagarResponse['status']>;
+export type ContaPagarLoteRequest = Schemas['ContaPagarLoteRequest'];
+export type ContaReceberLoteRequest = Schemas['ContaReceberLoteRequest'];
+export type RepeticaoContaRequest = Schemas['RepeticaoContaRequest'];
+export type BaixaContaRequest = Schemas['BaixaContaRequest'];
+export type CategoriaFinanceiraRequest = Schemas['CategoriaFinanceiraRequest'];
+export type CategoriaFinanceiraResponse = Schemas['CategoriaFinanceiraResponse'];
+export type TipoCategoriaFinanceira = NonNullable<CategoriaFinanceiraResponse['tipo']>;
+export type TipoRepeticaoConta = NonNullable<RepeticaoContaRequest['tipo']>;
+export type ParametroFinanceiroRequest = Schemas['ParametroFinanceiroRequest'];
+export type ParametroFinanceiroResponse = Schemas['ParametroFinanceiroResponse'];
+export type AuditoriaCaixaResponse = Schemas['AuditoriaCaixaResponse'];
+export type FechamentoFinanceiroRequest = Schemas['FechamentoRequest'];
+export type FechamentoFinanceiroResponse = Schemas['FechamentoResponse'];
+export type ReaberturaFinanceiraRequest = Schemas['ReaberturaRequest'];
+export type SituacaoFechamentoResponse = Schemas['SituacaoFechamentoResponse'];
 
 export type ChecklistRequest = Schemas['ChecklistRequest'];
 export type ChecklistResponse = Schemas['ChecklistResponse'];
@@ -246,8 +261,60 @@ export type PermissaoResponse = Schemas['PermissaoResponse'];
 // `confirmacaoSenha` / `adminConfirmacaoSenha` existem no backend (motogest_api),
 // mas o /v3/api-docs rodando ainda não os expõe; remover os intersections
 // após o próximo `gen:api` que os inclua.
-export type UsuarioRequest = Schemas['UsuarioRequest'] & { confirmacaoSenha?: string };
-export type UsuarioResponse = Schemas['UsuarioResponse'];
+// Dados de colaborador (CLT): ainda não existem na spec ao vivo — contrato em
+// docs/backend-cadastro-colaborador-clt.md. Todos opcionais, e o GET /usuarios
+// (lista) não os traz; só o GET /usuarios/{id} devolve o cadastro completo.
+export type Sexo = 'MASCULINO' | 'FEMININO' | 'OUTRO' | 'NAO_INFORMADO';
+export type EstadoCivil = 'SOLTEIRO' | 'CASADO' | 'UNIAO_ESTAVEL' | 'SEPARADO' | 'DIVORCIADO' | 'VIUVO';
+export type TipoContrato = 'INDETERMINADO' | 'EXPERIENCIA' | 'DETERMINADO' | 'APRENDIZ';
+
+type Campo<T = string> = T | null;
+
+export interface DadosColaborador {
+  cpf?: Campo;
+  rg?: Campo;
+  rgOrgaoEmissor?: Campo;
+  rgUf?: Campo;
+  rgDataEmissao?: Campo;
+  dataNascimento?: Campo;
+  sexo?: Campo<Sexo>;
+  estadoCivil?: Campo<EstadoCivil>;
+  nacionalidade?: Campo;
+  naturalidade?: Campo;
+  naturalidadeUf?: Campo;
+  nomeMae?: Campo;
+  nomePai?: Campo;
+  pisPasep?: Campo;
+  ctpsNumero?: Campo;
+  ctpsSerie?: Campo;
+  ctpsUf?: Campo;
+  tituloEleitor?: Campo;
+  emailPessoal?: Campo;
+  telefone?: Campo;
+  celular?: Campo;
+  contatoEmergenciaNome?: Campo;
+  contatoEmergenciaParentesco?: Campo;
+  contatoEmergenciaTelefone?: Campo;
+  cep?: Campo;
+  logradouro?: Campo;
+  numero?: Campo;
+  complemento?: Campo;
+  bairro?: Campo;
+  cidade?: Campo;
+  uf?: Campo;
+  matricula?: Campo;
+  cargo?: Campo;
+  cbo?: Campo;
+  dataAdmissao?: Campo;
+  tipoContrato?: Campo<TipoContrato>;
+  dataFimContrato?: Campo;
+  jornadaSemanalHoras?: Campo<number>;
+  salario?: Campo<number>;
+  dataDemissao?: Campo;
+}
+
+export type UsuarioRequest = Schemas['UsuarioRequest'] & { confirmacaoSenha?: string } & DadosColaborador;
+export type UsuarioResponse = Schemas['UsuarioResponse'] & DadosColaborador;
 
 // ATENÇÃO — mesma divergência temporária citada acima: o backend também
 // removeu `logoUrl` de OficinaResponse (só sobrou `logoImagemDisponivel`).

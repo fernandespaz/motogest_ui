@@ -357,11 +357,14 @@ export function ModeloVeiculoField({
   modelo,
   onSelecionar,
   disabled,
+  className = 'col-span-full',
 }: {
   marca: string | undefined;
   modelo: string | undefined;
   onSelecionar: (modelo: { marca: string; modelo: string }) => void;
   disabled?: boolean;
+  /** Posição dentro da grade do formulário — por padrão ocupa a linha inteira. */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   // undefined = usuário ainda não escolheu nesta sessão (usa a resolução
@@ -377,7 +380,7 @@ export function ModeloVeiculoField({
   }
 
   return (
-    <div className="col-span-full flex items-center gap-2">
+    <div className={clsx('flex items-center gap-2', className)}>
       <ModeloVeiculoThumb base64={imagemEscolhida} />
       <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={() => setOpen(true)}>
         <ImagePlus size={14} /> {marca || modelo ? 'Trocar modelo do catálogo' : 'Escolher modelo do catálogo (opcional)'}

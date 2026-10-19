@@ -55,7 +55,14 @@ describe('TrialBanner', () => {
     expect(screen.queryByText(/venceu/)).not.toBeInTheDocument();
   });
 
-  it('always uses the same solid brand orange as the project buttons — same in light and dark, never amber or red', () => {
+  it('is a discreet tinted strip while there are plenty of days left', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'TRIAL', diasRestantes: 6 } } as never);
+    const { container } = renderBanner();
+    expect(container.firstChild).toHaveClass('bg-brand-600/10');
+    expect(container.firstChild).not.toHaveClass('bg-brand-600');
+  });
+
+  it('turns into the solid brand orange when 2 days or fewer remain — same in light and dark, never amber or red', () => {
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'ATIVA', diasRestantes: 0 } } as never);
     const { container } = renderBanner();
     expect(container.firstChild).toHaveClass('bg-brand-600', 'text-white');
@@ -80,7 +87,7 @@ describe('TrialBanner', () => {
     expect(screen.getByText('Seu período de teste terminou.')).toBeInTheDocument();
   });
 
-  it('uses the same solid brand orange for an expired/urgent TRIAL too, not the old fixed light-only bg-red-50', () => {
+  it('uses the solid brand orange for an expired TRIAL too, not the old fixed light-only bg-red-50', () => {
     vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'TRIAL', diasRestantes: 0 } } as never);
     const { container } = renderBanner();
     expect(container.firstChild).toHaveClass('bg-brand-600', 'text-white');

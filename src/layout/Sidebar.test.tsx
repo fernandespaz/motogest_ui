@@ -49,6 +49,26 @@ describe('Sidebar', () => {
     expect(screen.getByText('Diego Fernandes')).toBeInTheDocument();
   });
 
+  it('collapses a group on click but keeps the group of the current page open', async () => {
+    localStorage.clear();
+    useAuthStore.setState({
+      nome: 'Diego',
+      perfil: 'Administrador',
+      permissoes: ['CLIENTE_READ', 'ESTOQUE_READ'],
+    });
+    render(
+      <MemoryRouter initialEntries={['/clientes']}>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /gestão/i }));
+    expect(screen.queryByText('Produtos e Estoque')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /operação/i }));
+    expect(screen.getByText('Clientes')).toBeInTheDocument();
+  });
+
   it('logs out and redirects to /login when "Sair" is clicked', async () => {
     const logoutSpy = vi.fn();
     useAuthStore.setState({ nome: 'Diego', perfil: 'Administrador', permissoes: [], logout: logoutSpy });

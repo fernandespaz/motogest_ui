@@ -15,7 +15,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-400 disabled:bg-brand-300',
+  primary:
+    'bg-gradient-to-b from-brand-600 to-brand-700 text-white shadow-brand hover:from-brand-700 hover:to-brand-800 focus-visible:ring-brand-400 disabled:bg-none disabled:bg-brand-300 disabled:shadow-none',
   secondary: 'bg-surface-alt text-ink hover:bg-brand-50 dark:hover:bg-brand-900/40 border border-border focus-visible:ring-brand-300',
   outline:
     'bg-transparent text-brand-700 dark:text-brand-300 border border-brand-300 dark:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-900/40 focus-visible:ring-brand-300',
@@ -33,21 +34,29 @@ const sizeStyles: Record<Size, string> = {
   lg: 'h-12 px-6 text-base gap-2',
 };
 
+/** Classes do botão — pra um link (`<a>`/`<Link>`) com a mesma aparência de um `Button`. */
+export function buttonStyles({
+  variant = 'primary',
+  size = 'md',
+  fullWidth,
+}: { variant?: Variant; size?: Size; fullWidth?: boolean } = {}) {
+  return clsx(
+    'inline-flex items-center justify-center rounded-lg font-medium transition-[color,background-color,border-color,box-shadow]',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    'disabled:cursor-not-allowed',
+    variantStyles[variant],
+    sizeStyles[size],
+    fullWidth && 'w-full',
+  );
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, fullWidth, disabled, children, ...props }, ref) => {
     return (
       <motion.button
         ref={ref}
         whileTap={{ scale: disabled || loading ? 1 : 0.97 }}
-        className={clsx(
-          'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-          'disabled:cursor-not-allowed',
-          variantStyles[variant],
-          sizeStyles[size],
-          fullWidth && 'w-full',
-          className,
-        )}
+        className={clsx(buttonStyles({ variant, size, fullWidth }), className)}
         disabled={disabled || loading}
         {...(props as any)}
       >

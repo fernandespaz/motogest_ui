@@ -26,8 +26,10 @@ const TAMANHO_PAGINA_BUSCA = 200;
  * oficina pra isso pesar) e paginar/filtrar por cima do conjunto completo,
  * no cliente.
  */
-export function useTodosOrcamentos(sort?: string) {
+export function useTodosOrcamentos(sort?: string, options?: { enabled?: boolean; silentError?: boolean }) {
   return useQuery({
+    enabled: options?.enabled,
+    meta: options?.silentError ? { silentError: true } : undefined,
     queryKey: [...orcamentosKeys.all, 'todos', sort],
     queryFn: async () => {
       const primeira = await orcamentosApi.list({ page: 0, size: TAMANHO_PAGINA_BUSCA, sort });

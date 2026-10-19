@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { Button } from './Button';
+import { Button, buttonStyles } from './Button';
 
 describe('Button', () => {
   it('renders its children and responds to a click', async () => {
@@ -35,6 +35,13 @@ describe('Button', () => {
   it.each(['sm', 'md', 'lg'] as const)('renders the %s size without crashing', (size) => {
     render(<Button size={size}>Ação</Button>);
     expect(screen.getByRole('button', { name: 'Ação' })).toBeInTheDocument();
+  });
+
+  it('buttonStyles gives a link the same look as a Button', () => {
+    const classes = buttonStyles({ size: 'lg', fullWidth: true });
+    expect(classes).toContain('from-brand-600');
+    expect(classes).toContain('h-12');
+    expect(classes).toContain('w-full');
   });
 
   it('applies fullWidth styling when requested', () => {

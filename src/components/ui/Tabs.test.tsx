@@ -52,3 +52,20 @@ describe('TabPanel', () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+describe('Tabs badge', () => {
+  it('shows a counter next to the label, highlighted when it is a danger badge', () => {
+    render(
+      <Tabs
+        tabs={[
+          { key: 'a', label: 'A pagar', badge: { texto: '3', tone: 'danger' } },
+          { key: 'b', label: 'A receber', badge: { texto: '1' } },
+        ]}
+        active="a"
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText('3')).toHaveClass('bg-danger');
+    expect(screen.getByText('1')).not.toHaveClass('bg-danger');
+  });
+});

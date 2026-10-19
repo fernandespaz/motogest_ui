@@ -13,6 +13,7 @@ vi.mock('@/hooks/useUsuarios', () => ({
   useDeleteUsuario: vi.fn(),
   useCreateUsuario: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
   useUpdateUsuario: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useUsuario: vi.fn(() => ({ data: undefined, isLoading: false, isError: false })),
 }));
 vi.mock('@/hooks/useOficina', () => ({ useLicencaAtual: vi.fn() }));
 vi.mock('@/hooks/usePerfis', () => ({ usePerfis: vi.fn(() => ({ data: [] })) }));

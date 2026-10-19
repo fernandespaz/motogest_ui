@@ -5,7 +5,10 @@ import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
-import { Input, Select, Textarea, Checkbox } from '@/components/ui/Field';
+import { Input, Textarea, Checkbox } from '@/components/ui/Field';
+import { FormSection } from '@/components/ui/FormSection';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { Car, MapPin, UserRound } from 'lucide-react';
 import { useCreateCliente, useUpdateCliente, clientesKeys } from '@/hooks/useClientes';
 import { useDeleteVeiculo } from '@/hooks/useVeiculos';
 import { useCepLookup } from '@/hooks/useCepLookup';
@@ -80,6 +83,7 @@ const schema = z.object({
   telefone: z.string().optional(),
   logradouro: z.string().optional(),
   numero: z.string().optional(),
+  complemento: z.string().optional(),
   bairro: z.string().optional(),
   cidade: z.string().optional(),
   uf: z.string().max(2).optional(),
@@ -96,10 +100,13 @@ export function ClienteFormModal({
   open,
   onClose,
   cliente,
+  onCriado,
 }: {
   open: boolean;
   onClose: () => void;
   cliente?: ClienteResponse | null;
+  /** Chamado com o cliente recém-cadastrado, antes de fechar — pra quem abriu o modal já selecioná-lo (ex.: no agendamento). */
+  onCriado?: (cliente: ClienteResponse) => void;
 }) {
   const isEditing = !!cliente;
   const qc = useQueryClient();
@@ -152,6 +159,7 @@ export function ClienteFormModal({
               telefone: cliente.telefone ?? '',
               logradouro: cliente.logradouro ?? '',
               numero: cliente.numero ?? '',
+              complemento: cliente.complemento ?? '',
               bairro: cliente.bairro ?? '',
               cidade: cliente.cidade ?? '',
               uf: cliente.uf ?? '',
@@ -207,11 +215,12 @@ export function ClienteFormModal({
         }
         toast.success('Cliente atualizado com sucesso.');
       } else {
-        await createMutation.mutateAsync({
+        const criado = await createMutation.mutateAsync({
           ...payload,
           veiculos: veiculosNovos && veiculosNovos.length > 0 ? veiculosNovos : undefined,
         });
         toast.success('Cliente cadastrado com sucesso.');
+        onCriado?.(criado);
       }
       onClose();
     } catch (error) {
@@ -239,7 +248,7 @@ export function ClienteFormModal({
       open={open}
       onClose={onClose}
       title={isEditing ? 'Editar cliente' : 'Novo cliente'}
-      size="lg"
+      size="2xl"
       footer={
         <>
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
@@ -256,109 +265,153 @@ export function ClienteFormModal({
           id={FORM_ID}
           onSubmit={handleSubmit(onSubmit)}
           onKeyDown={preventEnterSubmit}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-6"
           noValidate
         >
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Select label="Tipo de pessoa" required {...register('tipoPessoa')}>
-              <option value="PF">Pessoa física</option>
-              <option value="PJ">Pessoa jurídica</option>
-            </Select>
-            <Input
-              label={tipoPessoa === 'PJ' ? 'Razão social' : 'Nome completo'}
-              required
-              error={errors.nome?.message}
-              {...register('nome')}
-            />
-            <Controller
-              control={control}
-              name="documento"
-              render={({ field }) => (
-                <Input
-                  label={tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'}
-                  required
-                  inputMode="numeric"
-                  autoComplete="off"
-                  value={tipoPessoa === 'PJ' ? formatCnpj(field.value ?? '') : formatCpf(field.value ?? '')}
-                  onChange={(e) =>
-                    field.onChange(onlyDigits(e.target.value).slice(0, tipoPessoa === 'PJ' ? 14 : 11))
-                  }
-                  error={errors.documento?.message}
-                />
-              )}
-            />
-            <Input label="E-mail" type="email" error={errors.email?.message} {...register('email')} />
-            <Controller
-              control={control}
-              name="telefone"
-              render={({ field }) => (
-                <Input
-                  label="Telefone"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="(11) 91234-5678"
-                  value={formatPhone(field.value ?? '')}
-                  onChange={(e) => field.onChange(onlyDigits(e.target.value).slice(0, 11))}
-                />
-              )}
-            />
-            <Controller
-              control={control}
-              name="cep"
-              render={({ field }) => (
-                <Input
-                  label="CEP"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="00000-000"
-                  hint={buscandoCep ? 'Buscando endereço...' : undefined}
-                  value={formatCep(field.value ?? '')}
-                  onChange={(e) => field.onChange(onlyDigits(e.target.value).slice(0, 8))}
-                  onBlur={(e) => handleCepBlur(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Enter here means "look up this CEP", not "submit the form".
-                    if (e.key === 'Enter') handleCepBlur(e.currentTarget.value);
-                  }}
-                />
-              )}
-            />
-            <Input label="Logradouro" autoComplete="off" {...register('logradouro')} />
-            <Input label="Número" autoComplete="off" {...register('numero')} />
-            <Input label="Bairro" autoComplete="off" {...register('bairro')} />
-            <Input label="Cidade" autoComplete="off" {...register('cidade')} />
-            <Input label="UF" autoComplete="off" maxLength={2} {...register('uf')} />
-          </div>
-          <Textarea label="Observações" {...register('observacoes')} />
-          {isEditing && <Checkbox label="Cliente ativo" {...register('ativo')} />}
-
-          {isEditing && veiculosExistentesFields.length > 0 && (
-            <div className="border-t border-border pt-4">
-              <p className="mb-2 text-sm font-semibold text-ink">Veículos vinculados</p>
-              <div className="flex flex-col gap-2">
-                {veiculosExistentesFields.map((field, index) => (
-                  <VeiculoVinculadoRow
-                    key={field.id}
-                    index={index}
-                    onRemover={() => {
-                      // fields[].id is react-hook-form's own synthetic key, not
-                      // our vehicle's real id — read the live value instead.
-                      const atual = getValues(`veiculosExistentes.${index}`);
-                      if (!atual) return;
-                      setRemovendo({ index, id: atual.id, placa: atual.placa });
-                    }}
+          <div className="grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
+            <FormSection title="Dados do cliente" icon={UserRound}>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Controller
+                    control={control}
+                    name="tipoPessoa"
+                    render={({ field }) => (
+                      <SegmentedControl
+                        label="Tipo de pessoa"
+                        required
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={[
+                          { value: 'PF', label: 'Pessoa física' },
+                          { value: 'PJ', label: 'Pessoa jurídica' },
+                        ]}
+                      />
+                    )}
                   />
-                ))}
+                </div>
+                <div className="sm:col-span-2">
+                  <Input
+                    label={tipoPessoa === 'PJ' ? 'Razão social' : 'Nome completo'}
+                    required
+                    error={errors.nome?.message}
+                    {...register('nome')}
+                  />
+                </div>
+                <Controller
+                  control={control}
+                  name="documento"
+                  render={({ field }) => (
+                    <Input
+                      label={tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'}
+                      required
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={tipoPessoa === 'PJ' ? formatCnpj(field.value ?? '') : formatCpf(field.value ?? '')}
+                      onChange={(e) =>
+                        field.onChange(onlyDigits(e.target.value).slice(0, tipoPessoa === 'PJ' ? 14 : 11))
+                      }
+                      error={errors.documento?.message}
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="telefone"
+                  render={({ field }) => (
+                    <Input
+                      label="Telefone"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="(11) 91234-5678"
+                      value={formatPhone(field.value ?? '')}
+                      onChange={(e) => field.onChange(onlyDigits(e.target.value).slice(0, 11))}
+                    />
+                  )}
+                />
+                <div className="sm:col-span-2">
+                  <Input label="E-mail" type="email" error={errors.email?.message} {...register('email')} />
+                </div>
               </div>
-            </div>
-          )}
+              {isEditing && <Checkbox label="Cliente ativo" {...register('ativo')} />}
+            </FormSection>
 
-          <div className="border-t border-border pt-4">
-            <VeiculosEditor name="veiculosNovos" />
+            <FormSection title="Endereço" icon={MapPin}>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
+                <div className="col-span-2 sm:col-span-2">
+                  <Controller
+                    control={control}
+                    name="cep"
+                    render={({ field }) => (
+                      <Input
+                        label="CEP"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="00000-000"
+                        hint={buscandoCep ? 'Buscando endereço...' : undefined}
+                        value={formatCep(field.value ?? '')}
+                        onChange={(e) => field.onChange(onlyDigits(e.target.value).slice(0, 8))}
+                        onBlur={(e) => handleCepBlur(e.target.value)}
+                        onKeyDown={(e) => {
+                          // Enter here means "look up this CEP", not "submit the form".
+                          if (e.key === 'Enter') handleCepBlur(e.currentTarget.value);
+                        }}
+                      />
+                    )}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Input label="Número" autoComplete="off" {...register('numero')} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Input label="Complemento" autoComplete="off" placeholder="Apto, bloco..." {...register('complemento')} />
+                </div>
+                <div className="col-span-2 sm:col-span-6">
+                  <Input label="Logradouro" autoComplete="off" {...register('logradouro')} />
+                </div>
+                <div className="col-span-2 sm:col-span-3">
+                  <Input label="Bairro" autoComplete="off" {...register('bairro')} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Input label="Cidade" autoComplete="off" {...register('cidade')} />
+                </div>
+                <div className="sm:col-span-1">
+                  <Input label="UF" autoComplete="off" maxLength={2} {...register('uf')} />
+                </div>
+              </div>
+              <Textarea label="Observações" rows={2} {...register('observacoes')} />
+            </FormSection>
           </div>
 
-          <p className="text-xs text-ink-muted">
-            Alterações em veículos (editados, novos ou removidos) só são salvas quando você clica em "Salvar" abaixo.
-          </p>
+          <div className="flex flex-col gap-5 border-t border-border pt-5">
+            {isEditing && veiculosExistentesFields.length > 0 && (
+              <FormSection title="Veículos vinculados" icon={Car}>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {veiculosExistentesFields.map((field, index) => (
+                    <VeiculoVinculadoRow
+                      key={field.id}
+                      index={index}
+                      onRemover={() => {
+                        // fields[].id is react-hook-form's own synthetic key, not
+                        // our vehicle's real id — read the live value instead.
+                        const atual = getValues(`veiculosExistentes.${index}`);
+                        if (!atual) return;
+                        setRemovendo({ index, id: atual.id, placa: atual.placa });
+                      }}
+                    />
+                  ))}
+                </div>
+              </FormSection>
+            )}
+
+            <VeiculosEditor
+              name="veiculosNovos"
+              titulo={isEditing && veiculosExistentesFields.length > 0 ? 'Novos veículos' : 'Veículos'}
+            />
+
+            <p className="text-xs text-ink-muted">
+              Alterações em veículos (editados, novos ou removidos) só são salvas quando você clica em "Salvar" abaixo.
+            </p>
+          </div>
         </form>
       </FormProvider>
 

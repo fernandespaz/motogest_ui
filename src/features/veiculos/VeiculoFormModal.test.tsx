@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+﻿import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
@@ -20,6 +20,11 @@ vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn()
 
 const clientes = { content: [{ id: 1, nome: 'Carlos Eduardo' }] };
 
+async function escolherCliente(nome: string) {
+  await userEvent.click(screen.getByPlaceholderText('Buscar cliente pelo nome...'));
+  await userEvent.click(await screen.findByRole('button', { name: new RegExp(nome) }));
+}
+
 describe('VeiculoFormModal', () => {
   let createMutateAsync: ReturnType<typeof vi.fn>;
   let updateMutateAsync: ReturnType<typeof vi.fn>;
@@ -35,7 +40,7 @@ describe('VeiculoFormModal', () => {
   it('renders empty for a new veículo, defaulting the cliente when given', () => {
     render(<VeiculoFormModal open onClose={vi.fn()} veiculo={null} defaultClienteId={1} />);
     expect(screen.getByText('Novo veículo')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /Cliente/ })).toHaveValue('1');
+    expect(screen.getByDisplayValue('Carlos Eduardo')).toBeInTheDocument();
   });
 
   it('prefills the form when editing an existing veículo', () => {
@@ -86,7 +91,7 @@ describe('VeiculoFormModal', () => {
     const onClose = vi.fn();
     render(<VeiculoFormModal open onClose={onClose} veiculo={null} />);
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Cliente/ }), 'Carlos Eduardo');
+    await escolherCliente('Carlos Eduardo');
     await userEvent.type(screen.getByLabelText('Placa', { exact: false }), 'MTG0002');
     await userEvent.type(screen.getByLabelText(/^Modelo/), 'Onix 1.0');
     await userEvent.type(screen.getByLabelText('Cor', { exact: false }), 'Vermelha');
@@ -110,7 +115,7 @@ describe('VeiculoFormModal', () => {
     const onClose = vi.fn();
     render(<VeiculoFormModal open onClose={onClose} veiculo={null} />);
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Cliente/ }), 'Carlos Eduardo');
+    await escolherCliente('Carlos Eduardo');
     await userEvent.type(screen.getByLabelText('Placa', { exact: false }), 'MTG0003');
     await userEvent.type(screen.getByLabelText(/^Modelo/), 'Hilux');
     await userEvent.type(screen.getByLabelText('Cor', { exact: false }), 'Prata');
@@ -188,3 +193,5 @@ describe('VeiculoFormModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+

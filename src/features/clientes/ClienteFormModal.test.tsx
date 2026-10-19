@@ -68,8 +68,10 @@ describe('ClienteFormModal', () => {
 
   it('relabels to Razão social/CNPJ when switching to pessoa jurídica', async () => {
     renderModal({ open: true, onClose: vi.fn(), cliente: null });
-    await userEvent.selectOptions(screen.getByLabelText(/Tipo de pessoa/), 'Pessoa jurídica');
+    expect(screen.getByRole('radio', { name: 'Pessoa física' })).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: 'Pessoa jurídica' }));
 
+    expect(screen.getByRole('radio', { name: 'Pessoa jurídica' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText('Razão social', { exact: false })).toBeInTheDocument();
     expect(screen.getByText('CNPJ', { exact: false })).toBeInTheDocument();
   });
@@ -93,6 +95,22 @@ describe('ClienteFormModal', () => {
     expect(buscarCep).toHaveBeenCalledWith('01310-100');
     await waitFor(() => expect(screen.getByLabelText(/^Logradouro/)).toHaveValue('Av. Paulista'));
     expect(screen.getByLabelText(/^Cidade/)).toHaveValue('São Paulo');
+  });
+
+  it('sends the complemento along with the rest of the address, and prefills it when editing', async () => {
+    const { unmount } = renderModal({ open: true, onClose: vi.fn(), cliente: null });
+    await userEvent.type(screen.getByLabelText(/^Nome completo/), 'Fernanda Souza');
+    await userEvent.type(screen.getByLabelText(/^CPF/), '98765432100');
+    await userEvent.type(screen.getByLabelText(/^Número/), '120');
+    await userEvent.type(screen.getByLabelText(/^Complemento/), 'Apto 42');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(createMutateAsync).toHaveBeenCalled());
+    expect(createMutateAsync).toHaveBeenCalledWith(expect.objectContaining({ numero: '120', complemento: 'Apto 42' }));
+    unmount();
+
+    renderModal({ open: true, onClose: vi.fn(), cliente: { ...clienteComVeiculo, complemento: 'Bloco B' } as never });
+    expect(screen.getByLabelText(/^Complemento/)).toHaveValue('Bloco B');
   });
 
   it('requires a nome before saving', async () => {
