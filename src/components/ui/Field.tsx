@@ -163,7 +163,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
 Select.displayName = 'Select';
 
 interface CheckboxProps extends InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
 }
 
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(({ label, className, ...props }, ref) => (
