@@ -100,6 +100,12 @@ export const API_ROUTES = {
     situacao: '/api/v1/financeiro/fechamentos/situacao',
     reabrir: (id: number) => `/api/v1/financeiro/fechamentos/${id}/reabrir`,
   },
+  comissoes: {
+    base: '/api/v1/financeiro/comissoes',
+    configuracao: '/api/v1/financeiro/comissoes/configuracao',
+    resumo: '/api/v1/financeiro/comissoes/resumo',
+    pagamento: '/api/v1/financeiro/comissoes/pagamento',
+  },
   contasPagar: {
     base: '/api/v1/contas-pagar',
     lote: '/api/v1/contas-pagar/lote',

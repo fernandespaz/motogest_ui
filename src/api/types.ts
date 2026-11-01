@@ -229,6 +229,59 @@ export type FechamentoFinanceiroResponse = Schemas['FechamentoResponse'];
 export type ReaberturaFinanceiraRequest = Schemas['ReaberturaRequest'];
 export type SituacaoFechamentoResponse = Schemas['SituacaoFechamentoResponse'];
 
+// Comissões ainda não estão no schema gerado (openapi.json) — tipos escritos à mão a partir de
+// motogest_api/docs/comissoes-contexto-front.md. Trocar por Schemas[...] depois do próximo `npm run gen:api`.
+export type PapelComissao = 'MECANICO' | 'CONSULTOR';
+export type StatusComissao = 'PENDENTE' | 'PAGA';
+export interface ConfiguracaoComissao {
+  mecanicoPercentual: number;
+  consultorPercentual: number;
+  mecanicoIncluiProdutos: boolean;
+}
+export interface ComissaoResponse {
+  id: number;
+  ordemServicoId: number;
+  ordemServicoNumero: string;
+  usuarioId: number;
+  usuarioNome: string;
+  papel: PapelComissao;
+  baseCalculo: number;
+  percentual: number;
+  valor: number;
+  status: StatusComissao;
+  dataGeracao: string;
+  dataPagamento: string | null;
+  contaPagarId: number | null;
+}
+export interface ResumoComissaoFuncionario {
+  usuarioId: number;
+  usuarioNome: string;
+  totalMecanico: number;
+  totalConsultor: number;
+  totalPendente: number;
+  totalPago: number;
+  quantidadePendente: number;
+}
+export interface ComissoesFiltro {
+  inicio?: string;
+  fim?: string;
+  usuarioId?: number;
+  papel?: PapelComissao;
+  status?: StatusComissao;
+}
+export interface PagarComissoesRequest {
+  comissaoIds: number[];
+  data?: string;
+  formaPagamento?: FormaPagamento;
+}
+export interface PagamentoComissoesResponse {
+  contaPagarId: number;
+  usuarioId: number;
+  usuarioNome: string;
+  valorTotal: number;
+  comissoes: ComissaoResponse[];
+}
+
 export type ChecklistRequest = Schemas['ChecklistRequest'];
 export type ChecklistResponse = Schemas['ChecklistResponse'];
 export type ChecklistItemRequest = Schemas['ChecklistItemRequest'];

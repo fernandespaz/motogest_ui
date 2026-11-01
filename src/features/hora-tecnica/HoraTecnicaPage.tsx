@@ -7,9 +7,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useAuditoriaHoraTecnica, useCategoriasHoraTecnica } from '@/hooks/useHoraTecnica';
 import { CategoriaHoraTecnicaForm } from './CategoriaHoraTecnicaForm';
+import { ComissaoConfigCard } from './ComissaoConfigCard';
 import { AuditoriaFinanceiraCard } from '@/features/shared/AuditoriaFinanceiraCard';
 
-type Aba = 'categorias' | 'historico';
+type Aba = 'categorias' | 'comissoes' | 'historico';
 
 /**
  * Fallback da rota pra quem não tem HORA_TECNICA_GERENCIAR (ex.: Consultor
@@ -59,6 +60,7 @@ export function HoraTecnicaPage() {
         <Tabs
           tabs={[
             { key: 'categorias', label: 'Categorias' },
+            { key: 'comissoes', label: 'Comissões' },
             { key: 'historico', label: 'Histórico' },
           ]}
           active={aba}
@@ -66,6 +68,9 @@ export function HoraTecnicaPage() {
         />
         <TabPanel hidden={aba !== 'categorias'}>
           <CategoriaHoraTecnicaForm categorias={data} />
+        </TabPanel>
+        <TabPanel hidden={aba !== 'comissoes'}>
+          <ComissaoConfigCard />
         </TabPanel>
         <TabPanel hidden={aba !== 'historico'}>
           <AuditoriaFinanceiraCard data={auditoria.data} isLoading={auditoria.isLoading} page={pagina} onPageChange={setPagina} />
