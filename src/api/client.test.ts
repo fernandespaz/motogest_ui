@@ -186,12 +186,28 @@ describe('sessão por cookie HttpOnly', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
+  it('tenta a renovação uma segunda vez (outra aba pode ter rotacionado o refresh) antes de desistir', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    const refresh = vi
+      .spyOn(axios, 'post')
+      .mockRejectedValueOnce(new Error('401 por corrida entre abas'))
+      .mockResolvedValueOnce({ data: {} });
+    vi.spyOn(apiClient, 'request').mockResolvedValue({ data: 'ok', status: 200 } as never);
+
+    const result = await responseInterceptorRejection()(makeAxiosError({}, 401));
+
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ data: 'ok', status: 200 });
+    expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
   it('desloga e redireciona quando a renovação falha', async () => {
     useAuthStore.setState({ isAuthenticated: true });
-    vi.spyOn(axios, 'post').mockRejectedValue(new Error('401'));
+    const refresh = vi.spyOn(axios, 'post').mockRejectedValue(new Error('401'));
 
     await expect(responseInterceptorRejection()(makeAxiosError({}, 401))).rejects.toBeTruthy();
 
+    expect(refresh).toHaveBeenCalledTimes(2); // tentativa + uma nova tentativa
     expect(window.location.assign).toHaveBeenCalledWith('/login?sessao=expirada');
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
   });

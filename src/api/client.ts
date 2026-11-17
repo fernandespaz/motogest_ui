@@ -35,12 +35,24 @@ function forceReauth(requestUrl?: string) {
 // como roubo (revoga a sessão). Requisições concorrentes com 401 compartilham a mesma promessa.
 let renovacaoEmAndamento: Promise<void> | null = null;
 
+// A promessa acima só vale por aba. Com várias abas (o cookie é compartilhado) outra aba pode ter acabado de
+// rotacionar o refresh token: a nossa chamada falha (401/409) mas o cookie novo já está no navegador — por isso uma
+// única nova tentativa depois de uma pausa curta, antes de dar a sessão por perdida.
+const PAUSA_ANTES_DA_SEGUNDA_TENTATIVA_MS = 500;
+
+function chamarRefresh() {
+  return axios.post(API_ROUTES.auth.refresh, null, {
+    baseURL: apiClient.defaults.baseURL,
+    withCredentials: true,
+    headers: { [HEADER_CLIENTE]: VALOR_CLIENTE_WEB },
+  });
+}
+
 function renovarSessao(): Promise<void> {
-  renovacaoEmAndamento ??= axios
-    .post(API_ROUTES.auth.refresh, null, {
-      baseURL: apiClient.defaults.baseURL,
-      withCredentials: true,
-      headers: { [HEADER_CLIENTE]: VALOR_CLIENTE_WEB },
+  renovacaoEmAndamento ??= chamarRefresh()
+    .catch(async () => {
+      await new Promise((resolve) => setTimeout(resolve, PAUSA_ANTES_DA_SEGUNDA_TENTATIVA_MS));
+      return chamarRefresh();
     })
     .then(() => undefined)
     .finally(() => {
