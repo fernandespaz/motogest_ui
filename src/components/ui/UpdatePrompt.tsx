@@ -6,6 +6,22 @@ import { Button } from './Button';
 // Sem isso o navegador só checa ao navegar/abrir a página (no máximo 1x/24h).
 const INTERVALO_CHECAGEM_MS = 10 * 60 * 1000;
 
+// Plano B do recarregamento: o vite-plugin-pwa só recarrega a página quando o workbox dispara o evento 'controlling' com
+// isUpdate — o que não acontece se a versão nova já estava esperando quando a página abriu (ex.: o aviso foi ignorado
+// antes). Nesse caso o SW novo assume, mas a tela fica parada no JS antigo e o botão parece não fazer nada.
+const PRAZO_RECARGA_MS = 2000;
+
+function recarregarQuandoONovoSwAssumir() {
+  let recarregou = false;
+  const recarregar = () => {
+    if (recarregou) return;
+    recarregou = true;
+    window.location.reload();
+  };
+  navigator.serviceWorker?.addEventListener('controllerchange', recarregar, { once: true });
+  window.setTimeout(recarregar, PRAZO_RECARGA_MS);
+}
+
 export function UpdatePrompt() {
   const {
     needRefresh: [precisaAtualizar],
@@ -30,7 +46,13 @@ export function UpdatePrompt() {
     >
       <RefreshCw size={18} className="shrink-0 text-brand-600" />
       <p className="flex-1 text-sm font-medium text-ink">Nova versão disponível.</p>
-      <Button size="sm" onClick={() => void updateServiceWorker(true)}>
+      <Button
+        size="sm"
+        onClick={() => {
+          recarregarQuandoONovoSwAssumir();
+          void updateServiceWorker(true);
+        }}
+      >
         Atualizar
       </Button>
     </div>

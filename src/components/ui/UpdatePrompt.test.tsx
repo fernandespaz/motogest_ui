@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UpdatePrompt } from './UpdatePrompt';
 
 const updateServiceWorker = vi.fn();
@@ -31,6 +31,50 @@ describe('UpdatePrompt', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Nova versão disponível');
     await userEvent.click(screen.getByRole('button', { name: 'Atualizar' }));
     expect(updateServiceWorker).toHaveBeenCalledWith(true);
+  });
+
+  describe('recarregamento depois de "Atualizar"', () => {
+    const reload = vi.fn();
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      reload.mockClear();
+      vi.stubGlobal('location', { ...window.location, reload });
+      precisaAtualizar = true;
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    it('recarrega mesmo quando o workbox não avisa que o SW novo assumiu (plano B de 2 s)', () => {
+      render(<UpdatePrompt />);
+      act(() => screen.getByRole('button', { name: 'Atualizar' }).click());
+      expect(updateServiceWorker).toHaveBeenCalledWith(true);
+      expect(reload).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+
+    it('recarrega uma vez só quando o controllerchange chega antes do prazo', () => {
+      const listeners: Array<() => void> = [];
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        serviceWorker: { addEventListener: (_: string, fn: () => void) => listeners.push(fn) },
+      });
+      render(<UpdatePrompt />);
+      act(() => screen.getByRole('button', { name: 'Atualizar' }).click());
+
+      act(() => listeners[0]());
+      act(() => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('checa versão nova periodicamente', () => {
