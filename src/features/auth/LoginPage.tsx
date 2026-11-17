@@ -185,7 +185,9 @@ export function LoginPage() {
                 variant="dark"
                 label="Oficina"
                 icon={Building2}
-                autoComplete="organization"
+                // "off": com "organization" o navegador preenche o campo sozinho com o nome de uma empresa do perfil
+                // de endereço, e a oficina errada bloqueava o login. O valor certo vem do "lembrar" ou do link de acesso.
+                autoComplete="off"
                 autoCapitalize="characters"
                 placeholder="Código da oficina (ex.: RAMTEC)"
                 hint="Em branco, entramos pelo seu e-mail."
