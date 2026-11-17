@@ -157,7 +157,7 @@ Se o backend mudar um path, o ajuste é em um único arquivo — nenhuma busca p
 
 ### Autenticação e sessão
 
-- O login (`POST /auth/login`) exige `cnpj + email + senha` — não existe usuário "root" nem seletor de tenant: **um login = uma oficina**, o isolamento é feito pelo backend via JWT.
+- O login (`POST /auth/login`) é **só por códigos**: `oficina` (código da oficina) + `identificador` (código do usuário) + `senha`. Os códigos são números aleatórios de 7 dígitos, gerados pelo sistema e **não editáveis** (Dados da oficina e cadastro de usuário só mostram). Não há login por e-mail/CNPJ nem escolha de oficina: **um login = uma oficina**. "Lembrar os códigos neste dispositivo" guarda só os dois códigos em `localStorage` (`lib/loginOficina.ts`) — **nunca a senha**; o link de acesso `/login?oficina=CÓDIGO` pré-preenche a oficina. Ao cadastrar uma oficina no console root (`/root/oficinas`), `NovaOficinaModal` mostra o código da oficina e o do administrador devolvidos pela API (`codigoAcesso`, `adminCodigo`).
 - `authStore` (Zustand + `persist`) guarda o token e os dados da sessão no `localStorage`. Em todo `login()`/`logout()`, o store **limpa completamente** o `localStorage` e o cache do TanStack Query (`queryClient.clear()`) antes de aplicar o novo estado — isso evita que dados de uma oficina vazem para a sessão de outra ao trocar de conta no mesmo navegador.
 - `RequireAuth` protege as rotas autenticadas; `RequirePermission` (baseado nos códigos de permissão retornados no login) esconde ações que o perfil do usuário não tem — é só uma camada de UX, a autorização real é sempre revalidada pelo backend (respostas 403 caem no interceptor do Axios).
 
