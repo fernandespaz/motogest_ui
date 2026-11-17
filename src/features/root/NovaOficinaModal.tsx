@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { extractErrorMessage } from '@/api/client';
 import { toast } from '@/store/toastStore';
 import { isSenhaForte, SENHA_FRACA_MSG, SENHA_HINT, SENHA_NAO_CONFERE_MSG } from '@/lib/senha';
 import { useCriarOficinaAdmin } from '@/hooks/useOficinasAdmin';
+import { linkDeAcesso } from '@/lib/loginOficina';
 
 const schema = z
   .object({
@@ -48,6 +49,8 @@ export function NovaOficinaModal({
   adminToken: string;
 }) {
   const criar = useCriarOficinaAdmin(adminToken);
+  // Códigos gerados pelo sistema: aparecem UMA vez, logo depois do cadastro, para serem passados ao cliente.
+  const [cadastrada, setCadastrada] = useState<{ nome: string; oficina: string; admin: string } | null>(null);
   const {
     control,
     register,
@@ -61,17 +64,54 @@ export function NovaOficinaModal({
   // Cancelar no meio do preenchimento deixava os campos preenchidos quando o
   // modal reabria pra cadastrar a próxima oficina.
   useEffect(() => {
-    if (open) reset();
+    if (open) {
+      reset();
+      setCadastrada(null);
+    }
   }, [open, reset]);
 
   async function onSubmit(values: FormValues) {
     try {
-      await criar.mutateAsync(values);
+      const criada = await criar.mutateAsync(values);
       toast.success('Oficina cadastrada com sucesso.');
-      onClose();
+      setCadastrada({
+        nome: criada.nomeFantasia || criada.razaoSocial || 'Oficina',
+        oficina: criada.codigoAcesso ?? '',
+        admin: criada.adminCodigo ?? '',
+      });
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível cadastrar a oficina.'));
     }
+  }
+
+  if (cadastrada) {
+    return (
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Oficina cadastrada"
+        footer={<Button onClick={onClose}>Concluir</Button>}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-ink-muted">
+            <strong className="text-ink">{cadastrada.nome}</strong> foi cadastrada. Passe estes códigos ao cliente: eles são
+            gerados pelo sistema e <strong className="text-ink">não podem ser alterados</strong>. Quem entra usa o código da
+            oficina, o código do usuário e a senha definida no cadastro.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <CodigoGerado rotulo="Código da oficina" valor={cadastrada.oficina} />
+            <CodigoGerado rotulo="Código do administrador" valor={cadastrada.admin} />
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void copiar(linkDeAcesso(cadastrada.oficina), 'Link de acesso copiado.')}
+          >
+            Copiar link de acesso
+          </Button>
+        </div>
+      </Modal>
+    );
   }
 
   return (
@@ -124,7 +164,7 @@ export function NovaOficinaModal({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="Nome" required error={errors.adminNome?.message} {...register('adminNome')} />
             <Input
-              label="E-mail de acesso"
+              label="E-mail do administrador"
               type="email"
               required
               error={errors.adminEmail?.message}
@@ -149,5 +189,30 @@ export function NovaOficinaModal({
         </div>
       </form>
     </Modal>
+  );
+}
+
+async function copiar(texto: string, aviso: string) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    toast.success(aviso);
+  } catch {
+    toast.error('Não foi possível copiar. Anote: ' + texto);
+  }
+}
+
+function CodigoGerado({ rotulo, valor }: { rotulo: string; valor: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-alt p-3">
+      <p className="text-xs font-medium text-ink-muted">{rotulo}</p>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <span className="font-mono text-2xl font-semibold tracking-wider text-ink" data-testid={'codigo-' + rotulo}>
+          {valor || '—'}
+        </span>
+        <Button type="button" variant="secondary" size="sm" disabled={!valor} onClick={() => void copiar(valor, 'Código copiado.')}>
+          Copiar
+        </Button>
+      </div>
+    </div>
   );
 }

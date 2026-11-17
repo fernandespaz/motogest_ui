@@ -1,7 +1,5 @@
-import axios from 'axios';
-
 /**
- * "Lembrar oficina e usuário neste dispositivo". Guarda SÓ o que não é segredo (código da oficina e do usuário):
+ * "Lembrar oficina e usuário neste dispositivo". Guarda SÓ os códigos de acesso (da oficina e do usuário):
  * a senha nunca é gravada pelo app — quem a guarda, se o usuário quiser, é o gerenciador de senhas do navegador
  * (por isso os campos do login usam autoComplete="username"/"current-password"). Gravar senha em localStorage
  * deixaria qualquer falha de XSS lê-la em texto puro.
@@ -44,25 +42,4 @@ export function limparLoginLembrado() {
 /** Link que abre o login já com a oficina preenchida (o admin passa para a equipe, por mensagem ou QR code). */
 export function linkDeAcesso(codigoOficina: string | undefined, origem: string = window.location.origin): string {
   return codigoOficina ? `${origem}/login?oficina=${encodeURIComponent(codigoOficina)}` : `${origem}/login`;
-}
-
-export interface OpcaoOficina {
-  codigo: string;
-  nome: string;
-}
-
-export const CODIGO_ESCOLHER_OFICINA = 'ESCOLHER_OFICINA';
-
-/**
- * Login por e-mail cuja senha confere em mais de uma oficina: o back-end responde 409 com codigo ESCOLHER_OFICINA e as
- * oficinas em `details`, no formato "CODIGO|Nome". Devolve a lista, ou null se o erro for outro.
- */
-export function opcoesDeOficinaDoErro(error: unknown): OpcaoOficina[] | null {
-  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
-  const data = error.response.data as { codigo?: string; details?: string[] } | undefined;
-  if (data?.codigo !== CODIGO_ESCOLHER_OFICINA || !Array.isArray(data.details)) return null;
-  return data.details.map((d) => {
-    const [codigo, ...resto] = d.split('|');
-    return { codigo, nome: resto.join('|') || codigo };
-  });
 }

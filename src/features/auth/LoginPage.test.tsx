@@ -17,8 +17,8 @@ const RESPOSTA = {
   email: '',
   perfil: 'Mecânico',
   permissoes: [],
-  usuarioCodigo: '0003',
-  oficinaCodigo: 'RAMTEC',
+  usuarioCodigo: '7351948',
+  oficinaCodigo: '4829163',
 };
 
 function renderLogin(url = '/login') {
@@ -29,19 +29,21 @@ function renderLogin(url = '/login') {
   );
 }
 
-async function preencher({ oficina, usuario, senha }: { oficina?: string; usuario: string; senha: string }) {
+async function preencher({ oficina, usuario, senha }: { oficina?: string; usuario?: string; senha?: string }) {
   if (oficina !== undefined) {
-    const campo = screen.getByLabelText(/^Oficina/);
+    const campo = screen.getByLabelText(/Código da oficina/);
     await userEvent.clear(campo);
     if (oficina) await userEvent.type(campo, oficina);
   }
-  const campoUsuario = screen.getByLabelText(/Usuário/);
-  await userEvent.clear(campoUsuario);
-  await userEvent.type(campoUsuario, usuario);
-  await userEvent.type(screen.getByLabelText(/Senha/), senha);
+  if (usuario !== undefined) {
+    const campo = screen.getByLabelText(/Código do usuário/);
+    await userEvent.clear(campo);
+    if (usuario) await userEvent.type(campo, usuario);
+  }
+  if (senha !== undefined) await userEvent.type(screen.getByLabelText(/Senha/), senha);
 }
 
-describe('LoginPage — oficina + usuário', () => {
+describe('LoginPage — só por códigos (oficina + usuário)', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -49,102 +51,84 @@ describe('LoginPage — oficina + usuário', () => {
     useAuthStore.setState({ isAuthenticated: false, loginEm: null });
   });
 
-  it('envia oficina, usuário e senha', async () => {
+  it('não tem campo de e-mail nem de CNPJ: só os dois códigos e a senha', () => {
+    renderLogin();
+
+    expect(screen.getByLabelText(/Código da oficina/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Código do usuário/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Senha/)).toBeInTheDocument();
+    expect(screen.queryByText(/e-mail/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CNPJ/i)).not.toBeInTheDocument();
+  });
+
+  it('envia o código da oficina, o do usuário e a senha', async () => {
     vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
     renderLogin();
 
-    await preencher({ oficina: 'ramtec', usuario: '0003', senha: 'segredo' });
+    await preencher({ oficina: '4829163', usuario: '7351948', senha: 'segredo' });
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
     await waitFor(() =>
-      expect(authApi.login).toHaveBeenCalledWith({ identificador: '0003', senha: 'segredo', oficina: 'ramtec' }),
+      expect(authApi.login).toHaveBeenCalledWith({ identificador: '7351948', senha: 'segredo', oficina: '4829163' }),
     );
   });
 
-  it('espaços no código da oficina são descartados antes de enviar', async () => {
-    vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
+  it('exige os dois códigos: sem eles nem chama a API', async () => {
     renderLogin();
 
-    await preencher({ oficina: ' ram tec ', usuario: '0003', senha: 'segredo' });
+    await preencher({ oficina: '', usuario: '', senha: 'segredo' });
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
-    await waitFor(() =>
-      expect(authApi.login).toHaveBeenCalledWith({ identificador: '0003', senha: 'segredo', oficina: 'ramtec' }),
-    );
+    expect(await screen.findByText('Informe o código da oficina')).toBeInTheDocument();
+    expect(screen.getByText('Informe o código do usuário')).toBeInTheDocument();
+    expect(authApi.login).not.toHaveBeenCalled();
   });
 
-  it('com a oficina em branco entra só por e-mail (a oficina nem vai no pedido)', async () => {
+  it('espaços digitados ou colados nos códigos são descartados antes de enviar', async () => {
     vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
     renderLogin();
 
-    await preencher({ oficina: '', usuario: 'diego@ramtec.com.br', senha: 'segredo' });
+    await preencher({ oficina: ' 482 9163 ', usuario: ' 735 1948', senha: 'segredo' });
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
     await waitFor(() =>
-      expect(authApi.login).toHaveBeenCalledWith({ identificador: 'diego@ramtec.com.br', senha: 'segredo' }),
+      expect(authApi.login).toHaveBeenCalledWith({ identificador: '7351948', senha: 'segredo', oficina: '4829163' }),
     );
   });
 
   it('o link de acesso (?oficina=) já vem preenchido, e vale mais que o lembrado', () => {
-    localStorage.setItem('motogest:login-lembrado', JSON.stringify({ oficina: 'OUTRA', usuario: '0001' }));
-    renderLogin('/login?oficina=ramtec');
+    localStorage.setItem('motogest:login-lembrado', JSON.stringify({ oficina: '1111111', usuario: '2222222' }));
+    renderLogin('/login?oficina=4829163');
 
-    expect(screen.getByLabelText(/^Oficina/)).toHaveValue('RAMTEC');
-    expect(screen.getByLabelText(/Usuário/)).toHaveValue('0001');
+    expect(screen.getByLabelText(/Código da oficina/)).toHaveValue('4829163');
+    expect(screen.getByLabelText(/Código do usuário/)).toHaveValue('2222222');
   });
 
-  it('lembrar: grava oficina e usuário confirmados pelo servidor, e NUNCA a senha', async () => {
+  it('lembrar: grava os dois códigos confirmados pelo servidor, e NUNCA a senha', async () => {
     vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
     renderLogin();
 
-    await preencher({ oficina: 'ramtec', usuario: '3', senha: 'segredo-super' });
-    await userEvent.click(screen.getByLabelText(/Lembrar oficina e usuário/));
+    await preencher({ oficina: '4829163', usuario: '7351948', senha: 'segredo-super' });
+    await userEvent.click(screen.getByLabelText(/Lembrar os códigos/));
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
     await waitFor(() => expect(localStorage.getItem('motogest:login-lembrado')).not.toBeNull());
-    expect(JSON.parse(localStorage.getItem('motogest:login-lembrado')!)).toEqual({ oficina: 'RAMTEC', usuario: '0003' });
+    expect(JSON.parse(localStorage.getItem('motogest:login-lembrado')!)).toEqual({ oficina: '4829163', usuario: '7351948' });
     expect(JSON.stringify(Object.values(localStorage))).not.toContain('segredo-super');
     expect(JSON.stringify(Object.values(sessionStorage))).not.toContain('segredo-super');
   });
 
   it('sem marcar "lembrar", esquece o que estava lembrado', async () => {
-    localStorage.setItem('motogest:login-lembrado', JSON.stringify({ oficina: 'RAMTEC', usuario: '0001' }));
+    localStorage.setItem('motogest:login-lembrado', JSON.stringify({ oficina: '4829163', usuario: '7351948' }));
     vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
     renderLogin();
 
-    await userEvent.click(screen.getByLabelText(/Lembrar oficina e usuário/)); // vinha marcado: desmarca
+    await userEvent.click(screen.getByLabelText(/Lembrar os códigos/)); // vinha marcado: desmarca
     await userEvent.type(screen.getByLabelText(/Senha/), 'segredo');
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
     await waitFor(() => expect(authApi.login).toHaveBeenCalled());
     await waitFor(() => expect(localStorage.getItem('motogest:login-lembrado')).toBeNull());
-  });
-
-  it('e-mail em mais de uma oficina: mostra a escolha e repete o login com a oficina escolhida', async () => {
-    const conflito = new AxiosError('409');
-    conflito.response = {
-      status: 409,
-      data: { codigo: 'ESCOLHER_OFICINA', details: ['RAMTEC|Ram Tec', 'RAMTECT|Ram Tec Teste'] },
-      statusText: '',
-      headers: {},
-      config: {} as never,
-    } as never;
-    vi.mocked(authApi.login).mockRejectedValueOnce(conflito).mockResolvedValueOnce(RESPOSTA as never);
-    renderLogin();
-
-    await preencher({ oficina: '', usuario: 'diego@ramtec.com.br', senha: 'segredo' });
-    await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
-
-    expect(await screen.findByText('Em qual oficina deseja entrar?')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: /Ram Tec Teste/ }));
-
-    await waitFor(() =>
-      expect(authApi.login).toHaveBeenLastCalledWith({
-        identificador: 'diego@ramtec.com.br',
-        senha: 'segredo',
-        oficina: 'RAMTECT',
-      }),
-    );
   });
 
   it('credenciais inválidas: mensagem genérica, sem revelar o que falhou', async () => {
@@ -153,10 +137,9 @@ describe('LoginPage — oficina + usuário', () => {
     vi.mocked(authApi.login).mockRejectedValue(invalido);
     renderLogin();
 
-    await preencher({ oficina: 'RAMTEC', usuario: '0009', senha: 'errada' });
+    await preencher({ oficina: '4829163', usuario: '1234567', senha: 'errada' });
     await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
 
     expect(await screen.findByText('Credenciais invalidas')).toBeInTheDocument();
-    expect(screen.queryByText('Em qual oficina deseja entrar?')).not.toBeInTheDocument();
   });
 });

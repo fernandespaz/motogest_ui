@@ -16,16 +16,14 @@ import { getLogoFixadaParaLogin, getNomeFixadoParaLogin } from '@/hooks/useOfici
 import {
   lerLoginLembrado,
   limparLoginLembrado,
-  opcoesDeOficinaDoErro,
   salvarLoginLembrado,
-  type OpcaoOficina,
 } from '@/lib/loginOficina';
 import { WorkshopIllustration } from './WorkshopIllustration';
 
 const schema = z.object({
-  // código de acesso (ou CNPJ) da oficina; em branco, o login por e-mail descobre a oficina pela senha
-  oficina: z.string().optional(),
-  identificador: z.string().min(1, 'Informe o código do usuário ou o e-mail'),
+  // Só códigos (numéricos, gerados pelo sistema): o da oficina e o do usuário. Não há login por e-mail.
+  oficina: z.string().min(1, 'Informe o código da oficina'),
+  identificador: z.string().min(1, 'Informe o código do usuário'),
   senha: z.string().min(1, 'Informe a senha'),
   lembrar: z.boolean().optional(),
 });
@@ -40,7 +38,6 @@ const MENSAGENS_SESSAO: Record<string, string> = {
 
 export function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
-  const [opcoesOficina, setOpcoesOficina] = useState<OpcaoOficina[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
@@ -56,28 +53,27 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
-    getValues,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      oficina: searchParams.get('oficina')?.toUpperCase() ?? lembrado?.oficina ?? '',
+      oficina: searchParams.get('oficina') ?? lembrado?.oficina ?? '',
       identificador: lembrado?.usuario ?? '',
       lembrar: lembrado !== null,
     },
   });
 
-  async function entrar(values: FormValues, oficinaEscolhida?: string) {
+  async function entrar(values: FormValues) {
     setServerError(null);
-    setOpcoesOficina(null);
     setSubmitting(true);
-    // o código da oficina nunca tem espaço (só letras e números): descarta qualquer um digitado, no meio ou nas pontas
-    const oficina = (oficinaEscolhida ?? values.oficina ?? '').replace(/\s+/g, '');
+    // os códigos nunca têm espaço: descarta qualquer um digitado ou colado, no meio ou nas pontas
+    const oficina = values.oficina.replace(/\s+/g, '');
+    const codigoUsuario = values.identificador.replace(/\s+/g, '');
     try {
       const response = await authApi.login({
-        identificador: values.identificador.trim(),
+        identificador: codigoUsuario,
         senha: values.senha,
-        ...(oficina ? { oficina } : {}),
+        oficina,
       });
       login(response);
       // sessão única: as outras abas deste navegador (cookie compartilhado) caem, a mais nova vence
@@ -86,7 +82,7 @@ export function LoginPage() {
         // só oficina e usuário (nunca a senha — ver lib/loginOficina); o que o servidor confirmou vale mais que o digitado
         salvarLoginLembrado({
           oficina: response.oficinaCodigo ?? oficina,
-          usuario: response.usuarioCodigo ?? values.identificador.trim(),
+          usuario: response.usuarioCodigo ?? codigoUsuario,
         });
       } else {
         limparLoginLembrado();
@@ -96,12 +92,7 @@ export function LoginPage() {
         getLandingPath(useAuthStore.getState().hasPermission, useAuthStore.getState().perfil);
       navigate(redirectTo, { replace: true });
     } catch (error) {
-      const opcoes = opcoesDeOficinaDoErro(error);
-      if (opcoes) {
-        setOpcoesOficina(opcoes);
-      } else {
-        setServerError(extractErrorMessage(error, 'Oficina, usuário ou senha inválidos.'));
-      }
+      setServerError(extractErrorMessage(error, 'Código da oficina, código do usuário ou senha inválidos.'));
     } finally {
       setSubmitting(false);
     }
@@ -184,24 +175,21 @@ export function LoginPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
               <Input
                 variant="dark"
-                label="Oficina"
+                label="Código da oficina"
                 icon={Building2}
-                // "off": com "organization" o navegador preenche o campo sozinho com o nome de uma empresa do perfil
-                // de endereço, e a oficina errada bloqueava o login. O valor certo vem do "lembrar" ou do link de acesso.
+                // "off": o navegador não deve preencher sozinho com outro valor; o certo vem do "lembrar" ou do link de acesso
                 autoComplete="off"
-                autoCapitalize="characters"
-                placeholder="Código da oficina (ex.: RAMTEC)"
-                hint="Em branco, entramos pelo seu e-mail."
+                placeholder="Ex.: 4829163"
                 error={errors.oficina?.message}
+                required
                 {...register('oficina')}
               />
               <Input
                 variant="dark"
-                label="Usuário"
+                label="Código do usuário"
                 icon={IdCard}
                 autoComplete="username"
-                autoCapitalize="none"
-                placeholder="Código (0001) ou e-mail"
+                placeholder="Ex.: 7351948"
                 error={errors.identificador?.message}
                 required
                 {...register('identificador')}
@@ -223,28 +211,8 @@ export function LoginPage() {
                   className="h-4 w-4 rounded border-white/30 bg-transparent accent-brand-600"
                   {...register('lembrar')}
                 />
-                Lembrar oficina e usuário neste dispositivo
+                Lembrar os códigos neste dispositivo
               </label>
-
-              {opcoesOficina && (
-                <div role="group" aria-label="Escolha a oficina" className="rounded-lg border border-white/15 bg-white/[0.04] p-3">
-                  <p className="mb-2 text-sm font-medium text-slate-200">Em qual oficina deseja entrar?</p>
-                  <div className="flex flex-col gap-2">
-                    {opcoesOficina.map((o) => (
-                      <button
-                        key={o.codigo}
-                        type="button"
-                        disabled={submitting}
-                        onClick={() => void entrar(getValues(), o.codigo)}
-                        className="flex items-center justify-between rounded-lg border border-white/15 px-3 py-2 text-left text-sm text-white transition hover:border-brand-500 hover:bg-white/[0.06] disabled:opacity-60"
-                      >
-                        <span className="font-medium">{o.nome}</span>
-                        <span className="text-xs text-slate-400">{o.codigo}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {serverError && (
                 <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm font-medium text-red-300">

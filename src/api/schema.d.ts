@@ -2858,7 +2858,6 @@ export interface components {
             jornadaDiariaMinutos?: number;
             /** Format: int32 */
             jornadaSabadoMinutos?: number;
-            codigoAcesso?: string;
         };
         OficinaResponse: {
             /** Format: int64 */
@@ -2883,6 +2882,7 @@ export interface components {
             /** Format: int32 */
             jornadaSabadoMinutos?: number;
             codigoAcesso?: string;
+            adminCodigo?: string;
         };
         ModeloVeiculoResponse: {
             /** Format: int64 */
@@ -3698,7 +3698,7 @@ export interface components {
         LoginRequest: {
             identificador: string;
             senha: string;
-            oficina?: string;
+            oficina: string;
         };
         OficinaRegistrationRequest: {
             razaoSocial: string;

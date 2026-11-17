@@ -38,19 +38,19 @@ export function AbaAcesso({
   } = useFormContext<FormValues>();
   return (
     <>
-      <Secao titulo="Quem é" descricao="Dados usados para entrar no sistema.">
+      <Secao titulo="Quem é" descricao="Identificação do colaborador. O acesso ao sistema é pelos códigos, não pelo e-mail.">
         <Grid>
           <Col span={6}>
             <Input label="Nome" required error={errors.nome?.message} {...register('nome')} />
           </Col>
           <Col span={6}>
-            <Input label="E-mail de acesso" type="email" required error={errors.email?.message} {...register('email')} />
+            <Input label="E-mail" type="email" required error={errors.email?.message} {...register('email')} />
           </Col>
           <Col span={6}>
             <Input
               label="Código de login"
               value={isEditing ? (codigo ?? '—') : 'Gerado ao salvar'}
-              hint="Automático e fixo. O colaborador digita este código com a oficina para entrar, se não usar e-mail."
+              hint="Gerado pelo sistema e não pode ser alterado. O colaborador entra com o código da oficina, este código e a senha."
               readOnly
               disabled
             />

@@ -1,12 +1,5 @@
-import { AxiosError } from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { lerLoginLembrado, limparLoginLembrado, opcoesDeOficinaDoErro, salvarLoginLembrado } from './loginOficina';
-
-function erro(status: number, data: unknown): AxiosError {
-  const e = new AxiosError('falhou');
-  e.response = { status, data, statusText: '', headers: {}, config: {} as never } as never;
-  return e;
-}
+import { lerLoginLembrado, limparLoginLembrado, linkDeAcesso, salvarLoginLembrado } from './loginOficina';
 
 describe('login lembrado', () => {
   beforeEach(() => localStorage.clear());
@@ -43,18 +36,9 @@ describe('login lembrado', () => {
   });
 });
 
-describe('opcoesDeOficinaDoErro', () => {
-  it('lê as oficinas do 409 ESCOLHER_OFICINA', () => {
-    const e = erro(409, { codigo: 'ESCOLHER_OFICINA', details: ['RAMTEC|Ram Tec', 'RAMTEC2|Ram Tec | Teste'] });
-    expect(opcoesDeOficinaDoErro(e)).toEqual([
-      { codigo: 'RAMTEC', nome: 'Ram Tec' },
-      { codigo: 'RAMTEC2', nome: 'Ram Tec | Teste' },
-    ]);
-  });
-
-  it('devolve null para qualquer outro erro', () => {
-    expect(opcoesDeOficinaDoErro(erro(401, { message: 'x' }))).toBeNull();
-    expect(opcoesDeOficinaDoErro(erro(409, { codigo: 'LIMITE_USUARIOS_EXCEDIDO' }))).toBeNull();
-    expect(opcoesDeOficinaDoErro(new Error('rede'))).toBeNull();
+describe('linkDeAcesso', () => {
+  it('abre o login já com o código da oficina', () => {
+    expect(linkDeAcesso('4829163', 'https://app.exemplo.com')).toBe('https://app.exemplo.com/login?oficina=4829163');
+    expect(linkDeAcesso(undefined, 'https://app.exemplo.com')).toBe('https://app.exemplo.com/login');
   });
 });

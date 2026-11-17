@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,11 +35,6 @@ const schema = z.object({
   cidade: z.string().optional(),
   uf: z.string().max(2).optional(),
   cep: z.string().optional(),
-  // código de acesso (login e link da oficina): 3 a 12 letras/números; o servidor também valida e garante a unicidade
-  codigoAcesso: z
-    .string()
-    .transform((v) => v.trim().toUpperCase())
-    .refine((v) => /^[A-Z0-9]{3,12}$/.test(v), 'Use de 3 a 12 letras ou números, sem espaços'),
   logoUrl: z
     .string()
     .max(500, 'A URL deve ter no máximo 500 caracteres')
@@ -56,7 +51,6 @@ export function OficinaDadosTab() {
   const enviarLogo = useEnviarLogoOficina();
   const removerLogo = useRemoverLogoOficina();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [editandoCodigo, setEditandoCodigo] = useState(false);
 
   const {
     register,
@@ -78,7 +72,6 @@ export function OficinaDadosTab() {
         cidade: oficina.cidade ?? '',
         uf: oficina.uf ?? '',
         cep: oficina.cep ?? '',
-        codigoAcesso: oficina.codigoAcesso ?? '',
         logoUrl: oficina.logoUrl ?? '',
       });
     }
@@ -177,27 +170,13 @@ export function OficinaDadosTab() {
             <Input label="CNPJ" value={formatCnpj(oficina?.cnpj ?? '')} disabled />
             <div>
               <div className="flex items-end gap-2">
-                <Input
-                  label="Código de acesso"
-                  className="flex-1"
-                  readOnly={!editandoCodigo}
-                  required={editandoCodigo}
-                  error={errors.codigoAcesso?.message}
-                  {...register('codigoAcesso')}
-                />
+                <Input label="Código de acesso" className="flex-1" value={oficina?.codigoAcesso ?? ''} readOnly disabled />
                 <Button type="button" variant="secondary" onClick={copiarLinkDeAcesso} disabled={!oficina?.codigoAcesso}>
                   <Link2 size={16} /> Copiar link
                 </Button>
               </div>
               <p className="mt-1 text-xs text-ink-muted">
-                Gerado a partir do nome da oficina; é o que a equipe digita no login.{' '}
-                {editandoCodigo ? (
-                  'Se mudar, o link antigo deixa de valer.'
-                ) : (
-                  <button type="button" className="font-medium text-brand-600 hover:underline" onClick={() => setEditandoCodigo(true)}>
-                    Alterar
-                  </button>
-                )}
+                Gerado pelo sistema e não pode ser alterado. A equipe entra com este código, o código do usuário e a senha.
               </p>
             </div>
             <Input label="Razão social" required error={errors.razaoSocial?.message} {...register('razaoSocial')} />
