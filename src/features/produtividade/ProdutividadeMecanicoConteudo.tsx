@@ -19,17 +19,21 @@ export function ProdutividadeMecanicoConteudo({
   mes,
   atualizando,
   linkOsBase = '/ordens-servico',
+  ocultarMaoDeObra = false,
 }: {
   data: ProdutividadeMecanicoDetalheResponse;
   mes: string;
   atualizando?: boolean;
   /** O mecânico abre a OS pela própria tela (/minhas-os/:id), não pela do consultor. */
   linkOsBase?: string;
+  /** Visão do próprio mecânico: esconde o card e a coluna de mão de obra. */
+  ocultarMaoDeObra?: boolean;
 }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const podeAbrirOs = hasPermission('ORDEM_SERVICO_READ');
 
-  const colunas: Column<OrdemServicoProdutividadeResponse>[] = [
+  // tipado ANTES do filter: o literal inferido alargaria `hideBelow` para string e quebraria o build (tsc -b)
+  const todasAsColunas: Column<OrdemServicoProdutividadeResponse>[] = [
     {
       header: 'OS',
       render: (o) =>
@@ -54,16 +58,18 @@ export function ProdutividadeMecanicoConteudo({
       ),
     },
     {
+      key: 'mao-de-obra',
       header: 'Mão de obra',
       render: (o) => <span className="font-medium text-ink">{formatCurrency(o.valorMaoDeObra)}</span>,
       className: 'text-right',
       hideBelow: 'sm',
     },
   ];
+  const colunas = todasAsColunas.filter((c) => !(ocultarMaoDeObra && c.key === 'mao-de-obra'));
 
   return (
     <div className={clsx('flex flex-col gap-5 transition-opacity', atualizando && 'opacity-60')}>
-      <IndicadoresMecanicoGrid indicadores={data.indicadores ?? {}} />
+      <IndicadoresMecanicoGrid indicadores={data.indicadores ?? {}} ocultarMaoDeObra={ocultarMaoDeObra} />
 
       <Card>
         <CardHeader title="Horas trabalhadas por dia" subtitle={formatMesReferencia(mes)} />

@@ -10,8 +10,8 @@ import {
 } from '@/lib/formatters';
 import { GradeIndicadores, type Indicador } from './IndicadoresConsultor';
 
-export function montarIndicadoresMecanico(ind: IndicadoresProdutividadeResponse): Indicador[] {
-  return [
+export function montarIndicadoresMecanico(ind: IndicadoresProdutividadeResponse, ocultarMaoDeObra = false): Indicador[] {
+  const indicadores: Indicador[] = [
     {
       chave: 'vendidas',
       icon: Clock,
@@ -64,20 +64,24 @@ export function montarIndicadoresMecanico(ind: IndicadoresProdutividadeResponse)
       formula: 'Valor dos serviços das OS concluídas no mês',
     },
   ];
+  return ocultarMaoDeObra ? indicadores.filter((i) => i.chave !== 'mao-de-obra') : indicadores;
 }
 
 export function IndicadoresMecanicoGrid({
   indicadores,
   atualizando,
+  ocultarMaoDeObra = false,
 }: {
   indicadores: IndicadoresProdutividadeResponse;
   atualizando?: boolean;
+  /** Visão do próprio mecânico: o valor da mão de obra não é exibido a ele. */
+  ocultarMaoDeObra?: boolean;
 }) {
   return (
     <GradeIndicadores
-      itens={montarIndicadoresMecanico(indicadores)}
+      itens={montarIndicadoresMecanico(indicadores, ocultarMaoDeObra)}
       atualizando={atualizando}
-      className="lg:grid-cols-3 2xl:grid-cols-6"
+      className={ocultarMaoDeObra ? 'lg:grid-cols-3 2xl:grid-cols-5' : 'lg:grid-cols-3 2xl:grid-cols-6'}
     />
   );
 }

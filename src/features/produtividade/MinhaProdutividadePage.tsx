@@ -43,7 +43,7 @@ export function MinhaProdutividadePage() {
       ) : isLoading || !data ? (
         <PageSpinner label="Calculando suas horas técnicas..." />
       ) : (
-        <ProdutividadeMecanicoConteudo data={data} mes={mes} atualizando={isPlaceholderData} linkOsBase="/minhas-os" />
+        <ProdutividadeMecanicoConteudo data={data} mes={mes} atualizando={isPlaceholderData} linkOsBase="/minhas-os" ocultarMaoDeObra />
       )}
     </div>
   );
