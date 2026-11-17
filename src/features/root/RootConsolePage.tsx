@@ -115,6 +115,7 @@ export function RootConsolePage() {
                 <div>
                   <p className="font-medium text-ink">{row.nomeFantasia || row.razaoSocial}</p>
                   <p className="text-xs text-ink-muted">{row.cnpj}</p>
+                  {row.codigoAcesso && <p className="font-mono text-xs text-ink-muted">Código: {row.codigoAcesso}</p>}
                 </div>
               ),
             },

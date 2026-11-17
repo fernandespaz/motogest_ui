@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Upload, Trash2 } from 'lucide-react';
+import { Upload, Trash2, Link2 } from 'lucide-react';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
@@ -19,6 +19,7 @@ import {
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { formatCnpj } from '@/lib/formatters';
+import { linkDeAcesso } from '@/lib/loginOficina';
 
 const LOGO_TIPOS_ACEITOS = ['image/png', 'image/jpeg', 'image/webp'];
 const LOGO_TAMANHO_MAXIMO = 5 * 1024 * 1024; // 5MB — mesmo limite validado no backend
@@ -34,6 +35,11 @@ const schema = z.object({
   cidade: z.string().optional(),
   uf: z.string().max(2).optional(),
   cep: z.string().optional(),
+  // código de acesso (login e link da oficina): 3 a 12 letras/números; o servidor também valida e garante a unicidade
+  codigoAcesso: z
+    .string()
+    .transform((v) => v.trim().toUpperCase())
+    .refine((v) => /^[A-Z0-9]{3,12}$/.test(v), 'Use de 3 a 12 letras ou números, sem espaços'),
   logoUrl: z
     .string()
     .max(500, 'A URL deve ter no máximo 500 caracteres')
@@ -71,6 +77,7 @@ export function OficinaDadosTab() {
         cidade: oficina.cidade ?? '',
         uf: oficina.uf ?? '',
         cep: oficina.cep ?? '',
+        codigoAcesso: oficina.codigoAcesso ?? '',
         logoUrl: oficina.logoUrl ?? '',
       });
     }
@@ -82,6 +89,16 @@ export function OficinaDadosTab() {
       toast.success('Dados da oficina atualizados.');
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível atualizar os dados.'));
+    }
+  }
+
+  async function copiarLinkDeAcesso() {
+    const link = linkDeAcesso(oficina?.codigoAcesso);
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Link de acesso copiado.');
+    } catch {
+      toast.error('Não foi possível copiar. Link: ' + link);
     }
   }
 
@@ -157,6 +174,19 @@ export function OficinaDadosTab() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="CNPJ" value={formatCnpj(oficina?.cnpj ?? '')} disabled />
+            <div className="flex items-end gap-2">
+              <Input
+                label="Código de acesso"
+                hint="O que a equipe digita no login. Se mudar, o link antigo deixa de valer."
+                className="flex-1"
+                required
+                error={errors.codigoAcesso?.message}
+                {...register('codigoAcesso')}
+              />
+              <Button type="button" variant="secondary" onClick={copiarLinkDeAcesso} disabled={!oficina?.codigoAcesso}>
+                <Link2 size={16} /> Copiar link
+              </Button>
+            </div>
             <Input label="Razão social" required error={errors.razaoSocial?.message} {...register('razaoSocial')} />
             <Input label="Nome fantasia" {...register('nomeFantasia')} />
             <Input label="E-mail" type="email" required error={errors.email?.message} {...register('email')} />

@@ -186,7 +186,7 @@ export function UsuarioFormModal({
                 noValidate
               >
                 <TabPanel hidden={aba !== 'acesso'}>
-                  <AbaAcesso isEditing={isEditing} perfis={perfis} />
+                  <AbaAcesso isEditing={isEditing} perfis={perfis} codigo={(detalhe.data ?? usuario)?.codigo} />
                 </TabPanel>
                 <TabPanel hidden={!podeVerRh || aba !== 'pessoais'}>
                   <AbaPessoais />

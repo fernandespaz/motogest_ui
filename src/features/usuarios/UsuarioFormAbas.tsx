@@ -1,5 +1,5 @@
 import { useFormContext } from 'react-hook-form';
-import { Checkbox, Input, Select } from '@/components/ui/Field';
+import { Checkbox, Input, ReadOnlyField, Select } from '@/components/ui/Field';
 import { SENHA_HINT } from '@/lib/senha';
 import { formatCep, formatCpf, formatPhone } from '@/lib/formatters';
 import { formatPis } from '@/lib/documentos';
@@ -22,7 +22,16 @@ function Opcoes({ rotulos }: { rotulos: Record<string, string> }) {
   );
 }
 
-export function AbaAcesso({ isEditing, perfis }: { isEditing: boolean; perfis?: { id?: number; nome?: string }[] }) {
+export function AbaAcesso({
+  isEditing,
+  perfis,
+  codigo,
+}: {
+  isEditing: boolean;
+  perfis?: { id?: number; nome?: string }[];
+  /** Código de login do usuário na oficina (0001...): gerado pelo sistema, só leitura. */
+  codigo?: string;
+}) {
   const {
     register,
     formState: { errors },
@@ -37,6 +46,11 @@ export function AbaAcesso({ isEditing, perfis }: { isEditing: boolean; perfis?: 
           <Col span={6}>
             <Input label="E-mail de acesso" type="email" required error={errors.email?.message} {...register('email')} />
           </Col>
+          {isEditing && (
+            <Col span={6}>
+              <ReadOnlyField label="Código de login" value={codigo ?? '—'} />
+            </Col>
+          )}
           <Col span={6}>
             <Select label="Perfil de acesso" required error={errors.perfilId?.message} {...register('perfilId')}>
               <option value={0}>Selecione...</option>

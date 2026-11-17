@@ -280,6 +280,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/comissoes/configuracao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Percentuais de comissao do mecanico e do consultor (unicos para todas as categorias) e a flag de produtos */
+        get: operations["consultarConfiguracao"];
+        /** Define os percentuais de comissao e se o consultor comissiona tambem sobre produtos (auditado) */
+        put: operations["atualizarConfiguracao"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/financeiro/capacidade-produtiva": {
         parameters: {
             query?: never;
@@ -1085,6 +1103,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/financeiro/comissoes/pagamento": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Paga comissoes pendentes de um funcionario: gera e baixa uma Conta a Pagar com o total */
+        post: operations["pagar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/descontos": {
         parameters: {
             query?: never;
@@ -1096,7 +1131,7 @@ export interface paths {
          * Lista solicitacoes de desconto da oficina corrente
          * @description Filtra por origem (origemTipo + origemId) ou por status; sem filtros, lista todas
          */
-        get: operations["listar_14"];
+        get: operations["listar_15"];
         put?: never;
         /**
          * Solicita desconto num item de Orcamento/OS
@@ -1151,7 +1186,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a receber da oficina corrente */
-        get: operations["listar_15"];
+        get: operations["listar_16"];
         put?: never;
         /** Cadastra uma nova conta a receber */
         post: operations["criar_10"];
@@ -1223,7 +1258,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista as contas a pagar da oficina corrente */
-        get: operations["listar_16"];
+        get: operations["listar_17"];
         put?: never;
         /** Cadastra uma nova conta a pagar */
         post: operations["criar_11"];
@@ -1246,7 +1281,7 @@ export interface paths {
          * Marca a conta como paga e gera o lancamento de caixa correspondente
          * @description O corpo e' opcional: data do pagamento (nao futura), forma de pagamento e valor efetivamente pago.
          */
-        post: operations["pagar"];
+        post: operations["pagar_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1298,7 +1333,7 @@ export interface paths {
          * Lista os clientes da oficina corrente
          * @description Filtro opcional por nome, ou por 'busca' (nome, CPF/CNPJ ou placa de qualquer veiculo vinculado — tem prioridade sobre 'nome' quando os dois sao informados)
          */
-        get: operations["listar_17"];
+        get: operations["listar_18"];
         put?: never;
         /**
          * Cadastra um novo cliente (PF ou PJ)
@@ -1322,7 +1357,7 @@ export interface paths {
          * Lista as categorias financeiras da oficina
          * @description Por padrao so' as ativas; use incluirInativas=true para a tela de gestao. Filtra por tipo (DESPESA/RECEITA).
          */
-        get: operations["listar_18"];
+        get: operations["listar_19"];
         put?: never;
         /** Cadastra uma categoria financeira */
         post: operations["criar_13"];
@@ -1343,7 +1378,7 @@ export interface paths {
          * Lista sessoes de caixa
          * @description Requer CAIXA_OPERAR ou CAIXA_GERENCIAR. Quem so' tem CAIXA_OPERAR ve apenas as proprias sessoes; CAIXA_GERENCIAR ve todas as sessoes da oficina
          */
-        get: operations["listar_19"];
+        get: operations["listar_20"];
         put?: never;
         /**
          * Abre uma nova sessao de caixa (turno)
@@ -1407,7 +1442,7 @@ export interface paths {
          * Lista os lancamentos de caixa da oficina corrente
          * @description Requer FINANCEIRO_READ
          */
-        get: operations["listar_20"];
+        get: operations["listar_21"];
         put?: never;
         /**
          * Registra um lancamento manual de caixa (exige caixa aberto)
@@ -1440,6 +1475,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renova a sessao web a partir do refresh token (cookie HttpOnly), rotacionando-o
+         * @description Exige o header X-MotoGest-Client: web. Um refresh token ja rotacionado (reuso) revoga a sessao.
+         */
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -1466,7 +1521,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Autentica um usuario e retorna o token JWT de acesso */
+        /**
+         * Autentica um usuario e retorna o token JWT de acesso
+         * @description Com o header X-MotoGest-Client: web, o JWT e o refresh token vao em cookies HttpOnly (o corpo vem sem token). Sem o header, o token vem no corpo (clientes nao-navegador).
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -1482,7 +1540,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista os agendamentos da oficina corrente */
-        get: operations["listar_21"];
+        get: operations["listar_22"];
         put?: never;
         /** Cria um novo agendamento */
         post: operations["criar_14"];
@@ -1503,7 +1561,7 @@ export interface paths {
          * Lista todas as oficinas cadastradas no sistema, com o status da licenca de cada uma
          * @description Requer o header X-Admin-Token. Unico endpoint do sistema que enxerga dados de todas as oficinas ao mesmo tempo.
          */
-        get: operations["listar_22"];
+        get: operations["listar_23"];
         put?: never;
         /**
          * Cadastra uma nova oficina (tenant) e seu usuario administrador
@@ -1764,7 +1822,7 @@ export interface paths {
         };
         /**
          * Produtividade do proprio usuario autenticado no mes (visao do mecanico)
-         * @description Mesmo formato do detalhe por mecanico: OS concluidas e horas por dia.
+         * @description Mesmo formato do detalhe por mecanico (OS concluidas e horas por dia), sem o valor em reais da mao de obra.
          */
         get: operations["minhaProdutividade"];
         put?: never;
@@ -1878,6 +1936,26 @@ export interface paths {
          * @description A fila que qualquer mecanico pode assumir — iniciar o cronometro (/timer/start) numa dessas atribui automaticamente quem iniciou.
          */
         get: operations["listarDisponiveis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oficinas/atual/dias-uteis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dias uteis do mes da oficina do usuario autenticado
+         * @description Segunda a sexta descontando feriados nacionais e estaduais (UF do cadastro da oficina; feriados municipais nao sao considerados). Devolve tambem a lista de feriados do mes e os dias trabalhados conforme a jornada de sabado da oficina. Sem o parametro mes, usa o mes corrente.
+         */
+        get: operations["diasUteis"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2014,6 +2092,40 @@ export interface paths {
         };
         /** Data muro vigente, proximo periodo a fechar e o checklist dele */
         get: operations["situacao"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/comissoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista as comissoes geradas no periodo (data de geracao), com filtros por funcionario, papel e status */
+        get: operations["listar_14"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/financeiro/comissoes/resumo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Totais de comissao por funcionario no periodo (pendente x pago) */
+        get: operations["resumo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2439,6 +2551,7 @@ export interface components {
             /** Format: int64 */
             perfilId?: number;
             perfilNome?: string;
+            codigo?: string;
         };
         ServicoRequest: {
             nome: string;
@@ -2745,6 +2858,7 @@ export interface components {
             jornadaDiariaMinutos?: number;
             /** Format: int32 */
             jornadaSabadoMinutos?: number;
+            codigoAcesso?: string;
         };
         OficinaResponse: {
             /** Format: int64 */
@@ -2768,6 +2882,7 @@ export interface components {
             jornadaDiariaMinutos?: number;
             /** Format: int32 */
             jornadaSabadoMinutos?: number;
+            codigoAcesso?: string;
         };
         ModeloVeiculoResponse: {
             /** Format: int64 */
@@ -2853,6 +2968,16 @@ export interface components {
             valorHora?: number;
             /** Format: int32 */
             arredondamentoComercial?: number;
+        };
+        ConfiguracaoComissaoRequest: {
+            mecanicoPercentual: number;
+            consultorPercentual: number;
+            mecanicoIncluiProdutos?: boolean;
+        };
+        ConfiguracaoComissaoResponse: {
+            mecanicoPercentual?: number;
+            consultorPercentual?: number;
+            mecanicoIncluiProdutos?: boolean;
         };
         CapacidadeProdutivaRequest: {
             /** Format: int32 */
@@ -3324,6 +3449,45 @@ export interface components {
         ReaberturaRequest: {
             motivo: string;
         };
+        PagarComissoesRequest: {
+            comissaoIds: number[];
+            /** Format: date */
+            data?: string;
+            /** @enum {string} */
+            formaPagamento?: "DINHEIRO" | "CARTAO" | "PIX" | "TRANSFERENCIA";
+        };
+        ComissaoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            ordemServicoId?: number;
+            ordemServicoNumero?: string;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            /** @enum {string} */
+            papel?: "MECANICO" | "CONSULTOR";
+            baseCalculo?: number;
+            percentual?: number;
+            valor?: number;
+            /** @enum {string} */
+            status?: "PENDENTE" | "PAGA";
+            /** Format: date-time */
+            dataGeracao?: string;
+            /** Format: date */
+            dataPagamento?: string;
+            /** Format: int64 */
+            contaPagarId?: number;
+        };
+        PagamentoComissoesResponse: {
+            /** Format: int64 */
+            contaPagarId?: number;
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            valorTotal?: number;
+            comissoes?: components["schemas"]["ComissaoResponse"][];
+        };
         SolicitacaoDescontoRequest: {
             /** @enum {string} */
             origemTipo: "ORCAMENTO" | "ORDEM_SERVICO";
@@ -3495,10 +3659,6 @@ export interface components {
             /** Format: date-time */
             recebidoEm?: string;
         };
-        LoginRequest: {
-            identificador: string;
-            senha: string;
-        };
         LicencaResponse: {
             /** @enum {string} */
             status?: "TRIAL" | "ATIVA" | "EXPIRADA" | "CANCELADA";
@@ -3532,6 +3692,13 @@ export interface components {
             perfil?: string;
             permissoes?: string[];
             licenca?: components["schemas"]["LicencaResponse"];
+            usuarioCodigo?: string;
+            oficinaCodigo?: string;
+        };
+        LoginRequest: {
+            identificador: string;
+            senha: string;
+            oficina?: string;
         };
         OficinaRegistrationRequest: {
             razaoSocial: string;
@@ -3799,6 +3966,31 @@ export interface components {
             totalPages?: number;
             last?: boolean;
         };
+        DiasUteisMesResponse: {
+            mes?: string;
+            uf?: string;
+            /** Format: int32 */
+            diasNoMes?: number;
+            /** Format: int32 */
+            diasUteis?: number;
+            /** Format: int32 */
+            sabadosUteis?: number;
+            /** Format: int32 */
+            domingos?: number;
+            /** Format: int32 */
+            jornadaSabadoMinutos?: number;
+            /** Format: int32 */
+            diasTrabalhados?: number;
+            feriados?: components["schemas"]["FeriadoResponse"][];
+        };
+        FeriadoResponse: {
+            /** Format: date */
+            data?: string;
+            /** @enum {string} */
+            diaDaSemana?: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+            nome?: string;
+            abrangencia?: string;
+        };
         PageResponseModeloVeiculoResponse: {
             content?: components["schemas"]["ModeloVeiculoResponse"][];
             /** Format: int32 */
@@ -3877,6 +4069,17 @@ export interface components {
             /** Format: date */
             dataMuro?: string;
             proximo?: components["schemas"]["Proximo"];
+        };
+        ResumoComissaoFuncionarioResponse: {
+            /** Format: int64 */
+            usuarioId?: number;
+            usuarioNome?: string;
+            totalMecanico?: number;
+            totalConsultor?: number;
+            totalPendente?: number;
+            totalPago?: number;
+            /** Format: int64 */
+            quantidadePendente?: number;
         };
         PageResponseSolicitacaoDescontoResponse: {
             content?: components["schemas"]["SolicitacaoDescontoResponse"][];
@@ -4096,6 +4299,7 @@ export interface components {
             /** Format: date-time */
             proximaCobranca?: string;
             emCarencia?: boolean;
+            codigoAcesso?: string;
         };
         PageResponseAdminOficinaResponse: {
             content?: components["schemas"]["AdminOficinaResponse"][];
@@ -4958,6 +5162,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CategoriaHoraTecnicaResponse"][];
+                };
+            };
+        };
+    };
+    consultarConfiguracao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfiguracaoComissaoResponse"];
+                };
+            };
+        };
+    };
+    atualizarConfiguracao: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfiguracaoComissaoRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConfiguracaoComissaoResponse"];
                 };
             };
         };
@@ -6479,7 +6727,31 @@ export interface operations {
             };
         };
     };
-    listar_14: {
+    pagar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PagarComissoesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PagamentoComissoesResponse"];
+                };
+            };
+        };
+    };
+    listar_15: {
         parameters: {
             query: {
                 origemTipo?: "ORCAMENTO" | "ORDEM_SERVICO";
@@ -6576,7 +6848,7 @@ export interface operations {
             };
         };
     };
-    listar_15: {
+    listar_16: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6694,7 +6966,7 @@ export interface operations {
             };
         };
     };
-    listar_16: {
+    listar_17: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -6740,7 +7012,7 @@ export interface operations {
             };
         };
     };
-    pagar: {
+    pagar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -6812,7 +7084,7 @@ export interface operations {
             };
         };
     };
-    listar_17: {
+    listar_18: {
         parameters: {
             query: {
                 nome?: string;
@@ -6860,7 +7132,7 @@ export interface operations {
             };
         };
     };
-    listar_18: {
+    listar_19: {
         parameters: {
             query?: {
                 tipo?: "DESPESA" | "RECEITA";
@@ -6907,7 +7179,7 @@ export interface operations {
             };
         };
     };
-    listar_19: {
+    listar_20: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7005,7 +7277,7 @@ export interface operations {
             };
         };
     };
-    listar_20: {
+    listar_21: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7077,6 +7349,26 @@ export interface operations {
             };
         };
     };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LoginResponse"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -7119,7 +7411,7 @@ export interface operations {
             };
         };
     };
-    listar_21: {
+    listar_22: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7165,7 +7457,7 @@ export interface operations {
             };
         };
     };
-    listar_22: {
+    listar_23: {
         parameters: {
             query: {
                 pageable: components["schemas"]["Pageable"];
@@ -7679,6 +7971,32 @@ export interface operations {
             };
         };
     };
+    diasUteis: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Mes de referencia (yyyy-MM)
+                 * @example 2026-11
+                 */
+                mes?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DiasUteisMesResponse"];
+                };
+            };
+        };
+    };
     listar_10: {
         parameters: {
             query: {
@@ -7846,6 +8164,55 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SituacaoFechamentoResponse"];
+                };
+            };
+        };
+    };
+    listar_14: {
+        parameters: {
+            query?: {
+                inicio?: string;
+                fim?: string;
+                usuarioId?: number;
+                papel?: "MECANICO" | "CONSULTOR";
+                status?: "PENDENTE" | "PAGA";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ComissaoResponse"][];
+                };
+            };
+        };
+    };
+    resumo: {
+        parameters: {
+            query?: {
+                inicio?: string;
+                fim?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ResumoComissaoFuncionarioResponse"][];
                 };
             };
         };

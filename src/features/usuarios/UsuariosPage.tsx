@@ -99,6 +99,7 @@ export function UsuariosPage() {
           emptyTitle="Nenhum usuário cadastrado"
           columns={[
             { header: 'Nome', render: (row) => <span className="font-medium text-ink">{row.nome}</span> },
+            { header: 'Código', render: (row) => <span className="font-mono text-sm text-ink-muted">{row.codigo ?? '—'}</span>, hideBelow: 'sm' },
             { header: 'E-mail', render: (row) => row.email, hideBelow: 'sm' },
             { header: 'Perfil', render: (row) => <Badge tone="brand">{row.perfilNome}</Badge> },
             {
