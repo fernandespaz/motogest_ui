@@ -7,7 +7,6 @@ import { contasPagarKeys } from './useFinanceiro';
 export const comissoesKeys = {
   all: ['comissoes'] as const,
   configuracao: ['comissoes', 'configuracao'] as const,
-  resumo: (params?: Pick<ComissoesFiltro, 'inicio' | 'fim'>) => ['comissoes', 'resumo', params] as const,
   lista: (params?: ComissoesFiltro) => ['comissoes', 'lista', params] as const,
 };
 
@@ -33,14 +32,6 @@ export function useSalvarConfiguracaoComissao() {
       qc.invalidateQueries({ queryKey: ['hora-tecnica', 'auditoria'] });
     },
     meta: { hasLocalErrorHandling: true },
-  });
-}
-
-export function useResumoComissoes(params: Pick<ComissoesFiltro, 'inicio' | 'fim'>, options?: { enabled?: boolean }) {
-  return useQuery({
-    queryKey: comissoesKeys.resumo(params),
-    queryFn: () => comissoesApi.resumo(params),
-    enabled: options?.enabled,
   });
 }
 

@@ -20,6 +20,16 @@ vi.mock('../adminClient', () => ({
 }));
 
 describe('oficinasApi', () => {
+  it('diasUteis() GETs the month (or the current one when omitted)', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { mes: '2026-07', diasTrabalhados: 22 } });
+
+    await oficinasApi.diasUteis('2026-07');
+    expect(apiClient.get).toHaveBeenLastCalledWith('/api/v1/oficinas/atual/dias-uteis', { params: { mes: '2026-07' } });
+
+    await oficinasApi.diasUteis();
+    expect(apiClient.get).toHaveBeenLastCalledWith('/api/v1/oficinas/atual/dias-uteis', { params: { mes: undefined } });
+  });
+
   it('atual() GETs the tenant’s own oficina', async () => {
     vi.mocked(apiClient.get).mockResolvedValueOnce({ data: { id: 1, razaoSocial: 'Ram Tec' } });
 

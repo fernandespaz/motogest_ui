@@ -7,8 +7,9 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Field';
 import { useAtualizarCapacidadeProdutiva } from '@/hooks/useCapacidadeProdutiva';
+import { useDiasUteis } from '@/hooks/useDiasUteis';
 import type { CapacidadeProdutivaResponse } from '@/api/types';
-import { formatHorasDecimais } from '@/lib/formatters';
+import { formatHorasDecimais, formatMesReferencia } from '@/lib/formatters';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -33,12 +34,14 @@ function previaHorasProdutivas(v: Partial<FormValues>) {
 
 export function CapacidadeProdutivaForm({ capacidade }: { capacidade: CapacidadeProdutivaResponse | undefined }) {
   const mutation = useAtualizarCapacidadeProdutiva();
+  const diasDoMes = useDiasUteis().data;
   const configurado = capacidade?.configurado === true;
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: PADRAO });
 
@@ -108,6 +111,24 @@ export function CapacidadeProdutivaForm({ capacidade }: { capacidade: Capacidade
               {...register('eficienciaPercentual')}
             />
           </div>
+
+          {diasDoMes && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
+              <span>
+                {formatMesReferencia(diasDoMes.mes)} tem <strong className="text-ink">{diasDoMes.diasTrabalhados} dias trabalhados</strong>, descontando
+                feriados nacionais{diasDoMes.uf ? ` e de ${diasDoMes.uf}` : ''}.
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setValue('diasUteisMes', diasDoMes.diasTrabalhados, { shouldDirty: true, shouldValidate: true })}
+              >
+                Usar {diasDoMes.diasTrabalhados}
+              </Button>
+              {diasDoMes.uf == null && <span className="w-full text-warning">Informe a UF da oficina para considerar também os feriados estaduais.</span>}
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-sm text-ink-muted">

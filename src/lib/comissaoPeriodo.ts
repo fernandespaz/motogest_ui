@@ -17,29 +17,33 @@ function fechamentoDoMes(mes: Date, diaFechamento: number): Date {
   return new Date(mes.getFullYear(), mes.getMonth(), Math.min(diaFechamento, ultimo));
 }
 
+/** Datas (yyyy-MM-dd) de feriado nacional/estadual, vindas de GET /oficinas/atual/dias-uteis. */
+export type Feriados = ReadonlySet<string>;
+
 /**
- * Quinto dia útil do mês (segunda a sexta). Feriados não entram na conta: o backend não tem calendário de
- * feriados, então a data é uma previsão que o financeiro confirma ao pagar.
+ * Quinto dia útil do mês (segunda a sexta, sem os feriados informados). Sem a lista de feriados a conta é só
+ * de segunda a sexta; feriado municipal nunca entra, então a data segue sendo uma previsão que o financeiro
+ * confirma ao pagar.
  */
-export function quintoDiaUtil(mes: Date): Date {
+export function quintoDiaUtil(mes: Date, feriados: Feriados = new Set()): Date {
   let dia = startOfMonth(mes);
   let uteis = 0;
   for (;;) {
     const semana = getDay(dia);
-    if (semana !== 0 && semana !== 6) uteis += 1;
+    if (semana !== 0 && semana !== 6 && !feriados.has(format(dia, ISO))) uteis += 1;
     if (uteis === 5) return dia;
     dia = addDays(dia, 1);
   }
 }
 
 /** Período de comissão que termina no dia de fechamento do mês de `mesFim`. */
-export function periodoDoMes(mesFim: Date, diaFechamento: number): PeriodoComissao {
+export function periodoDoMes(mesFim: Date, diaFechamento: number, feriados?: Feriados): PeriodoComissao {
   const fim = fechamentoDoMes(mesFim, diaFechamento);
   const fechamentoAnterior = fechamentoDoMes(addMonths(mesFim, -1), diaFechamento);
   return {
     inicio: format(addDays(fechamentoAnterior, 1), ISO),
     fim: format(fim, ISO),
-    pagamentoPrevisto: format(quintoDiaUtil(addMonths(mesFim, 1)), ISO),
+    pagamentoPrevisto: format(quintoDiaUtil(addMonths(mesFim, 1), feriados), ISO),
   };
 }
 
@@ -51,7 +55,7 @@ export function periodoAtual(hoje: Date, diaFechamento: number): PeriodoComissao
 }
 
 /** Os `quantidade` períodos mais recentes (o atual primeiro), para o seletor da tela. */
-export function ultimosPeriodos(hoje: Date, diaFechamento: number, quantidade = 12): PeriodoComissao[] {
+export function ultimosPeriodos(hoje: Date, diaFechamento: number, quantidade = 12, feriados?: Feriados): PeriodoComissao[] {
   const atual = parseISO(periodoAtual(hoje, diaFechamento).fim);
-  return Array.from({ length: quantidade }, (_, i) => periodoDoMes(addMonths(atual, -i), diaFechamento));
+  return Array.from({ length: quantidade }, (_, i) => periodoDoMes(addMonths(atual, -i), diaFechamento, feriados));
 }

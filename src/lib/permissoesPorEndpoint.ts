@@ -66,7 +66,6 @@ export const PERMISSOES_POR_ENDPOINT: ReadonlyArray<readonly [string, string, re
   ['GET', '/api/v1/financeiro/comissoes/configuracao', ['HORA_TECNICA_GERENCIAR', 'FINANCEIRO_READ']],
   ['PUT', '/api/v1/financeiro/comissoes/configuracao', ['HORA_TECNICA_GERENCIAR']],
   ['POST', '/api/v1/financeiro/comissoes/pagamento', ['FINANCEIRO_WRITE']],
-  ['GET', '/api/v1/financeiro/comissoes/resumo', ['FINANCEIRO_READ']],
   ['GET', '/api/v1/financeiro/fechamentos', ['FINANCEIRO_READ']],
   ['POST', '/api/v1/financeiro/fechamentos', ['FINANCEIRO_FECHAR']],
   ['POST', '/api/v1/financeiro/fechamentos/{id}/reabrir', ['FINANCEIRO_FECHAR']],

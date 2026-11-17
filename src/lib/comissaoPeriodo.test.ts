@@ -15,6 +15,20 @@ describe('quintoDiaUtil', () => {
   });
 });
 
+describe('quintoDiaUtil com feriados', () => {
+  it('pula feriado em dia útil e ignora feriado que cai no fim de semana', () => {
+    // out/2026: 1,2,5,6,7 → quarta 7; com feriado na sexta 2 e na segunda 5 → 1,6,7,8,9 → sexta 9
+    expect(quintoDiaUtil(dia('2026-10-10'), new Set(['2026-10-02', '2026-10-05']))).toEqual(dia('2026-10-09'));
+    // feriado num sábado (3/10) não muda nada
+    expect(quintoDiaUtil(dia('2026-10-10'), new Set(['2026-10-03']))).toEqual(dia('2026-10-07'));
+  });
+
+  it('o previsto de pagamento do período acompanha os feriados do mês seguinte', () => {
+    expect(periodoDoMes(dia('2026-10-01'), 20).pagamentoPrevisto).toBe('2026-11-06');
+    expect(periodoDoMes(dia('2026-10-01'), 20, new Set(['2026-11-02'])).pagamentoPrevisto).toBe('2026-11-09');
+  });
+});
+
 describe('periodoDoMes', () => {
   it('vai do dia seguinte ao fechamento anterior até o fechamento do mês', () => {
     expect(periodoDoMes(dia('2026-10-01'), 20)).toEqual({

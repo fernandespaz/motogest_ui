@@ -105,7 +105,6 @@ export const API_ROUTES = {
   comissoes: {
     base: '/api/v1/financeiro/comissoes',
     configuracao: '/api/v1/financeiro/comissoes/configuracao',
-    resumo: '/api/v1/financeiro/comissoes/resumo',
     pagamento: '/api/v1/financeiro/comissoes/pagamento',
   },
   contasPagar: {
@@ -138,6 +137,7 @@ export const API_ROUTES = {
   },
   oficinas: {
     atual: '/api/v1/oficinas/atual',
+    diasUteis: '/api/v1/oficinas/atual/dias-uteis',
     logo: '/api/v1/oficinas/atual/logo',
     // Público (POST /oficinas/registrar) foi removido pelo backend — cadastro de
     // oficina agora é exclusivo do time root, via admin.base (X-Admin-Token).

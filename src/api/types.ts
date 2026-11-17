@@ -253,15 +253,6 @@ export interface ComissaoResponse {
   dataPagamento: string | null;
   contaPagarId: number | null;
 }
-export interface ResumoComissaoFuncionario {
-  usuarioId: number;
-  usuarioNome: string;
-  totalMecanico: number;
-  totalConsultor: number;
-  totalPendente: number;
-  totalPago: number;
-  quantidadePendente: number;
-}
 export interface ComissoesFiltro {
   inicio?: string;
   fim?: string;
@@ -378,6 +369,29 @@ export type OficinaRegistrationRequest = Schemas['OficinaRegistrationRequest'] &
   adminConfirmacaoSenha?: string;
 };
 export type OficinaUpdateRequest = Schemas['OficinaUpdateRequest'];
+
+// GET /oficinas/atual/dias-uteis — ainda fora do openapi.json commitado, por isso o tipo é escrito à mão.
+export interface FeriadoResponse {
+  data: string;
+  diaDaSemana: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  nome: string;
+  abrangencia: 'NACIONAL' | 'ESTADUAL';
+}
+export interface DiasUteisResponse {
+  mes: string;
+  /** UF usada no cálculo; null quando a oficina não preencheu (só valem os feriados nacionais). */
+  uf: string | null;
+  diasNoMes: number;
+  /** Segunda a sexta, sem feriados. */
+  diasUteis: number;
+  sabadosUteis: number;
+  domingos: number;
+  jornadaSabadoMinutos: number;
+  /** diasUteis + sábados úteis (só se a oficina abre aos sábados): o número que o relatório de produtividade usa. */
+  diasTrabalhados: number;
+  /** Feriados do mês em qualquer dia da semana, inclusive os de fim de semana. */
+  feriados: FeriadoResponse[];
+}
 export type AdminOficinaResponse = Schemas['AdminOficinaResponse'];
 
 export type LicencaResponse = Schemas['LicencaResponse'];

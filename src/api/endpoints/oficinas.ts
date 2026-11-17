@@ -3,6 +3,7 @@ import { adminApiClient } from '../adminClient';
 import { API_ROUTES } from '../routes';
 import type {
   AdminOficinaResponse,
+  DiasUteisResponse,
   OficinaRegistrationRequest,
   OficinaResponse,
   OficinaUpdateRequest,
@@ -14,6 +15,9 @@ export const oficinasApi = {
   atual: () => apiClient.get<OficinaResponse>(API_ROUTES.oficinas.atual).then((r) => r.data),
   atualizar: (payload: OficinaUpdateRequest) =>
     apiClient.put<OficinaResponse>(API_ROUTES.oficinas.atual, payload).then((r) => r.data),
+  /** `mes` no formato yyyy-MM; sem ele a API usa o mês corrente. */
+  diasUteis: (mes?: string) =>
+    apiClient.get<DiasUteisResponse>(API_ROUTES.oficinas.diasUteis, { params: { mes } }).then((r) => r.data),
   enviarLogo: (arquivo: File) => {
     const formData = new FormData();
     formData.append('arquivo', arquivo);

@@ -1,199 +1,158 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CalendarClock, CheckCircle2, Coins, Info, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import { Checkbox, Select } from '@/components/ui/Field';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Input, Select } from '@/components/ui/Field';
 import { PageSpinner } from '@/components/ui/Spinner';
-import { useComissoes, usePagarComissoes, useResumoComissoes } from '@/hooks/useComissoes';
+import { StatCard } from '@/components/ui/StatCard';
+import { useComissoes } from '@/hooks/useComissoes';
+import { useFeriadosDosMeses } from '@/hooks/useDiasUteis';
 import { useSituacaoFechamento } from '@/hooks/useFinanceiro';
-import { extractErrorMessage } from '@/api/client';
+import { agruparPorFuncionario, totaisDoPeriodo } from '@/lib/comissoesAgrupadas';
 import { ultimosPeriodos } from '@/lib/comissaoPeriodo';
-import { FORMAS_PAGAMENTO } from '@/lib/formaPagamento';
-import { formatCurrency, formatDate, formatPercent } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { useAuthStore } from '@/store/authStore';
-import { toast } from '@/store/toastStore';
-import type { ComissaoResponse, FormaPagamento, ResumoComissaoFuncionario } from '@/api/types';
+import { ComissoesFuncionario } from './ComissoesFuncionario';
 
-const PAPEL_LABEL = { MECANICO: 'Mecânico', CONSULTOR: 'Consultor' } as const;
+const PERSONALIZADO = 'personalizado';
 
 /**
- * Comissões por período de fechamento: o período segue o dia de fechamento cadastrado no financeiro e o
- * pagamento é previsto para o 5º dia útil do mês seguinte. A tela só consulta e paga — a comissão nasce
- * sozinha (OS concluída → mecânico; OS faturada → consultor).
+ * Comissões por período: o financeiro escolhe o período (fechamento mensal ou um intervalo livre), vê quanto cada
+ * funcionário tem a receber e abre a pessoa para conferir as OS que geraram o valor e pagar. A comissão nasce
+ * sozinha (OS concluída → mecânico; OS faturada → consultor); "a pagar" é a comissão já gerada e ainda não paga.
  */
 export function FinanceiroComissoes() {
   const podePagar = useAuthStore((s) => s.hasPermission('FINANCEIRO_WRITE'));
+  const podeAbrirOs = useAuthStore((s) => s.hasPermission('ORDEM_SERVICO_READ'));
   const situacao = useSituacaoFechamento({ silentError: true });
   const diaFechamento = situacao.data?.diaFechamento;
-  const periodos = useMemo(() => (diaFechamento ? ultimosPeriodos(new Date(), diaFechamento) : []), [diaFechamento]);
+  // O 5º dia útil depende dos feriados do mês do pagamento: primeiro descobre quais meses (sem feriados),
+  // busca os feriados deles e só então calcula as datas finais.
+  const mesesDePagamento = useMemo(
+    () => (diaFechamento ? ultimosPeriodos(new Date(), diaFechamento).map((p) => p.pagamentoPrevisto.slice(0, 7)) : []),
+    [diaFechamento],
+  );
+  const { feriados, semUf } = useFeriadosDosMeses(mesesDePagamento);
+  const periodos = useMemo(
+    () => (diaFechamento ? ultimosPeriodos(new Date(), diaFechamento, 12, feriados) : []),
+    [diaFechamento, feriados],
+  );
 
   const [fimEscolhido, setFimEscolhido] = useState<string>();
-  const periodo = periodos.find((p) => p.fim === fimEscolhido) ?? periodos[0];
-  const [usuarioId, setUsuarioId] = useState<number>();
+  const personalizado = fimEscolhido === PERSONALIZADO;
+  const [de, setDe] = useState('');
+  const [ate, setAte] = useState('');
+  const periodoFechamento = periodos.find((p) => p.fim === fimEscolhido) ?? periodos[0];
+  // No intervalo livre só há consulta com as duas datas válidas; sem previsão de pagamento (não é um fechamento).
+  const intervaloValido = !!de && !!ate && de <= ate;
+  const periodo = personalizado
+    ? intervaloValido
+      ? { inicio: de, fim: ate, pagamentoPrevisto: undefined }
+      : undefined
+    : periodoFechamento;
 
-  const filtroPeriodo = { inicio: periodo?.inicio, fim: periodo?.fim };
-  const habilitado = !!periodo;
-  const resumo = useResumoComissoes(filtroPeriodo, { enabled: habilitado });
-  const lista = useComissoes({ ...filtroPeriodo, usuarioId }, { enabled: habilitado });
+  const lista = useComissoes({ inicio: periodo?.inicio, fim: periodo?.fim }, { enabled: !!periodo });
+  const grupos = useMemo(() => agruparPorFuncionario(lista.data ?? []), [lista.data]);
+  const totais = totaisDoPeriodo(grupos);
 
-  if (situacao.isLoading || (habilitado && resumo.isLoading)) return <PageSpinner label="Carregando comissões..." />;
-  if (!periodo) {
+  if (situacao.isLoading) return <PageSpinner label="Carregando comissões..." />;
+  if (!periodoFechamento && !personalizado) {
     return <p className="text-sm text-ink-muted">Não foi possível carregar o dia de fechamento do financeiro.</p>;
   }
-
-  const funcionarios = resumo.data ?? [];
-  const totalPendente = funcionarios.reduce((soma, f) => soma + f.totalPendente, 0);
 
   return (
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader
-          title="A receber no 5º dia útil"
-          subtitle={`Período de ${formatDate(periodo.inicio)} a ${formatDate(periodo.fim)} · dia de fechamento ${diaFechamento}`}
+          title="Comissões por período"
+          subtitle={
+            periodo
+              ? `${formatDate(periodo.inicio)} a ${formatDate(periodo.fim)}${personalizado ? '' : ` · fechamento no dia ${diaFechamento}`}`
+              : 'Informe o intervalo de datas'
+          }
           action={
-            <Badge tone="brand">
-              <CalendarClock size={12} className="mr-1 inline" aria-hidden="true" />
-              Pagamento previsto: {formatDate(periodo.pagamentoPrevisto)}
-            </Badge>
+            periodo?.pagamentoPrevisto && (
+              <Badge tone="brand">
+                <CalendarClock size={12} className="mr-1 inline" aria-hidden="true" />
+                Pagamento previsto: {formatDate(periodo.pagamentoPrevisto)}
+              </Badge>
+            )
           }
         />
         <CardBody className="flex flex-col gap-4">
           <Select
             label="Período"
-            value={periodo.fim}
-            onChange={(e) => {
-              setFimEscolhido(e.target.value);
-              setUsuarioId(undefined);
-            }}
-            hint="Cada período vai do dia seguinte ao fechamento anterior até o dia de fechamento. Dias úteis consideram segunda a sexta, sem feriados."
+            value={personalizado ? PERSONALIZADO : periodoFechamento.fim}
+            onChange={(e) => setFimEscolhido(e.target.value)}
+            hint="Cada período vai do dia seguinte ao fechamento anterior até o dia de fechamento. O pagamento é previsto para o 5º dia útil do mês seguinte (segunda a sexta, sem feriados nacionais e estaduais; feriado municipal não entra na conta)."
           >
             {periodos.map((p) => (
               <option key={p.fim} value={p.fim}>
                 {formatDate(p.inicio)} a {formatDate(p.fim)} — paga em {formatDate(p.pagamentoPrevisto)}
               </option>
             ))}
+            <option value={PERSONALIZADO}>Intervalo personalizado</option>
           </Select>
 
-          <p className="text-sm text-ink-muted">
-            Total pendente no período: <strong className="text-ink">{formatCurrency(totalPendente)}</strong>
-          </p>
+          {semUf && (
+            <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-warning dark:bg-amber-900/20">
+              <Info size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <span>
+                A UF da oficina não está preenchida, então só os feriados nacionais entram no cálculo.{' '}
+                <Link to="/oficina" className="font-medium underline">
+                  Informe a UF da oficina
+                </Link>{' '}
+                para considerar também os feriados estaduais.
+              </span>
+            </p>
+          )}
 
-          {funcionarios.length === 0 ? (
-            <EmptyState title="Nenhuma comissão neste período" description="As comissões são geradas ao concluir e ao faturar as OS." />
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border">
-              {funcionarios.map((f) => (
-                <LinhaResumo key={f.usuarioId} funcionario={f} ativo={usuarioId === f.usuarioId} onVer={() => setUsuarioId(usuarioId === f.usuarioId ? undefined : f.usuarioId)} />
-              ))}
-            </ul>
+          {personalizado && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input label="De" type="date" value={de} max={ate || undefined} onChange={(e) => setDe(e.target.value)} />
+              <Input label="Até" type="date" value={ate} min={de || undefined} onChange={(e) => setAte(e.target.value)} />
+            </div>
           )}
         </CardBody>
       </Card>
 
-      {usuarioId != null && (
-        <ListaComissoes
-          key={usuarioId}
-          comissoes={lista.data ?? []}
-          carregando={lista.isLoading}
-          podePagar={podePagar}
-        />
+      {!periodo ? (
+        <EmptyState title="Escolha o intervalo" description="Preencha as duas datas, com a data final igual ou depois da inicial." />
+      ) : lista.isLoading ? (
+        <PageSpinner label="Carregando comissões..." />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <StatCard icon={Wallet} label="A pagar" value={formatCurrency(totais.aPagar)} tone="warning" index={0} />
+            <StatCard icon={CheckCircle2} label="Já pago" value={formatCurrency(totais.pago)} tone="success" index={1} />
+            <StatCard icon={Coins} label="Total do período" value={formatCurrency(totais.total)} index={2} />
+          </div>
+
+          {grupos.length === 0 ? (
+            <EmptyState
+              title="Nenhuma comissão neste período"
+              description="A comissão do mecânico é gerada quando a OS é concluída e a do consultor quando a OS é faturada."
+            />
+          ) : (
+            <section aria-label="Funcionários" className="flex flex-col gap-3">
+              <p className="text-sm text-ink-muted">
+                <strong className="text-ink">A pagar</strong> é a comissão já gerada que ainda não foi paga. Abra um funcionário para ver as OS que
+                geraram o valor e pagar.
+              </p>
+              {grupos.map((g) => (
+                <ComissoesFuncionario
+                  key={`${periodo.inicio}-${periodo.fim}-${g.usuarioId}`}
+                  grupo={g}
+                  podePagar={podePagar}
+                  podeAbrirOs={podeAbrirOs}
+                />
+              ))}
+            </section>
+          )}
+        </>
       )}
     </div>
-  );
-}
-
-function LinhaResumo({ funcionario: f, ativo, onVer }: { funcionario: ResumoComissaoFuncionario; ativo: boolean; onVer: () => void }) {
-  return (
-    <li className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-ink">{f.usuarioNome}</p>
-        <p className="text-xs text-ink-muted">
-          Mecânico {formatCurrency(f.totalMecanico)} · Consultor {formatCurrency(f.totalConsultor)} · Pago {formatCurrency(f.totalPago)}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className="text-xs text-ink-muted">A receber</p>
-        <p className="text-lg font-bold text-ink">{formatCurrency(f.totalPendente)}</p>
-      </div>
-      <Button size="sm" variant="secondary" onClick={onVer}>
-        {ativo ? 'Ocultar' : f.quantidadePendente > 0 ? `Ver ${f.quantidadePendente} pendente(s)` : 'Ver detalhes'}
-      </Button>
-    </li>
-  );
-}
-
-function ListaComissoes({
-  comissoes,
-  carregando,
-  podePagar,
-}: {
-  comissoes: ComissaoResponse[];
-  carregando: boolean;
-  podePagar: boolean;
-}) {
-  const pagar = usePagarComissoes();
-  const [selecionadas, setSelecionadas] = useState<number[]>([]);
-  const [forma, setForma] = useState<FormaPagamento>('PIX');
-
-  if (carregando) return <PageSpinner label="Carregando comissões..." />;
-
-  const pendentes = comissoes.filter((c) => c.status === 'PENDENTE');
-  const visiveisSelecionadas = pendentes.filter((c) => selecionadas.includes(c.id));
-  const idsSelecionados = visiveisSelecionadas.map((c) => c.id);
-  const total = visiveisSelecionadas.reduce((soma, c) => soma + c.valor, 0);
-  const alternar = (id: number) => setSelecionadas((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]));
-
-  async function confirmar() {
-    try {
-      const r = await pagar.mutateAsync({ comissaoIds: idsSelecionados, formaPagamento: forma });
-      toast.success(`${formatCurrency(r.valorTotal)} pagos a ${r.usuarioNome}.`);
-      setSelecionadas([]);
-    } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível pagar as comissões.'));
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader title="Comissões do funcionário" subtitle="Selecione as pendentes para pagar de uma vez" />
-      <CardBody className="flex flex-col gap-4">
-        <ul className="divide-y divide-border">
-          {comissoes.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-x-5 gap-y-1 py-2 text-sm">
-              {podePagar && c.status === 'PENDENTE' ? (
-                <Checkbox checked={selecionadas.includes(c.id)} onChange={() => alternar(c.id)} aria-label={`Selecionar ${c.ordemServicoNumero}`} />
-              ) : (
-                <span className="w-5" />
-              )}
-              <span className="font-medium text-ink">{c.ordemServicoNumero}</span>
-              <span className="text-ink-muted">{PAPEL_LABEL[c.papel]}</span>
-              <span className="text-ink-muted">
-                {formatCurrency(c.baseCalculo)} × {formatPercent(c.percentual)}
-              </span>
-              <span className="ml-auto font-semibold text-ink">{formatCurrency(c.valor)}</span>
-              <Badge tone={c.status === 'PAGA' ? 'success' : 'neutral'}>
-                {c.status === 'PAGA' ? `Paga em ${formatDate(c.dataPagamento)}` : 'Pendente'}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-        {podePagar && pendentes.length > 0 && (
-          <div className="flex flex-wrap items-end justify-end gap-3 border-t border-border pt-4">
-            <Select label="Forma de pagamento" value={forma} onChange={(e) => setForma(e.target.value as FormaPagamento)}>
-              {FORMAS_PAGAMENTO.map((f) => (
-                <option key={f.value} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </Select>
-            <Button onClick={confirmar} loading={pagar.isPending} disabled={idsSelecionados.length === 0}>
-              Pagar selecionadas ({formatCurrency(total)})
-            </Button>
-          </div>
-        )}
-      </CardBody>
-    </Card>
   );
 }

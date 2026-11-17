@@ -2,10 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAtualizarCapacidadeProdutiva } from '@/hooks/useCapacidadeProdutiva';
+import { useDiasUteis } from '@/hooks/useDiasUteis';
 import { toast } from '@/store/toastStore';
 import { CapacidadeProdutivaForm } from './CapacidadeProdutivaForm';
 
 vi.mock('@/hooks/useCapacidadeProdutiva', () => ({ useAtualizarCapacidadeProdutiva: vi.fn() }));
+vi.mock('@/hooks/useDiasUteis', () => ({ useDiasUteis: vi.fn() }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 describe('CapacidadeProdutivaForm', () => {
@@ -14,6 +16,24 @@ describe('CapacidadeProdutivaForm', () => {
   beforeEach(() => {
     mutateAsync = vi.fn().mockResolvedValue({ configurado: true });
     vi.mocked(useAtualizarCapacidadeProdutiva).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useDiasUteis).mockReturnValue({ data: undefined } as never);
+  });
+
+  it('sugere os dias trabalhados do mês e preenche o campo ao clicar em Usar', async () => {
+    vi.mocked(useDiasUteis).mockReturnValue({ data: { mes: '2026-11', uf: 'SP', diasTrabalhados: 20 } } as never);
+    render(<CapacidadeProdutivaForm capacidade={undefined} />);
+
+    expect(screen.getByText(/20 dias trabalhados/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Usar 20' }));
+
+    expect(screen.getByLabelText('Dias úteis no mês', { exact: false })).toHaveValue(20);
+  });
+
+  it('avisa que falta a UF da oficina quando a sugestão veio só com feriados nacionais', () => {
+    vi.mocked(useDiasUteis).mockReturnValue({ data: { mes: '2026-11', uf: null, diasTrabalhados: 20 } } as never);
+    render(<CapacidadeProdutivaForm capacidade={undefined} />);
+
+    expect(screen.getByText(/Informe a UF da oficina/)).toBeInTheDocument();
   });
 
   it('shows a first-setup hint and starting values when nothing is configured yet', () => {
