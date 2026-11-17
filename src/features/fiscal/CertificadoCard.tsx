@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { FileKey2, Trash2, Upload } from 'lucide-react';
+import { FileKey2, FolderOpen, Trash2, Upload } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -118,18 +118,30 @@ export function CertificadoCard({ podeEditar, mostrar }: Props) {
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
-                <label htmlFor="certificado-arquivo" className="text-sm font-medium text-ink">
-                  Arquivo (.pfx / .p12)
-                </label>
+                <span className="text-sm font-medium text-ink">Arquivo (.pfx / .p12)</span>
+                {/* Mesmo padrão do logo da oficina e da foto do produto: input escondido + botão do sistema. */}
                 <input
-                  id="certificado-arquivo"
                   ref={inputArquivo}
                   type="file"
                   accept=".pfx,.p12"
+                  className="hidden"
+                  data-testid="certificado-arquivo-input"
                   disabled={enviar.isPending}
                   onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
-                  className="text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-surface-alt file:px-3 file:py-2 file:text-sm file:font-medium"
                 />
+                <div className="flex min-w-0 items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={enviar.isPending}
+                    onClick={() => inputArquivo.current?.click()}
+                  >
+                    <FolderOpen size={16} /> {arquivo ? 'Trocar arquivo' : 'Escolher arquivo'}
+                  </Button>
+                  <span className="min-w-0 truncate text-sm text-ink-muted" title={arquivo?.name}>
+                    {arquivo ? arquivo.name : 'Nenhum arquivo escolhido'}
+                  </span>
+                </div>
               </div>
               <Input
                 label="Senha do certificado"
