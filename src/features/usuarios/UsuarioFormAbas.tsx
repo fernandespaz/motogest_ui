@@ -1,5 +1,5 @@
 import { useFormContext } from 'react-hook-form';
-import { Checkbox, Input, ReadOnlyField, Select } from '@/components/ui/Field';
+import { Checkbox, Input, Select } from '@/components/ui/Field';
 import { SENHA_HINT } from '@/lib/senha';
 import { formatCep, formatCpf, formatPhone } from '@/lib/formatters';
 import { formatPis } from '@/lib/documentos';
@@ -46,11 +46,15 @@ export function AbaAcesso({
           <Col span={6}>
             <Input label="E-mail de acesso" type="email" required error={errors.email?.message} {...register('email')} />
           </Col>
-          {isEditing && (
-            <Col span={6}>
-              <ReadOnlyField label="Código de login" value={codigo ?? '—'} />
-            </Col>
-          )}
+          <Col span={6}>
+            <Input
+              label="Código de login"
+              value={isEditing ? (codigo ?? '—') : 'Gerado ao salvar'}
+              hint="Automático e fixo. O colaborador digita este código com a oficina para entrar, se não usar e-mail."
+              readOnly
+              disabled
+            />
+          </Col>
           <Col span={6}>
             <Select label="Perfil de acesso" required error={errors.perfilId?.message} {...register('perfilId')}>
               <option value={0}>Selecione...</option>

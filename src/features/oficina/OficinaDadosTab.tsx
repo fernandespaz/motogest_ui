@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,6 +56,7 @@ export function OficinaDadosTab() {
   const enviarLogo = useEnviarLogoOficina();
   const removerLogo = useRemoverLogoOficina();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editandoCodigo, setEditandoCodigo] = useState(false);
 
   const {
     register,
@@ -174,18 +175,30 @@ export function OficinaDadosTab() {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label="CNPJ" value={formatCnpj(oficina?.cnpj ?? '')} disabled />
-            <div className="flex items-end gap-2">
-              <Input
-                label="Código de acesso"
-                hint="O que a equipe digita no login. Se mudar, o link antigo deixa de valer."
-                className="flex-1"
-                required
-                error={errors.codigoAcesso?.message}
-                {...register('codigoAcesso')}
-              />
-              <Button type="button" variant="secondary" onClick={copiarLinkDeAcesso} disabled={!oficina?.codigoAcesso}>
-                <Link2 size={16} /> Copiar link
-              </Button>
+            <div>
+              <div className="flex items-end gap-2">
+                <Input
+                  label="Código de acesso"
+                  className="flex-1"
+                  readOnly={!editandoCodigo}
+                  required={editandoCodigo}
+                  error={errors.codigoAcesso?.message}
+                  {...register('codigoAcesso')}
+                />
+                <Button type="button" variant="secondary" onClick={copiarLinkDeAcesso} disabled={!oficina?.codigoAcesso}>
+                  <Link2 size={16} /> Copiar link
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-ink-muted">
+                Gerado a partir do nome da oficina; é o que a equipe digita no login.{' '}
+                {editandoCodigo ? (
+                  'Se mudar, o link antigo deixa de valer.'
+                ) : (
+                  <button type="button" className="font-medium text-brand-600 hover:underline" onClick={() => setEditandoCodigo(true)}>
+                    Alterar
+                  </button>
+                )}
+              </p>
             </div>
             <Input label="Razão social" required error={errors.razaoSocial?.message} {...register('razaoSocial')} />
             <Input label="Nome fantasia" {...register('nomeFantasia')} />

@@ -103,8 +103,8 @@ export function UsuarioFormModal({
         await updateMutation.mutateAsync({ id: usuario.id, payload });
         toast.success('Usuário atualizado.');
       } else {
-        await createMutation.mutateAsync(payload);
-        toast.success('Usuário cadastrado.');
+        const criado = await createMutation.mutateAsync(payload);
+        toast.success(criado?.codigo ? `Usuário cadastrado. Código de login: ${criado.codigo}.` : 'Usuário cadastrado.');
       }
       onClose();
     } catch (error) {

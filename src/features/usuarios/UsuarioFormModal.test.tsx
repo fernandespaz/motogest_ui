@@ -45,6 +45,32 @@ describe('UsuarioFormModal', () => {
     expect(screen.getByText('Mínimo de 8 caracteres, com letra maiúscula e caractere especial')).toBeInTheDocument();
   });
 
+  it('mostra o código de login como "Gerado ao salvar" ao cadastrar (e o código real ao editar)', () => {
+    const { unmount } = renderModal();
+    expect(screen.getByLabelText('Código de login')).toHaveValue('Gerado ao salvar');
+    expect(screen.getByLabelText('Código de login')).toBeDisabled();
+    unmount();
+
+    renderModal({
+      usuario: { id: 1, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true, codigo: '0007' } as never,
+    });
+    expect(screen.getByLabelText('Código de login')).toHaveValue('0007');
+  });
+
+  it('avisa o código de login gerado quando o usuário é cadastrado', async () => {
+    createMutateAsync.mockResolvedValue({ id: 9, codigo: '0007' });
+    renderModal();
+
+    await userEvent.type(screen.getByLabelText(/^Nome/), 'Fernanda');
+    await userEvent.type(screen.getByLabelText(/^E-mail/), 'fernanda@ramtec.com.br');
+    await userEvent.selectOptions(screen.getByLabelText(/Perfil de acesso/), 'Administrador');
+    await userEvent.type(screen.getByLabelText(/^Senha/), 'Senha@123');
+    await userEvent.type(screen.getByLabelText(/^Confirmar senha/), 'Senha@123');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Usuário cadastrado. Código de login: 0007.'));
+  });
+
   it('relabels the password field as optional "Nova senha" when editing', () => {
     renderModal({
       usuario: { id: 1, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true } as never,
