@@ -37,7 +37,11 @@ export const editSchema = z
 export type FormValues = z.infer<typeof createSchema>;
 
 export function valoresIniciais(usuario?: Partial<UsuarioResponse> | null): Partial<FormValues> {
-  if (!usuario) return { ativo: true, ...colaboradorParaForm() };
+  // Cadastro novo: TODOS os campos explícitos. Com chaves faltando, o reset do react-hook-form deixa nos inputs o que já
+  // estava digitado (o usuário editado antes reaparecia ao clicar em "Novo usuário").
+  if (!usuario) {
+    return { nome: '', email: '', perfilId: 0, ativo: true, senha: '', confirmacaoSenha: '', ...colaboradorParaForm() };
+  }
   return {
     nome: usuario.nome ?? '',
     email: usuario.email ?? '',

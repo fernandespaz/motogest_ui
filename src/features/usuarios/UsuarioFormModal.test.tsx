@@ -71,6 +71,37 @@ describe('UsuarioFormModal', () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Usuário cadastrado. Código de login: 0007.'));
   });
 
+  it('abrir "Novo usuário" depois de editar outro vem com o formulário limpo', async () => {
+    const usuarioExistente = {
+      id: 5, nome: 'Diego Paz', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true, codigo: '0001',
+    } as never;
+    const { rerender } = render(
+      <MemoryRouter>
+        <UsuarioFormModal open onClose={vi.fn()} usuario={usuarioExistente} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.getByLabelText(/^Nome/)).toHaveValue('Diego Paz'));
+    expect(screen.getByLabelText(/^E-mail/)).toHaveValue('diego@ramtec.com.br');
+
+    // fecha e reabre como cadastro novo, como faz a UsuariosPage (undefined -> null)
+    rerender(
+      <MemoryRouter>
+        <UsuarioFormModal open={false} onClose={vi.fn()} usuario={undefined} />
+      </MemoryRouter>,
+    );
+    rerender(
+      <MemoryRouter>
+        <UsuarioFormModal open onClose={vi.fn()} usuario={null} />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByLabelText(/^Nome/)).toHaveValue(''));
+    expect(screen.getByLabelText(/^E-mail/)).toHaveValue('');
+    expect(screen.getByLabelText(/Perfil de acesso/)).toHaveValue('0');
+    expect(screen.getByLabelText(/^Senha/)).toHaveValue('');
+    expect(screen.getByText('Novo usuário')).toBeInTheDocument();
+  });
+
   it('relabels the password field as optional "Nova senha" when editing', () => {
     renderModal({
       usuario: { id: 1, nome: 'Diego', email: 'diego@ramtec.com.br', perfilId: 1, ativo: true } as never,
