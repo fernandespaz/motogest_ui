@@ -179,7 +179,6 @@ export function LoginPage() {
                 icon={Building2}
                 // "off": o navegador não deve preencher sozinho com outro valor; o certo vem do "lembrar" ou do link de acesso
                 autoComplete="off"
-                placeholder="Ex.: 4829163"
                 error={errors.oficina?.message}
                 required
                 {...register('oficina')}
@@ -189,7 +188,6 @@ export function LoginPage() {
                 label="Código do usuário"
                 icon={IdCard}
                 autoComplete="username"
-                placeholder="Ex.: 7351948"
                 error={errors.identificador?.message}
                 required
                 {...register('identificador')}
