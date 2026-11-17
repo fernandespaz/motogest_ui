@@ -11,6 +11,7 @@ import { authApi } from '@/api/endpoints/auth';
 import { useAuthStore } from '@/store/authStore';
 import { extractErrorMessage } from '@/api/client';
 import { getLandingPath } from '@/layout/nav';
+import { anunciarLogin } from '@/lib/sessaoEntreAbas';
 import { getLogoFixadaParaLogin, getNomeFixadoParaLogin } from '@/hooks/useOficina';
 import { WorkshopIllustration } from './WorkshopIllustration';
 
@@ -21,6 +22,12 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const MENSAGENS_SESSAO: Record<string, string> = {
+  expirada: 'Sua sessão expirou. Faça login novamente para continuar.',
+  'outra-aba': 'Sua sessão foi encerrada porque você entrou novamente em outra aba. Faça login para continuar aqui.',
+  encerrada: 'Você saiu em outra aba. Faça login novamente para continuar.',
+};
+
 export function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +35,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation() as { state?: { from?: { pathname: string } } };
   const [searchParams] = useSearchParams();
-  const sessaoExpirada = searchParams.get('sessao') === 'expirada';
+  const motivoSessao = searchParams.get('sessao');
+  const avisoSessao = MENSAGENS_SESSAO[motivoSessao ?? ''] ?? null;
   const [logoFixada] = useState(getLogoFixadaParaLogin);
   const [nomeFixado] = useState(getNomeFixadoParaLogin);
 
@@ -44,6 +52,8 @@ export function LoginPage() {
     try {
       const response = await authApi.login(values);
       login(response);
+      // sessão única: as outras abas deste navegador (cookie compartilhado) caem, a mais nova vence
+      anunciarLogin(useAuthStore.getState().loginEm ?? Date.now());
       const redirectTo =
         location.state?.from?.pathname ??
         getLandingPath(useAuthStore.getState().hasPermission, useAuthStore.getState().perfil);
@@ -120,10 +130,10 @@ export function LoginPage() {
             <h2 className="font-display text-2xl font-semibold text-white">Acessar plataforma</h2>
             <p className="mb-7 mt-1.5 text-sm text-slate-400">Entre com sua conta da oficina para continuar.</p>
 
-            {sessaoExpirada && (
+            {avisoSessao && (
               <div className="mb-4 flex items-start gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white">
                 <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-                <span>Sua sessão expirou. Faça login novamente para continuar.</span>
+                <span>{avisoSessao}</span>
               </div>
             )}
 
