@@ -1,12 +1,11 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { LoginResponse } from '@/api/types';
 import { queryClient } from '@/lib/queryClient';
 
 interface AuthState {
-  token: string | null;
-  tokenType?: string;
-  expiresAt: number | null;
+  /** Marca de cada login (identifica a sessão sem expor credencial: o JWT vive só em cookie HttpOnly). */
+  loginEm: number | null;
   usuarioId?: number | null;
   tenantId?: number | null;
   nome?: string;
@@ -24,9 +23,7 @@ const STORAGE_KEY = 'motogest.auth';
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
-      token: null,
-      tokenType: undefined,
-      expiresAt: null,
+      loginEm: null,
       usuarioId: undefined,
       tenantId: undefined,
       nome: undefined,
@@ -41,9 +38,7 @@ export const useAuthStore = create<AuthState>()(
         useAuthStore.persist.clearStorage();
         queryClient.clear();
         set({
-          token: response.token ?? null,
-          tokenType: response.tipo ?? 'Bearer',
-          expiresAt: response.expiraEmSegundos ? Date.now() + response.expiraEmSegundos * 1000 : null,
+          loginEm: Date.now(),
           usuarioId: response.usuarioId ?? null,
           tenantId: response.tenantId ?? null,
           nome: response.nome ?? '',
@@ -58,9 +53,7 @@ export const useAuthStore = create<AuthState>()(
         useAuthStore.persist.clearStorage();
         queryClient.clear();
         set({
-          token: null,
-          tokenType: undefined,
-          expiresAt: null,
+          loginEm: null,
           usuarioId: undefined,
           tenantId: undefined,
           nome: undefined,
@@ -78,10 +71,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: STORAGE_KEY,
+      // Só dados de exibição/permissão: o JWT e o refresh token ficam em cookies HttpOnly emitidos pelo
+      // back-end (inacessíveis a JavaScript). sessionStorage limita o perfil em cache à aba.
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        token: state.token,
-        tokenType: state.tokenType,
-        expiresAt: state.expiresAt,
+        loginEm: state.loginEm,
         usuarioId: state.usuarioId,
         tenantId: state.tenantId,
         nome: state.nome,

@@ -1,9 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
+import { authApi } from '@/api/endpoints/auth';
 import { MobileNav } from './MobileNav';
+
+vi.mock('@/api/endpoints/auth', () => ({ authApi: { logout: vi.fn().mockResolvedValue(undefined) } }));
+
 
 function renderNav() {
   return render(
@@ -38,6 +42,7 @@ describe('MobileNav', () => {
 
     expect(screen.getByText('Produtos e Estoque')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Sair da conta' }));
-    expect(logoutSpy).toHaveBeenCalled();
+    await waitFor(() => expect(logoutSpy).toHaveBeenCalled());
+    expect(authApi.logout).toHaveBeenCalled();
   });
 });

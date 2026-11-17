@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
 import { useOficinaAtual, useOficinaLogoSrc } from '@/hooks/useOficina';
+import { authApi } from '@/api/endpoints/auth';
 import { Sidebar } from './Sidebar';
 
 vi.mock('@/hooks/useOficina', () => ({
@@ -11,6 +12,7 @@ vi.mock('@/hooks/useOficina', () => ({
   useOficinaLogoSrc: vi.fn(),
 }));
 
+vi.mock('@/api/endpoints/auth', () => ({ authApi: { logout: vi.fn().mockResolvedValue(undefined) } }));
 const mockNavigate = vi.fn();
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -80,7 +82,8 @@ describe('Sidebar', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
 
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true }));
+    expect(authApi.logout).toHaveBeenCalled();
     expect(logoutSpy).toHaveBeenCalled();
-    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

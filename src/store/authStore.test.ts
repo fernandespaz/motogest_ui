@@ -5,9 +5,7 @@ import { queryClient } from '@/lib/queryClient';
 describe('useAuthStore', () => {
   beforeEach(() => {
     useAuthStore.setState({
-      token: null,
-      tokenType: undefined,
-      expiresAt: null,
+      loginEm: null,
       usuarioId: undefined,
       tenantId: undefined,
       nome: undefined,
@@ -33,23 +31,12 @@ describe('useAuthStore', () => {
       } as never);
 
       const state = useAuthStore.getState();
-      expect(state.token).toBe('abc123');
       expect(state.usuarioId).toBe(1);
       expect(state.tenantId).toBe(9);
       expect(state.nome).toBe('Diego');
       expect(state.permissoes).toEqual(['CLIENTE_READ']);
       expect(state.isAuthenticated).toBe(true);
-      expect(state.expiresAt).toBeGreaterThan(Date.now());
-    });
-
-    it('defaults tokenType to Bearer when the response omits it', () => {
-      useAuthStore.getState().login({ token: 'abc123' } as never);
-      expect(useAuthStore.getState().tokenType).toBe('Bearer');
-    });
-
-    it('leaves expiresAt null when the response has no expiraEmSegundos', () => {
-      useAuthStore.getState().login({ token: 'abc123' } as never);
-      expect(useAuthStore.getState().expiresAt).toBeNull();
+      expect(state.loginEm).toBeGreaterThan(0);
     });
 
     it('clears every other client cache before applying the new session', () => {
@@ -63,6 +50,18 @@ describe('useAuthStore', () => {
     });
   });
 
+  describe('persistência', () => {
+    it('nunca persiste o token (JWT e refresh vivem só em cookies HttpOnly)', () => {
+      useAuthStore.getState().login({ token: 'abc123', nome: 'Diego' } as never);
+
+      const salvo = sessionStorage.getItem('motogest.auth') ?? '';
+      expect(salvo).toContain('Diego');
+      expect(salvo).not.toContain('abc123');
+      expect(useAuthStore.getState()).not.toHaveProperty('token');
+      expect(localStorage.getItem('motogest.auth')).toBeNull();
+    });
+  });
+
   describe('logout', () => {
     it('resets the session to its logged-out defaults', () => {
       useAuthStore.getState().login({ token: 'abc123', permissoes: ['CLIENTE_READ'] } as never);
@@ -70,7 +69,7 @@ describe('useAuthStore', () => {
       useAuthStore.getState().logout();
 
       const state = useAuthStore.getState();
-      expect(state.token).toBeNull();
+      expect(state.loginEm).toBeNull();
       expect(state.permissoes).toEqual([]);
       expect(state.isAuthenticated).toBe(false);
     });

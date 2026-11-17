@@ -42,9 +42,9 @@ function contas(pagarVencidas: number, receberVencidas = 0) {
 
 describe('VencidasDialog', () => {
   beforeEach(() => {
-    // Cada teste é uma "sessão" nova (o aviso é uma vez por token).
+    // Cada teste é uma "sessão" nova (o aviso é uma vez por login).
     sessao += 1;
-    useAuthStore.setState({ token: `token-${sessao}`, permissoes: ['FINANCEIRO_READ'] } as never);
+    useAuthStore.setState({ loginEm: sessao, permissoes: ['FINANCEIRO_READ'] } as never);
   });
 
   it('warns about overdue accounts, summarised per side, when entering the system', () => {

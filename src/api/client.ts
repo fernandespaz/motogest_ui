@@ -1,43 +1,55 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 import { MENSAGEM_SEM_PERMISSAO } from '@/lib/permissaoNegada';
+import { API_ROUTES } from './routes';
+
+const HEADER_CLIENTE = 'X-MotoGest-Client';
+const VALOR_CLIENTE_WEB = 'web';
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080',
+  // A sessão vive em cookies HttpOnly emitidos pelo back-end (JWT + refresh rotativo): o JavaScript nunca vê o
+  // token. O header abaixo ativa o modo cookie no servidor e, em requisições que mudam estado, é a defesa CSRF
+  // (header customizado cross-origin exige preflight CORS, restrito às origens configuradas).
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    [HEADER_CLIENTE]: VALOR_CLIENTE_WEB,
   },
 });
 
-function isSessionExpired(): boolean {
-  const { token, expiresAt } = useAuthStore.getState();
-  return !!token && !!expiresAt && Date.now() >= expiresAt;
+function isRotaDeAuth(url?: string): boolean {
+  return !!url && (url.includes(API_ROUTES.auth.login) || url.includes(API_ROUTES.auth.refresh));
 }
 
 function forceReauth(requestUrl?: string) {
-  const isLoginRequest = requestUrl?.includes('/auth/login');
-  if (isLoginRequest) return;
+  // Falha de login (credencial errada) não derruba nada: o usuário já está na tela de login.
+  if (requestUrl?.includes(API_ROUTES.auth.login)) return;
   useAuthStore.getState().logout();
   if (typeof window !== 'undefined') {
     window.location.assign('/login?sessao=expirada');
   }
 }
 
-apiClient.interceptors.request.use((config) => {
-  // The JWT's own lifetime (expiresAt, tracked from expiraEmSegundos at login) is
-  // known client-side — catching it here means the very first request after expiry
-  // redirects immediately instead of letting every subsequent click hit the API
-  // and come back with a 401/403 the user has no way to act on.
-  if (isSessionExpired()) {
-    forceReauth(config.url);
-    return Promise.reject(new axios.CanceledError('Sessão expirada'));
-  }
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Uma renovação por vez: o back-end rotaciona o refresh token a cada uso e trata a reapresentação do token antigo
+// como roubo (revoga a sessão). Requisições concorrentes com 401 compartilham a mesma promessa.
+let renovacaoEmAndamento: Promise<void> | null = null;
+
+function renovarSessao(): Promise<void> {
+  renovacaoEmAndamento ??= axios
+    .post(API_ROUTES.auth.refresh, null, {
+      baseURL: apiClient.defaults.baseURL,
+      withCredentials: true,
+      headers: { [HEADER_CLIENTE]: VALOR_CLIENTE_WEB },
+    })
+    .then(() => undefined)
+    .finally(() => {
+      renovacaoEmAndamento = null;
+    });
+  return renovacaoEmAndamento;
+}
+
+type ConfigRepetivel = InternalAxiosRequestConfig & { _jaRenovou?: boolean };
 
 export class ApiForbiddenError extends Error {
   constructor(
@@ -51,19 +63,24 @@ export class ApiForbiddenError extends Error {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
     if (error.response?.status === 401) {
+      const original = error.config as ConfigRepetivel | undefined;
+      const podeRenovar =
+        !!original && !original._jaRenovou && !isRotaDeAuth(original.url) && useAuthStore.getState().isAuthenticated;
+      if (podeRenovar) {
+        original._jaRenovou = true;
+        try {
+          await renovarSessao();
+        } catch {
+          forceReauth(original.url);
+          return Promise.reject(error);
+        }
+        return apiClient.request(original);
+      }
       forceReauth(error.config?.url);
     }
     if (error.response?.status === 403) {
-      // This backend has, in practice, returned 403 (not 401) for a token that's
-      // no longer valid server-side — if our own record of the session says it
-      // should already be expired, treat it as the same case instead of showing
-      // a "sem permissão" toast that never goes away no matter what the user does.
-      if (isSessionExpired()) {
-        forceReauth(error.config?.url);
-        return Promise.reject(error);
-      }
       // O diálogo de permissão negada é aberto pelos caches de queries/mutations (lib/queryClient), que respeitam `silentError`.
       return Promise.reject(new ApiForbiddenError(error.config?.method, error.config?.url));
     }

@@ -5,13 +5,12 @@ import { Menu } from 'lucide-react';
 import clsx from 'clsx';
 import { groupLabels, type NavItem } from './nav';
 import { useVisibleMobileNav } from './useVisibleNavItems';
-import { useAuthStore } from '@/store/authStore';
+import { encerrarSessao } from '@/lib/sessao';
 
 const SECONDARY_GROUPS: NavItem['group'][] = ['gestao', 'admin', 'operacao'];
 
 export function MobileNav() {
   const [moreOpen, setMoreOpen] = useState(false);
-  const logout = useAuthStore((s) => s.logout);
   const { primary, secondary } = useVisibleMobileNav();
 
   return (
@@ -89,7 +88,7 @@ export function MobileNav() {
                 })}
               </div>
               <button
-                onClick={logout}
+                onClick={() => void encerrarSessao()}
                 className="mt-4 w-full rounded-lg border border-danger/30 py-2.5 text-sm font-medium text-danger"
               >
                 Sair da conta

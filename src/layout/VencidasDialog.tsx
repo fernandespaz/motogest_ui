@@ -16,10 +16,10 @@ import {
 
 const MAX_LINHAS = 5;
 
-// Em memória de propósito: a sessão do app vive em memória (token), então
+// Em memória de propósito: a sessão do app vive em memória (login), então
 // "uma vez por sessão" é uma vez por login — entrar de novo avisa de novo. A
-// chave é o token, pra um segundo login na mesma aba também ser avisado.
-let avisadoParaToken: string | null = null;
+// chave é a marca do login, pra um segundo login na mesma aba também ser avisado.
+let avisadoParaLogin: number | null = null;
 
 /**
  * Aviso de contas vencidas, logo ao entrar no sistema, pra quem tem acesso ao
@@ -28,7 +28,7 @@ let avisadoParaToken: string | null = null;
  * fecha, e a faixa dentro do Financeiro continua mostrando a pendência.
  */
 export function VencidasDialog() {
-  const token = useAuthStore((s) => s.token);
+  const loginEm = useAuthStore((s) => s.loginEm);
   const podeVer = useAuthStore((s) => s.hasPermission('FINANCEIRO_READ'));
   const navigate = useNavigate();
   const [fechado, setFechado] = useState(false);
@@ -48,10 +48,10 @@ export function VencidasDialog() {
 
   const totalVencidas = resumoPagar.vencida.quantidade + resumoReceber.vencida.quantidade;
   const carregado = pagar.isSuccess && receber.isSuccess;
-  const aberto = podeVer && carregado && totalVencidas > 0 && !fechado && avisadoParaToken !== token;
+  const aberto = podeVer && carregado && totalVencidas > 0 && !fechado && avisadoParaLogin !== loginEm;
 
   function fechar() {
-    avisadoParaToken = token;
+    avisadoParaLogin = loginEm;
     setFechado(true);
   }
 

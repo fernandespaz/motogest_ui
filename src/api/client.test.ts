@@ -1,4 +1,4 @@
-import { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/store/authStore';
 import { ApiForbiddenError, apiClient, extractErrorMessage, getBusinessErrorCode, mensagemSeguraParaUsuario } from './client';
@@ -115,50 +115,25 @@ describe('getBusinessErrorCode', () => {
   });
 });
 
-describe('session-expiry handling', () => {
+describe('sessão por cookie HttpOnly', () => {
   let assignMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    useAuthStore.setState({ token: null, expiresAt: null, isAuthenticated: false, permissoes: [] });
+    useAuthStore.setState({ loginEm: null, isAuthenticated: false, permissoes: [] });
     assignMock = vi.fn();
     vi.stubGlobal('location', { ...window.location, assign: assignMock });
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
-  it('does not touch a request when there is no active session', () => {
-    const config = { url: '/api/v1/clientes', headers: {} as Record<string, string> };
-    const result = requestInterceptor()(config);
-    expect(result).toBe(config);
-    expect(window.location.assign).not.toHaveBeenCalled();
-  });
-
-  it('attaches the bearer token for a live session', () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
-    const config = { url: '/api/v1/clientes', headers: {} as Record<string, string> };
-    const result = requestInterceptor()(config) as typeof config;
-    expect(result.headers.Authorization).toBe('Bearer abc123');
-  });
-
-  it('logs out and redirects before ever sending a request past expiry', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() - 1000, isAuthenticated: true });
-    const config = { url: '/api/v1/clientes', headers: {} as Record<string, string> };
-
-    await expect(Promise.resolve(requestInterceptor()(config))).rejects.toBeTruthy();
-    expect(window.location.assign).toHaveBeenCalledWith('/login?sessao=expirada');
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
-  });
-
-  it('never redirects the login request itself, even mid-expiry', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() - 1000, isAuthenticated: true });
-    const config = { url: '/api/v1/auth/login', headers: {} as Record<string, string> };
-
-    await expect(Promise.resolve(requestInterceptor()(config))).rejects.toBeTruthy();
-    // logout() still runs (the stale token shouldn't linger), but no redirect —
-    // the user is already on the login screen trying to sign back in.
-    expect(window.location.assign).not.toHaveBeenCalled();
+  it('envia cookies e o header de cliente web, e nunca um Authorization com token', () => {
+    expect(apiClient.defaults.withCredentials).toBe(true);
+    expect(apiClient.defaults.headers['X-MotoGest-Client']).toBe('web');
+    expect(apiClient.interceptors.request).toBeDefined();
+    expect(JSON.stringify(apiClient.defaults.headers)).not.toContain('Bearer');
   });
 
   it('passes a successful response straight through', () => {
@@ -166,34 +141,80 @@ describe('session-expiry handling', () => {
     expect(responseInterceptorFulfilled()(response)).toBe(response);
   });
 
-  it('surfaces a 403 as a plain permission error when the session is still valid', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
+  it('surfaces a 403 as a plain permission error', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
     await expect(responseInterceptorRejection()(makeAxiosError({}, 403))).rejects.toBeInstanceOf(ApiForbiddenError);
     expect(window.location.assign).not.toHaveBeenCalled();
   });
 
   it('carries method and url on the 403 error so the caches can explain the missing permission', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
+    useAuthStore.setState({ isAuthenticated: true });
 
     await expect(
       responseInterceptorRejection()(makeAxiosError({}, 403, '/api/v1/produtos/3/movimentacoes', 'post')),
     ).rejects.toMatchObject({ metodo: 'post', url: '/api/v1/produtos/3/movimentacoes' });
   });
 
-  it('treats a 403 as an expired session when our own record says it should be', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() - 1000, isAuthenticated: true });
-    await expect(responseInterceptorRejection()(makeAxiosError({}, 403))).rejects.toBeTruthy();
+  it('renova a sessão e repete a requisição quando recebe 401', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+    const repetida = vi.spyOn(apiClient, 'request').mockResolvedValue({ data: 'ok', status: 200 } as never);
+
+    const result = await responseInterceptorRejection()(makeAxiosError({}, 401));
+
+    expect(refresh).toHaveBeenCalledWith(
+      '/api/v1/auth/refresh',
+      null,
+      expect.objectContaining({ withCredentials: true, headers: { 'X-MotoGest-Client': 'web' } }),
+    );
+    expect(repetida).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ data: 'ok', status: 200 });
+    expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
+  it('várias requisições com 401 compartilham uma única renovação (o refresh é rotativo)', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+    vi.spyOn(apiClient, 'request').mockResolvedValue({ data: 'ok', status: 200 } as never);
+
+    await Promise.all([
+      responseInterceptorRejection()(makeAxiosError({}, 401, '/api/v1/a')),
+      responseInterceptorRejection()(makeAxiosError({}, 401, '/api/v1/b')),
+      responseInterceptorRejection()(makeAxiosError({}, 401, '/api/v1/c')),
+    ]);
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('desloga e redireciona quando a renovação falha', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    vi.spyOn(axios, 'post').mockRejectedValue(new Error('401'));
+
+    await expect(responseInterceptorRejection()(makeAxiosError({}, 401))).rejects.toBeTruthy();
+
+    expect(window.location.assign).toHaveBeenCalledWith('/login?sessao=expirada');
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('não tenta renovar mais de uma vez a mesma requisição', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    const refresh = vi.spyOn(axios, 'post').mockResolvedValue({ data: {} });
+    const error = makeAxiosError({}, 401);
+    (error.config as { _jaRenovou?: boolean })._jaRenovou = true;
+
+    await expect(responseInterceptorRejection()(error)).rejects.toBeTruthy();
+
+    expect(refresh).not.toHaveBeenCalled();
     expect(window.location.assign).toHaveBeenCalledWith('/login?sessao=expirada');
   });
 
-  it('logs out and redirects on a plain 401 for a non-login request', async () => {
-    useAuthStore.setState({ token: 'abc123', expiresAt: Date.now() + 60_000, isAuthenticated: true });
+  it('não tenta renovar quando não há sessão ativa', async () => {
+    const refresh = vi.spyOn(axios, 'post');
     await expect(responseInterceptorRejection()(makeAxiosError({}, 401))).rejects.toBeTruthy();
-    expect(window.location.assign).toHaveBeenCalledWith('/login?sessao=expirada');
+    expect(refresh).not.toHaveBeenCalled();
   });
 
   it('does not redirect on a 401 from the login request itself (bad credentials)', async () => {
-    useAuthStore.setState({ token: null, expiresAt: null, isAuthenticated: false });
     await expect(
       responseInterceptorRejection()(makeAxiosError({ message: 'Credenciais invalidas' }, 401, '/api/v1/auth/login')),
     ).rejects.toBeTruthy();

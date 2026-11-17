@@ -5,6 +5,7 @@ import { ChevronDown, LogOut } from 'lucide-react';
 import { useVisibleNavItems } from './useVisibleNavItems';
 import { groupLabels, isNavItemActive } from './nav';
 import { useAuthStore } from '@/store/authStore';
+import { encerrarSessao } from '@/lib/sessao';
 import { useOficinaAtual, useOficinaLogoSrc } from '@/hooks/useOficina';
 import { BrandMark } from '@/components/ui/BrandMark';
 
@@ -31,7 +32,6 @@ function initials(nome?: string | null): string {
 export function Sidebar() {
   const nome = useAuthStore((s) => s.nome);
   const perfil = useAuthStore((s) => s.perfil);
-  const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const visibleItems = useVisibleNavItems();
@@ -39,8 +39,8 @@ export function Sidebar() {
   const logoSrc = useOficinaLogoSrc();
   const [collapsed, setCollapsed] = useState<string[]>(readCollapsed);
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await encerrarSessao();
     navigate('/login', { replace: true });
   }
 
