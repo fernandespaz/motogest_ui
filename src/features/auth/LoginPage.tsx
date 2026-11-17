@@ -71,7 +71,8 @@ export function LoginPage() {
     setServerError(null);
     setOpcoesOficina(null);
     setSubmitting(true);
-    const oficina = (oficinaEscolhida ?? values.oficina ?? '').trim();
+    // o código da oficina nunca tem espaço (só letras e números): descarta qualquer um digitado, no meio ou nas pontas
+    const oficina = (oficinaEscolhida ?? values.oficina ?? '').replace(/\s+/g, '');
     try {
       const response = await authApi.login({
         identificador: values.identificador.trim(),

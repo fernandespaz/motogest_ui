@@ -61,6 +61,18 @@ describe('LoginPage — oficina + usuário', () => {
     );
   });
 
+  it('espaços no código da oficina são descartados antes de enviar', async () => {
+    vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
+    renderLogin();
+
+    await preencher({ oficina: ' ram tec ', usuario: '0003', senha: 'segredo' });
+    await userEvent.click(screen.getByRole('button', { name: /Entrar/ }));
+
+    await waitFor(() =>
+      expect(authApi.login).toHaveBeenCalledWith({ identificador: '0003', senha: 'segredo', oficina: 'ramtec' }),
+    );
+  });
+
   it('com a oficina em branco entra só por e-mail (a oficina nem vai no pedido)', async () => {
     vi.mocked(authApi.login).mockResolvedValue(RESPOSTA as never);
     renderLogin();
