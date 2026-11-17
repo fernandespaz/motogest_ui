@@ -20,4 +20,12 @@ describe('authApi', () => {
     });
     expect(result).toEqual({ token: 'abc', expiraEmSegundos: 3600 });
   });
+
+  it('logout() POSTs to the logout endpoint (o back-end limpa os cookies HttpOnly)', async () => {
+    vi.mocked(apiClient.post).mockResolvedValueOnce({ data: undefined });
+
+    await authApi.logout();
+
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/auth/logout');
+  });
 });
