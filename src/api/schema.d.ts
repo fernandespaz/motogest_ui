@@ -2790,9 +2790,9 @@ export interface components {
         };
         OrcamentoRequest: {
             /** Format: int64 */
-            clienteId: number;
+            clienteId?: number;
             /** Format: int64 */
-            veiculoId: number;
+            veiculoId?: number;
             /** Format: int64 */
             agendamentoId?: number;
             /** Format: int32 */
@@ -2804,6 +2804,13 @@ export interface components {
             /** Format: int32 */
             nivelCombustivel?: number;
             avarias?: components["schemas"]["AvariaRequest"][];
+            interessadoNome?: string;
+            interessadoTelefone?: string;
+            interessadoEmail?: string;
+            /** @enum {string} */
+            veiculoCategoria?: "A" | "B" | "C";
+            veiculoPlaca?: string;
+            veiculoDescricao?: string;
         };
         OrcamentoResponse: {
             /** Format: int64 */
@@ -2840,6 +2847,12 @@ export interface components {
             /** Format: int32 */
             nivelCombustivel?: number;
             avarias?: components["schemas"]["AvariaResponse"][];
+            interessadoNome?: string;
+            interessadoTelefone?: string;
+            interessadoEmail?: string;
+            /** @enum {string} */
+            veiculoCategoria?: "A" | "B" | "C";
+            veiculoDescricao?: string;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;

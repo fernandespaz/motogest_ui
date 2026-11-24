@@ -16,6 +16,7 @@ export const PERMISSAO_ROTULOS: Record<string, string> = {
   CLIENTE_WRITE: 'Cadastrar e editar clientes',
   VEICULO_READ: 'Visualizar veículos',
   VEICULO_WRITE: 'Cadastrar e editar veículos',
+  PLACAS_CARTEIRA: 'Ver o saldo e recarregar créditos de consulta de placa',
   VEICULO_MODELO_READ: 'Visualizar marcas e modelos de veículo',
   VEICULO_MODELO_WRITE: 'Cadastrar e editar marcas e modelos de veículo',
   AGENDA_READ: 'Visualizar a agenda',

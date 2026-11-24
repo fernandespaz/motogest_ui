@@ -465,3 +465,62 @@ export interface PageParams {
   size?: number;
   sort?: string;
 }
+
+// ---- Consulta de placa e carteira de creditos (backend: ConsultaPlacaController / CarteiraPlacasController) ----
+// Declarados a mao a partir dos DTOs do backend: o backend rodando ainda nao
+// expoe estes endpoints no OpenAPI. Quando expuser, regere com `npm run gen:api`
+// e troque estes tipos por Schemas['ConsultaPlacaResponse'] etc.
+export type EstadoCarteiraPlacas = 'OK' | 'CRITICO' | 'ESGOTADO';
+export type OrigemConsultaPlaca = 'API' | 'CACHE' | 'VEICULO_EXISTENTE';
+export type StatusRecargaPlacas = 'PENDENTE' | 'PAGA' | 'EXPIRADA' | 'RECUSADA';
+export type TipoLancamentoCarteira = 'RECARGA' | 'CONSUMO' | 'ESTORNO' | 'AJUSTE_CREDITO' | 'AJUSTE_DEBITO';
+
+export interface ConsultaPlacaResponse {
+  placa: string;
+  encontrada: boolean;
+  origem: OrigemConsultaPlaca;
+  marca?: string | null;
+  modelo?: string | null;
+  anoFabricacao?: number | null;
+  anoModelo?: number | null;
+  cor?: string | null;
+  chassi?: string | null;
+  placaJaCadastrada: boolean;
+  veiculoId?: number | null;
+  valorCobradoCentavos: number;
+  saldoCentavos: number;
+  estadoCarteira: EstadoCarteiraPlacas;
+}
+
+export interface CarteiraPlacasResponse {
+  saldoCentavos: number;
+  estado: EstadoCarteiraPlacas;
+  consultasRestantes: number;
+  precoConsultaCentavos: number;
+  precoChassiCentavos: number;
+  saldoCriticoCentavos: number;
+  recargaMinimaCentavos: number;
+  recargaMaximaCentavos: number;
+  consultaAutomaticaDisponivel: boolean;
+}
+
+export interface LancamentoCarteiraResponse {
+  id: number;
+  tipo: TipoLancamentoCarteira;
+  valorCentavos: number;
+  saldoAposCentavos: number;
+  placa?: string | null;
+  descricao?: string | null;
+  data: string;
+}
+
+export interface RecargaPlacasResponse {
+  id: number;
+  valorCentavos: number;
+  status: StatusRecargaPlacas;
+  qrCodeText?: string | null;
+  qrCodeImageUrl?: string | null;
+  expiraEm?: string | null;
+  mensagemErro?: string | null;
+  createdAt?: string;
+}

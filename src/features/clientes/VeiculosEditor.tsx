@@ -46,7 +46,7 @@ export function VeiculosEditor({ name, titulo = 'Veículos' }: { name: string; t
               </span>
               <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
-            <VeiculoCampos register={register} watch={watch} setValue={setValue} prefix={`${name}.${index}`} />
+            <VeiculoCampos register={register} watch={watch} setValue={setValue} prefix={`${name}.${index}`} consultaPlaca />
           </div>
         ))}
       </div>

@@ -9,6 +9,7 @@ import { useLicencaAtual } from '@/hooks/useOficina';
 import { licencaStatusMeta, metaFor } from '@/lib/statusMeta';
 import { formatDate } from '@/lib/formatters';
 import { precisaRenovarLicencaManualmente } from '@/lib/licenca';
+import { MENSAGEM_PAGAMENTO_PLANO_EM_BREVE, webhookPagBankLiberado } from '@/lib/liberacaoPagamentos';
 import { PagamentoCartaoModal } from './PagamentoCartaoModal';
 
 export function LicencaTab() {
@@ -84,6 +85,12 @@ export function LicencaTab() {
                     : 'Faça upgrade para continuar usando sem limites'}
                 </p>
               </div>
+
+              {!webhookPagBankLiberado() && (
+                <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                  {MENSAGEM_PAGAMENTO_PLANO_EM_BREVE}
+                </p>
+              )}
 
               <Button className="self-start" onClick={() => setShowPagamento(true)}>
                 {licenca.status === 'ATIVA' ? 'Renovar plano' : 'Fazer upgrade'}

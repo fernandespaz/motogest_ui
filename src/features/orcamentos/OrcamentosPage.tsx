@@ -23,6 +23,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orcamentoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { buildOrcamentoPdfBlob } from './orcamentoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
+import { orcamentoSemCadastro, MENSAGEM_ENVIAR_SEM_CADASTRO } from './orcamentoModo';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
@@ -138,7 +139,17 @@ export function OrcamentosPage() {
   // aí o cliente abria um orçamento que a tela pública ainda tratava como
   // rascunho, sem opção de aprovar. Uma única ação resolve os dois passos
   // juntos, na ordem certa.
+  // Enviar/aprovar exigem cliente e veículo cadastrados (o backend recusa com 422). Em vez de deixar o
+  // consultor esbarrar no erro, explica e leva direto pro orçamento, onde está o "vincular cliente".
+  function exigirCadastro(row: OrcamentoResponse): boolean {
+    if (!orcamentoSemCadastro(row)) return true;
+    toast.info(MENSAGEM_ENVIAR_SEM_CADASTRO);
+    navigate(`/orcamentos/${row.id}`);
+    return false;
+  }
+
   async function handleEnviarECompartilhar(row: OrcamentoResponse) {
+    if (!exigirCadastro(row)) return;
     try {
       const atualizado = await enviar.mutateAsync(row.id!);
       toast.success('Orçamento enviado — aguardando aprovação do cliente.');
@@ -156,6 +167,7 @@ export function OrcamentosPage() {
   // diretamente pelo cliente presencial: passa pelo ENVIADO só como transição
   // de estado interna, sem abrir o compartilhamento.
   async function handleAprovarNoBalcao(row: OrcamentoResponse) {
+    if (!exigirCadastro(row)) return;
     let enviado: OrcamentoResponse;
     try {
       enviado = await enviar.mutateAsync(row.id!);
@@ -206,7 +218,15 @@ export function OrcamentosPage() {
                 </span>
               ),
             },
-            { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
+            {
+              header: 'Cliente',
+              render: (row) => (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {`${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}`}
+                  {orcamentoSemCadastro(row) && <Badge tone="warning">Sem cadastro</Badge>}
+                </span>
+              ),
+            },
             { header: 'Valor', render: (row) => formatCurrency(row.valorTotal) },
             { header: 'Criado em', render: (row) => formatDate(row.createdAt), hideBelow: 'sm' },
             {

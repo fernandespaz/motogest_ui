@@ -9,6 +9,10 @@ import { Combobox } from '@/components/ui/Combobox';
 import { FormSection } from '@/components/ui/FormSection';
 import { Car, UserRound } from 'lucide-react';
 import { VeiculoCampos } from '@/features/shared/VeiculoCampos';
+import { usePlacaConsulta, type DadosPlaca, type DadosPlacaConsultada } from '@/features/shared/usePlacaConsulta';
+import { PlacaHero } from './PlacaHero';
+import { VeiculoDadosValidacao } from './VeiculoDadosValidacao';
+import { normalizarPlaca } from '@/lib/placa';
 import { useCreateVeiculo, useUpdateVeiculo } from '@/hooks/useVeiculos';
 import { useClientes } from '@/hooks/useClientes';
 import type { ClienteResponse, VeiculoRequest, VeiculoResponse } from '@/api/types';
@@ -46,6 +50,27 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+/** Nome mostrado ao usuário para cada campo obrigatório que ainda falta preencher. */
+const ROTULOS_OBRIGATORIOS: Partial<Record<keyof FormValues, string>> = {
+  clienteId: 'Cliente',
+  placa: 'Placa',
+  modelo: 'Modelo',
+  anoFabricacao: 'Ano de fabricação',
+  cor: 'Cor',
+  chassi: 'Chassi',
+  categoria: 'Categoria',
+};
+
+/** Rótulos dos campos obrigatórios ainda inválidos/vazios (na ordem do formulário). */
+function camposPendentes(values: Partial<FormValues>): string[] {
+  const resultado = schema.safeParse(values);
+  if (resultado.success) return [];
+  const pendentes = new Set(resultado.error.issues.map((i) => String(i.path[0])));
+  return (Object.keys(ROTULOS_OBRIGATORIOS) as (keyof FormValues)[])
+    .filter((campo) => pendentes.has(campo))
+    .map((campo) => ROTULOS_OBRIGATORIOS[campo]!);
+}
+
 export function VeiculoFormModal({
   open,
   onClose,
@@ -59,6 +84,8 @@ export function VeiculoFormModal({
 }) {
   const isEditing = !!veiculo;
   const [busca, setBusca] = useState('');
+  // Dados que a consulta de placa devolveu (e a placa a que se referem) — base do indicador "da consulta" x "manual".
+  const [dadosConsulta, setDadosConsulta] = useState<(Partial<DadosPlaca> & { placa: string }) | null>(null);
   const { data: clientes } = useClientes({ size: 50, nome: busca || undefined });
   const createMutation = useCreateVeiculo();
   const updateMutation = useUpdateVeiculo();
@@ -70,12 +97,15 @@ export function VeiculoFormModal({
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
     if (open) {
       setBusca('');
+      setDadosConsulta(null);
+      consulta.reset();
       reset(
         veiculo
           ? {
@@ -117,7 +147,31 @@ export function VeiculoFormModal({
     }
   }
 
+  const placaDigitada = watch('placa');
+  const consulta = usePlacaConsulta(placaDigitada, aplicarDadosConsulta, { enabled: open && !isEditing });
+  // Só vale para a placa que está no campo agora: mudou a placa, a seção volta ao cadastro manual.
+  const consultaVigente =
+    !isEditing && dadosConsulta && dadosConsulta.placa === normalizarPlaca(placaDigitada) ? dadosConsulta : null;
+
+  // Nunca sobrescreve o que o usuário já digitou: só completa campos vazios.
+  function aplicarDadosConsulta(dados: DadosPlacaConsultada) {
+    const { placa: placaConsultada, ...campos } = dados;
+    setDadosConsulta((anterior) => {
+      const base = anterior && anterior.placa === (placaConsultada ?? anterior.placa) ? anterior : { placa: placaConsultada ?? '' };
+      const novos = Object.fromEntries(Object.entries(campos).filter(([, v]) => v != null && v !== ''));
+      return { ...base, ...novos, placa: placaConsultada ?? base.placa };
+    });
+    for (const [campo, valor] of Object.entries(campos)) {
+      if (valor == null || valor === '') continue;
+      const atual = getValues(campo as keyof FormValues) as unknown;
+      if (atual != null && atual !== '') continue;
+      setValue(campo as keyof FormValues, valor as never, { shouldDirty: true, shouldValidate: true });
+    }
+  }
+
   const saving = createMutation.isPending || updateMutation.isPending;
+  // Salvar só libera quando todas as informações obrigatórias (as da consulta e as complementares) estão preenchidas.
+  const pendentes = camposPendentes(watch());
 
   return (
     <Modal
@@ -130,13 +184,20 @@ export function VeiculoFormModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
             Cancelar
           </Button>
-          <Button type="submit" form={FORM_ID} loading={saving}>
+          {pendentes.length > 0 && (
+            <span role="status" className="mr-auto self-center text-xs text-ink-muted">
+              Para salvar, preencha: {pendentes.join(', ')}
+            </span>
+          )}
+          <Button type="submit" form={FORM_ID} loading={saving} disabled={pendentes.length > 0}>
             Salvar
           </Button>
         </>
       }
     >
       <form id={FORM_ID} onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6" noValidate>
+        {!isEditing && <PlacaHero register={register} error={errors.placa?.message} consulta={consulta} />}
+
         <FormSection title="Proprietário" icon={UserRound}>
           <Controller
             control={control}
@@ -161,17 +222,34 @@ export function VeiculoFormModal({
           />
         </FormSection>
 
-        <FormSection title="Dados do veículo" icon={Car}>
-          <VeiculoCampos
+        {isEditing ? (
+          <FormSection title="Dados do veículo" icon={Car}>
+            <VeiculoCampos register={register} watch={watch} setValue={setValue} errors={errors} estrito categoriaVazia />
+            <Textarea label="Observações" rows={2} {...register('observacoes')} />
+          </FormSection>
+        ) : consultaVigente ? (
+          <VeiculoDadosValidacao
+            placa={consultaVigente.placa}
+            dadosConsulta={consultaVigente}
             register={register}
             watch={watch}
-            setValue={setValue}
             errors={errors}
-            estrito
-            categoriaVazia
+            consulta={consulta}
           />
-          <Textarea label="Observações" rows={2} {...register('observacoes')} />
-        </FormSection>
+        ) : (
+          <FormSection title="Dados do veículo" icon={Car}>
+            <VeiculoCampos
+              register={register}
+              watch={watch}
+              setValue={setValue}
+              errors={errors}
+              estrito
+              categoriaVazia
+              ocultarPlaca
+            />
+            <Textarea label="Observações" rows={2} {...register('observacoes')} />
+          </FormSection>
+        )}
       </form>
     </Modal>
   );

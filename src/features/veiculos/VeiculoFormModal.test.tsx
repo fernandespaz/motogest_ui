@@ -7,6 +7,11 @@ import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import { toast } from '@/store/toastStore';
 import { VeiculoFormModal } from './VeiculoFormModal';
 
+vi.mock('@/hooks/usePlacas', () => ({
+  useCarteiraPlacas: () => ({ data: undefined }),
+  useConsultarPlaca: () => ({ mutateAsync: vi.fn(), isPending: false, reset: vi.fn() }),
+  useConsultarChassi: () => ({ mutateAsync: vi.fn(), isPending: false, reset: vi.fn() }),
+}));
 vi.mock('@/hooks/useVeiculos', () => ({
   useCreateVeiculo: vi.fn(),
   useUpdateVeiculo: vi.fn(),
@@ -56,13 +61,26 @@ describe('VeiculoFormModal', () => {
     expect(screen.getByRole('combobox', { name: /Categoria/ })).toHaveValue('B');
   });
 
-  it('shows validation errors for the required fields', async () => {
+  it('keeps Salvar disabled and lists what is still missing until every required field is filled', async () => {
     render(<VeiculoFormModal open onClose={vi.fn()} veiculo={null} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    const salvar = screen.getByRole('button', { name: 'Salvar' });
 
-    expect(await screen.findByText('Selecione o cliente')).toBeInTheDocument();
-    expect(screen.getByText('Informe a placa')).toBeInTheDocument();
+    expect(salvar).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Para salvar, preencha: Cliente, Placa, Modelo, Ano de fabricação, Cor, Chassi');
     expect(createMutateAsync).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByPlaceholderText('Buscar cliente pelo nome...'));
+    await userEvent.click(await screen.findByRole('button', { name: /Carlos/ }));
+    await userEvent.type(screen.getByLabelText(/^Placa/), 'MTG0009');
+    await userEvent.type(screen.getByLabelText(/^Modelo/), 'Onix');
+    await userEvent.type(screen.getByLabelText(/^Cor/), 'Preta');
+    await userEvent.type(screen.getByLabelText(/^Ano de fabricação/), '2022');
+    expect(salvar).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Para salvar, preencha: Chassi');
+
+    await userEvent.type(screen.getByLabelText(/^Chassi/), '9BWZZZ377VT004251');
+    await waitFor(() => expect(salvar).toBeEnabled());
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('filters the cliente options as the user types a search term', async () => {
@@ -143,8 +161,8 @@ describe('VeiculoFormModal', () => {
     );
     expect(screen.getByRole('combobox', { name: /Categoria/ })).toHaveValue('');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-    expect(await screen.findByText('Categoria obrigatória')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Para salvar, preencha: Categoria');
     expect(updateMutateAsync).not.toHaveBeenCalled();
 
     await userEvent.selectOptions(screen.getByRole('combobox', { name: /Categoria/ }), 'C');

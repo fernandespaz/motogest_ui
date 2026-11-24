@@ -9,6 +9,11 @@ import { useModelosVeiculo } from '@/hooks/useModelosVeiculo';
 import { toast } from '@/store/toastStore';
 import { VeiculosPage } from './VeiculosPage';
 
+vi.mock('@/hooks/usePlacas', () => ({
+  useCarteiraPlacas: () => ({ data: undefined }),
+  useConsultarPlaca: () => ({ mutateAsync: vi.fn(), isPending: false, reset: vi.fn() }),
+  useConsultarChassi: () => ({ mutateAsync: vi.fn(), isPending: false, reset: vi.fn() }),
+}));
 vi.mock('@/hooks/useVeiculos', () => ({
   useVeiculos: vi.fn(),
   useDeleteVeiculo: vi.fn(),

@@ -3,6 +3,11 @@ export function formatCurrency(value: number | undefined | null): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/** Valor em centavos (como o backend de placas devolve) formatado em reais. */
+export function formatCentavos(centavos: number | undefined | null): string {
+  return formatCurrency((centavos ?? 0) / 100);
+}
+
 export function formatDate(value: string | undefined | null): string {
   if (!value) return '—';
   // Date-only strings ("YYYY-MM-DD") must not go through Date parsing — that

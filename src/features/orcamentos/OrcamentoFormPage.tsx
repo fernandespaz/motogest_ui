@@ -39,6 +39,8 @@ import { useAuthStore } from '@/store/authStore';
 import { isMecanico, isConsultor } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
 import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
+import { CamposInteressado, SeletorModoCliente, SugestoesClienteExistente } from './ClienteOrcamentoModo';
+import { camposDoModo, orcamentoSemCadastro } from './orcamentoModo';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -52,9 +54,18 @@ const itemSchema = z.object({
   precificadoPorHT: z.boolean().optional(),
 });
 
-const schema = z.object({
-  clienteId: z.coerce.number().positive('Selecione o cliente'),
-  veiculoId: z.coerce.number().positive('Selecione o veículo'),
+const schema = z
+  .object({
+  // O que vai pro backend depende do modo (ver camposDoModo): cliente/veículo cadastrados OU interessado/veículo avulso.
+  modo: z.enum(['CADASTRADO', 'INTERESSADO']),
+  clienteId: z.coerce.number().optional(),
+  veiculoId: z.coerce.number().optional(),
+  interessadoNome: z.string().optional(),
+  interessadoTelefone: z.string().optional(),
+  interessadoEmail: z.string().optional(),
+  veiculoCategoria: z.enum(['A', 'B', 'C']).optional().or(z.literal('')),
+  veiculoPlaca: z.string().optional(),
+  veiculoDescricao: z.string().optional(),
   // Vínculo com a Agenda. Não é editável aqui, mas PRECISA ir de volta no PUT: o backend grava null quando falta.
   agendamentoId: z.number().optional(),
   validadeDias: z.coerce.number().optional(),
@@ -72,7 +83,19 @@ const schema = z.object({
     .array(itemSchema)
     .min(1, 'Adicione ao menos um item')
     .refine((itens) => !temServicoPorHTSemTempo(itens), MENSAGEM_SERVICO_SEM_TEMPO),
-});
+  })
+  .superRefine((v, ctx) => {
+    if (v.modo === 'CADASTRADO') {
+      if (!v.clienteId) ctx.addIssue({ code: 'custom', path: ['clienteId'], message: 'Selecione o cliente' });
+      if (!v.veiculoId) ctx.addIssue({ code: 'custom', path: ['veiculoId'], message: 'Selecione o veículo' });
+      return;
+    }
+    if (!v.interessadoNome?.trim()) ctx.addIssue({ code: 'custom', path: ['interessadoNome'], message: 'Informe o nome do cliente' });
+    if (!v.veiculoCategoria) ctx.addIssue({ code: 'custom', path: ['veiculoCategoria'], message: 'Informe a categoria do veículo' });
+    if (v.interessadoEmail?.trim() && !z.string().email().safeParse(v.interessadoEmail.trim()).success) {
+      ctx.addIssue({ code: 'custom', path: ['interessadoEmail'], message: 'E-mail inválido' });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -92,6 +115,19 @@ function itensParaFormValues(itens: OrcamentoResponse['itens']): FormValues['ite
       tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
     })) ?? []
   );
+}
+
+// Campos do interessado/veículo avulso vindos da resposta (ausentes quando o orçamento é de cliente cadastrado).
+function interessadoParaFormValues(o: OrcamentoResponse) {
+  return {
+    interessadoNome: o.interessadoNome ?? '',
+    interessadoTelefone: o.interessadoTelefone ?? '',
+    interessadoEmail: o.interessadoEmail ?? '',
+    veiculoCategoria: o.veiculoCategoria ?? ('' as const),
+    // Na resposta, veiculoPlaca já vem preenchida com a placa avulsa quando não há cadastro.
+    veiculoPlaca: o.veiculoId == null ? (o.veiculoPlaca ?? '') : '',
+    veiculoDescricao: o.veiculoDescricao ?? '',
+  };
 }
 
 export function OrcamentoFormPage() {
@@ -164,7 +200,7 @@ function OrcamentoFormContent() {
     resolver: zodResolver(schema),
     // agendamentoId vem do parâmetro da URL (não do GET do agendamento): se o GET falhar (sem AGENDA_READ, rede),
     // o vínculo com a Agenda não pode se perder em silêncio.
-    defaultValues: { itens: [], avarias: [], validadeDias: 7, agendamentoId: agendamentoOrigemId, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
+    defaultValues: { modo: 'CADASTRADO', itens: [], avarias: [], validadeDias: 7, agendamentoId: agendamentoOrigemId, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
   });
   const {
     control,
@@ -178,6 +214,13 @@ function OrcamentoFormContent() {
   } = methods;
   const clienteId = watch('clienteId');
   const veiculoId = watch('veiculoId');
+  const modo = watch('modo');
+  const veiculoCategoriaAvulso = watch('veiculoCategoria');
+  const interessadoTelefone = watch('interessadoTelefone');
+  const interessadoEmail = watch('interessadoEmail');
+  const semCadastro = modo === 'INTERESSADO';
+  // Orçamento já salvo sem cliente cadastrado (diferente de só ter alternado o modo na tela).
+  const semCadastroSalvo = orcamentoSemCadastro(orcamento);
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
@@ -205,6 +248,9 @@ function OrcamentoFormContent() {
   useEffect(() => {
     if (orcamento) {
       reset({
+        // Sem clienteId na resposta = orçamento criado "ainda não cadastrado".
+        modo: orcamento.clienteId == null ? 'INTERESSADO' : 'CADASTRADO',
+        ...interessadoParaFormValues(orcamento),
         clienteId: orcamento.clienteId ?? 0,
         veiculoId: orcamento.veiculoId ?? 0,
         agendamentoId: orcamento.agendamentoId ?? undefined,
@@ -257,12 +303,15 @@ function OrcamentoFormContent() {
   // "id" e "precificadoPorHT" são só do form; serviço cobrado pela hora
   // técnica vai sem valorUnitario pro backend calcular (ver itemParaPayload).
   function paraPayload(values: FormValues) {
+    const { modo: modoValor, ...resto } = values;
     return {
-      ...values,
+      ...camposDoModo(modoValor, { ...resto, veiculoCategoria: resto.veiculoCategoria || undefined }),
       // Vazio = não informado: na criação o backend assume "agora"; na edição mantém o que já tinha.
       dataEntradaVeiculo: values.dataEntradaVeiculo || undefined,
       itens: values.itens.map(itemParaPayload),
-      avarias: avariasParaPayload(values.avarias),
+      // A vistoria só existe com veículo cadastrado (some da tela sem cadastro) e o backend recusa avaria com foto
+      // sem veículo: ao alternar pra "ainda não cadastrado" as avarias antigas não podem seguir escondidas no payload.
+      avarias: modoValor === 'INTERESSADO' ? [] : avariasParaPayload(values.avarias),
     };
   }
 
@@ -289,8 +338,12 @@ function OrcamentoFormContent() {
   async function garantirOrigem() {
     if (efetivoId) return { tipo: 'ORCAMENTO' as const, id: efetivoId };
     const valores = getValues();
-    if (!valores.clienteId || !valores.veiculoId) {
+    if (valores.modo === 'CADASTRADO' && (!valores.clienteId || !valores.veiculoId)) {
       toast.error('Selecione cliente e veículo antes de solicitar desconto ou reservar estoque.');
+      return undefined;
+    }
+    if (valores.modo === 'INTERESSADO' && (!valores.interessadoNome?.trim() || !valores.veiculoCategoria)) {
+      toast.error('Informe o nome e a categoria do veículo antes de solicitar desconto ou reservar estoque.');
       return undefined;
     }
     // Esse auto-save pula o zod (usa getValues direto) — sem esta checagem um
@@ -305,6 +358,8 @@ function OrcamentoFormContent() {
       if (!criado.id) return undefined;
       setSavedId(criado.id);
       reset({
+        modo: valores.modo,
+        ...interessadoParaFormValues(criado),
         clienteId: criado.clienteId ?? valores.clienteId,
         veiculoId: criado.veiculoId ?? valores.veiculoId,
         agendamentoId: criado.agendamentoId ?? valores.agendamentoId,
@@ -400,7 +455,38 @@ function OrcamentoFormContent() {
                   pros campos descendentes, então cada controle recebe o disabled
                   explicitamente. */}
               <div className="contents">
+                {!readOnly && (
+                  <div className="mb-4 flex flex-col gap-3">
+                    <SeletorModoCliente modo={modo} onChange={(m) => setValue('modo', m, { shouldDirty: true })} />
+                    {isEditing && semCadastroSalvo && !semCadastro && !clienteId && (
+                      <p className="text-sm text-ink-muted">
+                        Escolha o cliente e o veículo cadastrados e salve — os itens do orçamento são mantidos.
+                      </p>
+                    )}
+                    {!semCadastro && !clienteId && (
+                      <SugestoesClienteExistente
+                        telefone={interessadoTelefone}
+                        email={interessadoEmail}
+                        onEscolher={(id, nome) => {
+                          setValue('clienteId', id, { shouldDirty: true });
+                          setValue('veiculoId', 0);
+                          setBuscaClienteInput(nome);
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+                {semCadastro && (
+                  <div className="mb-4 flex flex-col gap-3">
+                    <CamposInteressado disabled={readOnly} />
+                    <p className="rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-muted">
+                      Dá para montar e salvar o rascunho agora. Para enviar ao cliente é preciso vincular um cliente e um
+                      veículo cadastrados.
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {!semCadastro && (
                   <Controller
                     control={control}
                     name="clienteId"
@@ -417,8 +503,10 @@ function OrcamentoFormContent() {
                           // A vehicle belongs to one client — a stale selection
                           // from whoever was picked before must not survive this.
                           setValue('veiculoId', 0);
-                          // Os itens foram precificados pela categoria do veículo anterior.
-                          if (value !== field.value) {
+                          // Os itens foram precificados pela categoria do veículo anterior. Sem cliente
+                          // anterior (ex.: vinculando um orçamento "ainda não cadastrado") os itens ficam:
+                          // o ItemsEditor reprecifica sozinho se a categoria do veículo real for outra.
+                          if (field.value && value !== field.value) {
                             setValue('itens', []);
                             descartarAvarias();
                           }
@@ -431,6 +519,8 @@ function OrcamentoFormContent() {
                       />
                     )}
                   />
+                  )}
+                  {!semCadastro && (
                   <Controller
                     control={control}
                     name="veiculoId"
@@ -454,6 +544,7 @@ function OrcamentoFormContent() {
                       />
                     )}
                   />
+                  )}
                   <Input label="Validade (dias)" type="number" disabled={readOnly} {...register('validadeDias')} />
                   <Input
                     label="Entrada do veículo"
@@ -513,13 +604,14 @@ function OrcamentoFormContent() {
                   )}
                 </AnimatePresence>
 
-                <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />
+                {/* Avaria com foto é do veículo cadastrado — sem ele a vistoria 3D não se aplica. */}
+                {!semCadastro && <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />}
 
                 <div className="mt-4 border-t border-border pt-4">
                   <ItemsEditor
                     name="itens"
                     mostrarTempoVendido
-                    categoriaVeiculo={selectedVeiculo?.categoria}
+                    categoriaVeiculo={semCadastro ? veiculoCategoriaAvulso || undefined : selectedVeiculo?.categoria}
                     disabled={readOnly}
                     origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
                     onGarantirOrigem={garantirOrigem}

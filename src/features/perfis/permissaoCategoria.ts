@@ -34,7 +34,7 @@ const RECURSOS_POR_CATEGORIA: Record<Exclude<PermissaoCategoria, 'OUTROS'>, stri
   // Contas, fechamento e operação do caixa — separado do Gerencial pra quem monta um perfil de operador de caixa achar tudo num lugar só.
   FINANCEIRO: ['FINANCEIRO', 'CAIXA'],
   // Atendimento/relacionamento com o cliente e o que é vendido a ele.
-  COMERCIAL: ['CLIENTE', 'VEICULO', 'VEICULO_MODELO', 'AGENDA', 'ORCAMENTO', 'SERVICO'],
+  COMERCIAL: ['CLIENTE', 'VEICULO', 'VEICULO_MODELO', 'PLACAS_CARTEIRA', 'AGENDA', 'ORCAMENTO', 'SERVICO'],
   // Execução do serviço dentro da oficina.
   TECNICO: ['ORDEM_SERVICO', 'CHECKLIST', 'FOTO', 'ESTOQUE'],
 };

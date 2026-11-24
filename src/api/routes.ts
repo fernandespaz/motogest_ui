@@ -15,6 +15,12 @@ export const API_ROUTES = {
   },
   veiculos: {
     base: '/api/v1/veiculos',
+    consultaPlaca: '/api/v1/veiculos/consulta-placa',
+  },
+  placas: {
+    carteira: '/api/v1/placas/carteira',
+    extrato: '/api/v1/placas/carteira/extrato',
+    recargas: '/api/v1/placas/recargas',
   },
   modelosVeiculo: {
     base: '/api/v1/modelos-veiculo',

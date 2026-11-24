@@ -213,6 +213,71 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
     expect(mutateAsync.mock.calls[0][0].payload.agendamentoId).toBe(77);
   });
 
+  // Orçamento "ainda não cadastrado": a resposta não traz clienteId/veiculoId, só os dados avulsos.
+  const orcamentoSemCadastro = {
+    id: 8,
+    status: 'RASCUNHO',
+    clienteNome: 'Maria Interessada',
+    validadeDias: 7,
+    interessadoNome: 'Maria Interessada',
+    interessadoTelefone: '(11) 98888-7777',
+    veiculoCategoria: 'B',
+    veiculoDescricao: 'Honda CG 160',
+    itens: [{ id: 1, tipoItem: 'SERVICO', descricao: 'Troca de óleo', quantidade: 1, valorUnitario: 50 }],
+  };
+
+  it('abre um orçamento sem cadastro no modo "ainda não cadastrado" e salva só os dados do interessado (backend dá 422 se vier cliente junto)', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoSemCadastro, isLoading: false } as never);
+    renderPage('/orcamentos/8');
+
+    await waitFor(() => expect(screen.getByLabelText(/Nome do cliente/)).toHaveValue('Maria Interessada'));
+    expect(screen.getByLabelText(/Categoria do veículo/)).toHaveValue('B');
+    expect(screen.queryByText('Buscar por nome ou CPF/CNPJ...')).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    const { payload } = mutateAsync.mock.calls[0][0];
+    expect(payload).toMatchObject({ interessadoNome: 'Maria Interessada', veiculoCategoria: 'B', veiculoDescricao: 'Honda CG 160' });
+    expect(payload.clienteId).toBeUndefined();
+    expect(payload.veiculoId).toBeUndefined();
+    expect(payload).not.toHaveProperty('modo');
+  });
+
+  it('não salva sem cadastro se faltar o nome ou a categoria do veículo', async () => {
+    const mutateAsync = vi.fn();
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({
+      data: { ...orcamentoSemCadastro, interessadoNome: '', veiculoCategoria: undefined },
+      isLoading: false,
+    } as never);
+    renderPage('/orcamentos/8');
+    await waitFor(() => expect(screen.getByLabelText(/Nome do cliente/)).toBeInTheDocument());
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    expect(await screen.findByText('Informe o nome do cliente')).toBeInTheDocument();
+    expect(screen.getByText('Informe a categoria do veículo')).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('ao escolher "Cliente cadastrado" num orçamento sem cadastro mostra os campos de vínculo e preserva o que foi digitado', async () => {
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoSemCadastro, isLoading: false } as never);
+    renderPage('/orcamentos/8');
+    await waitFor(() => expect(screen.getByLabelText(/Nome do cliente/)).toBeInTheDocument());
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Cliente cadastrado/ }));
+    expect(screen.queryByLabelText(/Nome do cliente/)).not.toBeInTheDocument();
+    expect(screen.getByText('Escolha o cliente e o veículo cadastrados e salve — os itens do orçamento são mantidos.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Ainda não cadastrado/ }));
+    expect(screen.getByLabelText(/Nome do cliente/)).toHaveValue('Maria Interessada');
+  });
+
   it('vindo da Agenda (?agendamentoId=) pré-preenche cliente/veículo, mostra a origem e envia o vínculo', async () => {
     const mutateAsync = vi.fn().mockResolvedValue({ id: 9 });
     vi.mocked(useCreateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);

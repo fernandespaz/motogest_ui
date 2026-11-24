@@ -106,4 +106,8 @@ describe('agruparPermissoesPorCategoria', () => {
     const grupos = agruparPermissoesPorCategoria([{ id: 1, codigo: undefined }, { id: 2, codigo: 'CLIENTE_READ' }]);
     expect(grupos.get('COMERCIAL')).toHaveLength(1);
   });
+
+  it('groups PLACAS_CARTEIRA (no action suffix) with the commercial permissions', () => {
+    expect(categoriaDaPermissao('PLACAS_CARTEIRA')).toBe('COMERCIAL');
+  });
 });

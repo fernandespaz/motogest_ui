@@ -165,6 +165,7 @@ export const router = createBrowserRouter([
           { path: '/descontos', element: <DescontosPage /> },
           { path: '/oficina', element: <OficinaPage /> },
           { path: '/oficina/licenca', element: <OficinaPage /> },
+          { path: '/oficina/placas', element: <OficinaPage /> },
         ],
       },
     ],

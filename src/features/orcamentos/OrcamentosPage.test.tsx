@@ -96,6 +96,8 @@ describe('OrcamentosPage — aprovação direta no balcão', () => {
   it('sends then approves a RASCUNHO in one click, without opening WhatsApp', async () => {
     const rascunho = {
       id: 1,
+      clienteId: 1,
+      veiculoId: 1,
       clienteNome: 'Cliente da Ana',
       veiculoPlaca: 'MTG0001',
       status: 'RASCUNHO',
@@ -125,6 +127,8 @@ describe('OrcamentosPage — aprovação direta no balcão', () => {
 
   const rascunho = {
     id: 1,
+    clienteId: 1,
+    veiculoId: 1,
     clienteNome: 'Cliente da Ana',
     veiculoPlaca: 'MTG0001',
     status: 'RASCUNHO',
@@ -172,6 +176,26 @@ describe('OrcamentosPage — aprovação direta no balcão', () => {
       expect.stringContaining('Orçamento enviado, mas não foi possível aprovar automaticamente'),
     );
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  // Orçamento criado "ainda não cadastrado" (sem clienteId/veiculoId): o backend recusa enviar/aprovar com 422.
+  // A tela explica e leva direto pro orçamento em vez de disparar a chamada que vai falhar.
+  it('does not call enviar for a rascunho without registered client, and explains how to proceed', async () => {
+    const semCadastro = { id: 5, clienteNome: 'Maria', veiculoPlaca: 'ABC1D23', status: 'RASCUNHO', consultorId: 10, consultorNome: 'Ana' };
+    vi.mocked(useTodosOrcamentos).mockReturnValue({ data: [semCadastro], isLoading: false } as never);
+    vi.mocked(useDeleteOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    const enviarMock = vi.fn();
+    vi.mocked(useEnviarOrcamento).mockReturnValue({ mutateAsync: enviarMock, isPending: false } as never);
+    vi.mocked(useAprovarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useRejeitarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useCriarOSAPartirDeOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+
+    renderPage();
+    expect(screen.getByText('Sem cadastro')).toBeInTheDocument();
+    await userEvent.click(screen.getByTitle('Aprovar (cliente no balcão)'));
+
+    expect(enviarMock).not.toHaveBeenCalled();
+    expect(toast.info).toHaveBeenCalledWith(expect.stringContaining('Vincule um cliente'));
   });
 
   // Ações de linha (Aprovar/Rejeitar/PDF/etc.) usam o mesmo padrão de ícone
