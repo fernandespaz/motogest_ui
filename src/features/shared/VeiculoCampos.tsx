@@ -43,7 +43,7 @@ export function VeiculoCampos({
   setValue: UseFormSetValue<any>;
   prefix?: string;
   errors?: VeiculoCamposErros;
-  /** Marca modelo, cor, ano de fabricação e chassi como obrigatórios (cadastro completo de um veículo). */
+  /** Marca o modelo como obrigatório e valida na hora (cadastro de um veículo). Cor, ano e chassi são recomendados, não obrigatórios. */
   estrito?: boolean;
   /** Mostra a opção vazia na categoria — veículo legado sem categoria precisa de uma escolha explícita. */
   categoriaVazia?: boolean;
@@ -103,7 +103,7 @@ export function VeiculoCampos({
         <Input label="Modelo" required={estrito} error={errors?.modelo?.message} {...register(n('modelo'))} />
       </div>
       <div className="lg:col-span-3">
-        <Input label="Cor" required={estrito} error={errors?.cor?.message} {...register(n('cor'))} />
+        <Input label="Cor" error={errors?.cor?.message} {...register(n('cor'))} />
       </div>
       <div className="lg:col-span-3">
         <Select
@@ -125,7 +125,6 @@ export function VeiculoCampos({
         <Input
           label="Ano de fabricação"
           type="number"
-          required={estrito}
           error={errors?.anoFabricacao?.message}
           {...register(n('anoFabricacao'))}
         />
@@ -139,7 +138,7 @@ export function VeiculoCampos({
         </div>
       )}
       <div className="lg:col-span-3">
-        <Input label="Chassi" required={estrito} error={errors?.chassi?.message} {...register(n('chassi'))} />
+        <Input label="Chassi" error={errors?.chassi?.message} {...register(n('chassi'))} />
       </div>
     </div>
   );

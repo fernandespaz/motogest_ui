@@ -52,6 +52,7 @@ import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
 import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
+import { rotuloOS } from './ordemServicoBusca';
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -293,16 +294,16 @@ export function OrdemServicoFormPage() {
         // realmente voltou na resposta, não o status anterior à edição.
         toast.success(
           os?.status === 'APROVADA' && atualizada.status === 'AGUARDANDO_APROVACAO'
-            ? 'OS atualizada — voltou para aguardando aprovação do cliente.'
-            : 'Ordem de Serviço atualizada.',
+            ? 'O.S. atualizada — voltou para aguardando aprovação do cliente.'
+            : 'O.S. atualizada.',
         );
       } else {
         await createMutation.mutateAsync(payload);
-        toast.success('Ordem de Serviço criada.');
+        toast.success('O.S. criada.');
       }
       navigate('/ordens-servico');
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível salvar a Ordem de Serviço.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível salvar a O.S.'));
     }
   }
 
@@ -320,10 +321,10 @@ export function OrdemServicoFormPage() {
     if (!osId) return;
     try {
       await enviarOS.mutateAsync(osId);
-      toast.success('OS enviada — aguardando aprovação do cliente.');
+      toast.success('O.S. enviada — aguardando aprovação do cliente.');
       if (os?.tokenAprovacao) await compartilharWhatsApp();
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível enviar a OS.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível enviar a O.S.'));
     }
   }
 
@@ -381,10 +382,10 @@ export function OrdemServicoFormPage() {
     if (!osId || !motivoPausa.trim()) return;
     try {
       await timerPause.mutateAsync({ id: osId, motivo: motivoPausa.trim() });
-      toast.success('OS pausada.');
+      toast.success('O.S. pausada.');
       fecharPausaModal();
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível pausar a OS.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível pausar a O.S.'));
     }
   }
 
@@ -394,7 +395,7 @@ export function OrdemServicoFormPage() {
       await timerResume.mutateAsync(osId);
       toast.success('Cronômetro retomado.');
     } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível retomar a OS.'));
+      toast.error(extractErrorMessage(error, 'Não foi possível retomar a O.S.'));
     }
   }
 
@@ -416,12 +417,22 @@ export function OrdemServicoFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEditing ? `OS ${os?.numero ?? `#${osId}`}` : 'Nova Ordem de Serviço'}
+        title={isEditing ? rotuloOS(os?.numero, osId) : 'Nova O.S.'}
         // Não é um campo do request (o backend atribui a partir do orçamento
         // de origem, ver OrdemServicoRequest em openapi.json) — só exibição,
         // pra rastreabilidade no fechamento de mês: quem converteu o
         // orçamento nesta OS.
-        subtitle={isEditing ? <ConsultorBadge nome={os?.consultorNome ?? '—'} /> : undefined}
+        subtitle={
+          isEditing ? (
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+              {/* Quem é o cliente e qual é o carro logo no cabeçalho — antes era preciso rolar até o formulário. */}
+              {(os?.clienteNome || os?.veiculoPlaca) && (
+                <span className="font-medium text-ink">{[os?.clienteNome, os?.veiculoPlaca].filter(Boolean).join(' · ')}</span>
+              )}
+              <ConsultorBadge nome={os?.consultorNome ?? '—'} />
+            </span>
+          ) : undefined
+        }
         action={
           <div className="flex flex-wrap items-center gap-2">
             {isEditing && (
@@ -711,7 +722,7 @@ export function OrdemServicoFormPage() {
       <Modal
         open={pausaModalAberto}
         onClose={fecharPausaModal}
-        title="Pausar Ordem de Serviço"
+        title="Pausar O.S."
         footer={
           <>
             <Button variant="secondary" onClick={fecharPausaModal}>

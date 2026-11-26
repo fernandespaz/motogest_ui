@@ -45,12 +45,15 @@ export function ResumoOrcamentoPanel({
   mostrarSalvar,
   saving,
   rotuloSalvar,
+  statusSalvamento,
 }: {
   itens: ItemFormValue[];
   pendencias: PendenciaEnvio[];
   mostrarSalvar: boolean;
   saving: boolean;
   rotuloSalvar: string;
+  /** Situação do salvamento automático ("Salvo automaticamente às 15:32"…); some quando não há o que dizer. */
+  statusSalvamento?: string;
 }) {
   const total = itens.reduce((s, i) => s + (Number(i.quantidade) || 0) * (Number(i.valorUnitario) || 0), 0);
   const porTipo = totaisPorTipo(itens);
@@ -127,6 +130,11 @@ export function ResumoOrcamentoPanel({
         <Button type="submit" loading={saving} className="w-full">
           {rotuloSalvar}
         </Button>
+      )}
+      {statusSalvamento && (
+        <p aria-live="polite" data-testid="status-salvamento" className="-mt-2 text-center text-xs text-ink-muted">
+          {statusSalvamento}
+        </p>
       )}
     </aside>
   );

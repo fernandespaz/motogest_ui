@@ -1,10 +1,10 @@
 import { format } from 'date-fns';
 import clsx from 'clsx';
-import { Car, FileText, User, Wrench, HardHat } from 'lucide-react';
+import { AlarmClock, Car, FileText, User, Wrench, HardHat } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import type { AgendamentoResponse, OrdemServicoResponse } from '@/api/types';
 import { agendamentoStatusMeta, metaFor } from '@/lib/statusMeta';
-import { ETAPA_LABEL, type Etapa } from './agendaUtils';
+import { ETAPA_LABEL, textoAtraso, type Etapa } from './agendaUtils';
 
 export function horaDe(ag: AgendamentoResponse): string {
   return ag.dataHora ? format(new Date(ag.dataHora), 'HH:mm') : '--:--';
@@ -32,6 +32,7 @@ export function AgendaCardBody({
   status,
   etapa,
   mostrarStatus = true,
+  atrasoMin = 0,
 }: {
   ag?: AgendamentoResponse;
   os?: OrdemServicoResponse;
@@ -40,6 +41,8 @@ export function AgendaCardBody({
   /** Onde está no caminho orçamento → OS; só aparece enquanto o técnico ainda não iniciou. */
   etapa?: Etapa;
   mostrarStatus?: boolean;
+  /** Minutos além do horário marcado sem o veículo ter chegado (0 = no horário). */
+  atrasoMin?: number;
 }) {
   const meta = metaFor(agendamentoStatusMeta, status ?? ag?.status);
   const placa = ag?.veiculoPlaca ?? os?.veiculoPlaca;
@@ -57,6 +60,12 @@ export function AgendaCardBody({
           <Badge tone="warning">{os?.numero ?? 'OS'}</Badge>
         )}
       </div>
+      {atrasoMin > 0 && (
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-danger">
+          <AlarmClock size={13} className="shrink-0" aria-hidden />
+          Atrasado {textoAtraso(atrasoMin)}
+        </p>
+      )}
       {cliente && (
         <p className="flex items-center gap-1.5 truncate text-sm text-ink">
           <User size={13} className="shrink-0 text-ink-muted" aria-hidden />

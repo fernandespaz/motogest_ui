@@ -132,7 +132,7 @@ describe('ClienteFormModal', () => {
     expect(createMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('creates a new cliente, sending along any new veículos (categoria defaults to A when untouched)', async () => {
+  it('creates a new cliente, sending along any new veículos (categoria escolhida explicitamente)', async () => {
     const onClose = vi.fn();
     renderModal({ open: true, onClose, cliente: null });
 
@@ -140,6 +140,9 @@ describe('ClienteFormModal', () => {
     await userEvent.type(screen.getByLabelText(/^CPF/), '98765432100');
     await userEvent.click(screen.getByRole('button', { name: /Adicionar veículo/ }));
     await userEvent.type(screen.getByLabelText(/^Placa/), 'MTG0002');
+    // sem valor inicial: a categoria decide a hora técnica, então o veículo novo exige uma escolha
+    expect(screen.getByRole('combobox', { name: /Categoria/ })).toHaveValue('');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Categoria/ }), 'A');
 
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 

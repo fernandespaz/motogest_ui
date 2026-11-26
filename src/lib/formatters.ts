@@ -77,6 +77,17 @@ export function formatPhone(value: string): string {
   return digits.replace(/^(\d{2})(\d{5})(\d{0,4})$/, (_, a, b, c) => (c ? `(${a}) ${b}-${c}` : `(${a}) ${b}`));
 }
 
+/**
+ * Telefone brasileiro só com dígitos, sem DDI (55) nem zero de tronco, para montar links tel:/wa.me.
+ * Devolve undefined quando não parece um número válido (10 ou 11 dígitos com DDD) — melhor sem link que um link errado.
+ */
+export function telefoneNacional(value: string | null | undefined): string | undefined {
+  let digits = onlyDigits(value ?? '');
+  if (digits.length > 11 && digits.startsWith('55')) digits = digits.slice(2);
+  digits = digits.replace(/^0+/, '');
+  return digits.length === 10 || digits.length === 11 ? digits : undefined;
+}
+
 /** First letter of the first and last word — the standard "avatar" shorthand for a name. */
 export function getInitials(nome: string): string {
   const partes = nome.trim().split(/\s+/).filter(Boolean);

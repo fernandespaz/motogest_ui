@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/Field';
 import { Spinner } from '@/components/ui/Spinner';
 import { useCaixaSessaoEventos, useReabrirCaixaSessao } from '@/hooks/useFinanceiro';
 import { caixaApi } from '@/api/endpoints/caixa';
-import { baixarExportacaoCaixa } from './caixaExport';
+import { useExportacaoCaixa } from './useExportacaoCaixa';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import { caixaSessaoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { FORMAS_PAGAMENTO } from '@/lib/formaPagamento';
@@ -40,7 +40,7 @@ export function CaixaSessaoDetalheModal({
   onClose: () => void;
 }) {
   const [reabrindo, setReabrindo] = useState(false);
-  const [exportando, setExportando] = useState(false);
+  const { exportando, exportar: exportarArquivo } = useExportacaoCaixa('Não foi possível exportar o comprovante.');
   const { data: eventos, isLoading: carregandoEventos } = useCaixaSessaoEventos(sessao?.id);
   const reabrir = useReabrirCaixaSessao();
 
@@ -69,18 +69,8 @@ export function CaixaSessaoDetalheModal({
 
   async function exportar(formato: 'PDF' | 'XLSX') {
     if (!sessao?.id) return;
-    setExportando(true);
-    try {
-      await baixarExportacaoCaixa(
-        () => caixaApi.sessoes.exportar(sessao.id!, formato),
-        `caixa-${sessao.identificador ?? sessao.id}`,
-        formato,
-      );
-    } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível exportar o comprovante.'));
-    } finally {
-      setExportando(false);
-    }
+    const id = sessao.id;
+    await exportarArquivo(() => caixaApi.sessoes.exportar(id, formato), `caixa-${sessao.identificador ?? id}`, formato);
   }
 
   if (!sessao) return null;

@@ -352,6 +352,18 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
     expect(useAgendamento).toHaveBeenCalledWith(7);
   });
 
+  it('vindo do perfil do cliente (?clienteId=&clienteNome=&veiculoId=) já abre com cliente e veículo escolhidos', async () => {
+    vi.mocked(useOrcamento).mockReturnValue({ data: undefined, isLoading: false } as never);
+    vi.mocked(useAgendamento).mockReturnValue({ data: undefined } as never);
+    vi.mocked(useVeiculosDoCliente).mockReturnValue({ data: [{ id: 9, placa: 'ABC1D23', marca: 'VW', modelo: 'Gol' }] } as never);
+    renderPage('/orcamentos/novo?clienteId=5&clienteNome=Ana%20Souza&veiculoId=9');
+
+    // o cliente chega pelo parâmetro (a lista paginada não precisa trazê-lo) e o veículo dele é consultado
+    expect(await screen.findByDisplayValue('Ana Souza')).toBeInTheDocument();
+    expect(useVeiculosDoCliente).toHaveBeenCalledWith(5);
+    expect(screen.getByDisplayValue('ABC1D23')).toBeInTheDocument();
+  });
+
   it('em orçamento que já saiu de rascunho, a vistoria fica só para consulta', async () => {
     vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
     vi.mocked(useOrcamento).mockReturnValue({ data: { ...orcamentoComAvaria, status: 'ENVIADO' }, isLoading: false } as never);

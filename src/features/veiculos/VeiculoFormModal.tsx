@@ -23,19 +23,28 @@ import { extractErrorMessage } from '@/api/client';
 const FORM_ID = 'veiculo-form';
 const CURRENT_YEAR = new Date().getFullYear();
 
+/** Número digitado em branco (ou inválido) vira "não informado" — nunca 0. */
+function vazioParaUndefined(v: unknown) {
+  return v === '' || v == null || (typeof v === 'number' && Number.isNaN(v)) ? undefined : Number(v);
+}
+
 const schema = z.object({
   clienteId: z.coerce.number({ invalid_type_error: 'Selecione o cliente' }).positive('Selecione o cliente'),
   placa: z.string().min(1, 'Informe a placa'),
   marca: z.string().optional(),
   modelo: z.string().min(1, 'Informe o modelo'),
-  anoFabricacao: z.coerce
-    .number({ invalid_type_error: 'Informe o ano de fabricação' })
-    .min(1900, 'Ano inválido')
-    .max(CURRENT_YEAR + 1, 'Ano inválido'),
-  anoModelo: z.coerce.number().optional(),
-  cor: z.string().min(1, 'Informe a cor'),
-  kmAtual: z.coerce.number().optional(),
-  chassi: z.string().min(1, 'Informe o chassi'),
+  // Cadastro mínimo = cliente, placa, modelo e categoria (o que o backend de fato exige, mais o modelo). Ano de
+  // fabricação, cor e chassi são "recomendados": a consulta de placa costuma trazê-los, mas o balcão não pode travar
+  // quando ela falha. Se vierem preenchidos, o ano continua validado.
+  anoFabricacao: z.preprocess(
+    vazioParaUndefined,
+    z.number().min(1900, 'Ano inválido').max(CURRENT_YEAR + 1, 'Ano inválido').optional(),
+  ),
+  anoModelo: z.preprocess(vazioParaUndefined, z.number().optional()),
+  cor: z.string().optional(),
+  // Campo numérico em branco é "não informado", não zero (z.coerce.number() transformava '' em 0).
+  kmAtual: z.preprocess(vazioParaUndefined, z.number().optional()),
+  chassi: z.string().optional(),
   observacoes: z.string().optional(),
   // É a categoria do veículo, não a do serviço escolhido, que decide a hora
   // técnica aplicada num Orçamento/OS pra ele (ver doc de Precificação por
@@ -55,11 +64,25 @@ const ROTULOS_OBRIGATORIOS: Partial<Record<keyof FormValues, string>> = {
   clienteId: 'Cliente',
   placa: 'Placa',
   modelo: 'Modelo',
+  categoria: 'Categoria',
+};
+
+/** Campos recomendados (não bloqueiam o salvar): dados que ajudam a identificar o veículo e que a consulta costuma trazer. */
+const ROTULOS_RECOMENDADOS: Partial<Record<keyof FormValues, string>> = {
   anoFabricacao: 'Ano de fabricação',
   cor: 'Cor',
   chassi: 'Chassi',
-  categoria: 'Categoria',
 };
+
+/** Rótulos dos campos recomendados ainda vazios. */
+function camposRecomendadosVazios(values: Partial<FormValues>): string[] {
+  return (Object.keys(ROTULOS_RECOMENDADOS) as (keyof FormValues)[])
+    .filter((campo) => {
+      const v = values[campo];
+      return v == null || v === '' || (typeof v === 'number' && Number.isNaN(v));
+    })
+    .map((campo) => ROTULOS_RECOMENDADOS[campo]!);
+}
 
 /** Rótulos dos campos obrigatórios ainda inválidos/vazios (na ordem do formulário). */
 function camposPendentes(values: Partial<FormValues>): string[] {
@@ -124,7 +147,23 @@ export function VeiculoFormModal({
               // herdar um "A" que ninguém decidiu.
               categoria: veiculo.categoria ?? '',
             }
-          : { clienteId: defaultClienteId ?? 0, categoria: 'A' },
+          // Categoria SEM valor inicial: ela decide a hora técnica cobrada nos orçamentos, então a escolha é explícita.
+          : {
+              clienteId: defaultClienteId ?? 0,
+              // Todos os campos listados de propósito: reset() com um objeto parcial deixava para trás os valores do
+              // veículo aberto antes — "Novo veículo" depois de ver/editar um existente vinha preenchido com os dados dele.
+              placa: '',
+              marca: '',
+              modelo: '',
+              // Campos numéricos com '' (e não undefined): reset() ignora undefined e mantinha o número anterior.
+              anoFabricacao: '' as unknown as undefined,
+              anoModelo: '' as unknown as undefined,
+              cor: '',
+              kmAtual: '' as unknown as undefined,
+              chassi: '',
+              observacoes: '',
+              categoria: '',
+            },
       );
     }
   }, [open, veiculo, defaultClienteId, reset]);
@@ -171,7 +210,9 @@ export function VeiculoFormModal({
 
   const saving = createMutation.isPending || updateMutation.isPending;
   // Salvar só libera quando todas as informações obrigatórias (as da consulta e as complementares) estão preenchidas.
-  const pendentes = camposPendentes(watch());
+  const valoresAtuais = watch();
+  const pendentes = camposPendentes(valoresAtuais);
+  const recomendados = pendentes.length === 0 ? camposRecomendadosVazios(valoresAtuais) : [];
 
   return (
     <Modal
@@ -187,6 +228,11 @@ export function VeiculoFormModal({
           {pendentes.length > 0 && (
             <span role="status" className="mr-auto self-center text-xs text-ink-muted">
               Para salvar, preencha: {pendentes.join(', ')}
+            </span>
+          )}
+          {recomendados.length > 0 && (
+            <span role="status" className="mr-auto self-center text-xs text-ink-muted">
+              Já dá para salvar. Recomendado completar depois: {recomendados.join(', ')}
             </span>
           )}
           <Button type="submit" form={FORM_ID} loading={saving} disabled={pendentes.length > 0}>

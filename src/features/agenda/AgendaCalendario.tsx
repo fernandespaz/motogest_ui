@@ -10,6 +10,7 @@ import {
   contaCarga,
   dayKey,
   diasDoIntervalo,
+  minutosDeAtraso,
   intervaloDaVisao,
   nivelCarga,
   type AgendaItem,
@@ -50,12 +51,14 @@ interface Props {
   view: AgendaView;
   cursor: Date;
   porDia: Map<string, AgendaItem[]>;
+  /** Hora de referência para marcar atrasados e posicionar a linha "agora" (atualizada pela página a cada minuto). */
+  agora: Date;
   onAbrirDia: (d: Date) => void;
   onAbrirAgendamento: (item: AgendaItem) => void;
   onNovo?: (d: Date) => void;
 }
 
-export function AgendaCalendario({ view, cursor, porDia, onAbrirDia, onAbrirAgendamento, onNovo }: Props) {
+export function AgendaCalendario({ view, cursor, porDia, agora, onAbrirDia, onAbrirAgendamento, onNovo }: Props) {
   const { inicio, fim } = intervaloDaVisao(view, cursor);
   const dias = diasDoIntervalo(inicio, fim);
 
@@ -107,9 +110,13 @@ export function AgendaCalendario({ view, cursor, porDia, onAbrirDia, onAbrirAgen
                     <span
                       key={item.ag.id}
                       className={clsx('truncate rounded border-l-2 bg-surface-alt px-1.5 py-0.5 text-xs text-ink', faixaStatus[item.status])}
-                      title={`${horaDe(item.ag)} · ${item.ag.veiculoPlaca} · ${item.ag.clienteNome}`}
+                      title={`${horaDe(item.ag)} · ${item.ag.veiculoPlaca} · ${item.ag.clienteNome}${minutosDeAtraso(item, agora) > 0 ? ' · atrasado' : ''}`}
                     >
-                      <span className="font-semibold tabular-nums">{horaDe(item.ag)}</span> {item.ag.veiculoPlaca}
+                      <span className={clsx('font-semibold tabular-nums', minutosDeAtraso(item, agora) > 0 && 'text-danger')}>
+                        {minutosDeAtraso(item, agora) > 0 && <span aria-hidden>! </span>}
+                        {horaDe(item.ag)}
+                      </span>{' '}
+                      {item.ag.veiculoPlaca}
                     </span>
                   ))}
                   {lista.length > 3 && (
@@ -165,15 +172,34 @@ export function AgendaCalendario({ view, cursor, porDia, onAbrirDia, onAbrirAgen
                 <p className="py-3 text-center text-xs text-ink-muted">Livre</p>
               )
             ) : (
-              lista.map((item) => (
-                <button key={item.ag.id} type="button" onClick={() => onAbrirAgendamento(item)} className={clsx(cardShell(item.status), 'w-full')}>
-                  <AgendaCardBody ag={item.ag} os={item.os} status={item.status} etapa={item.etapa} />
-                </button>
-              ))
+              lista.map((item, i) => {
+                // Linha "agora" só na visão do dia atual: separa o que já passou do que ainda vem.
+                const mostraAgora =
+                  view === 'dia' && isToday(dia) && new Date(item.ag.dataHora ?? 0) > agora && (i === 0 || new Date(lista[i - 1].ag.dataHora ?? 0) <= agora);
+                return (
+                  <div key={item.ag.id} className="flex flex-col gap-2">
+                    {mostraAgora && <LinhaAgora agora={agora} />}
+                    <button type="button" onClick={() => onAbrirAgendamento(item)} className={clsx(cardShell(item.status), 'w-full')}>
+                      <AgendaCardBody ag={item.ag} os={item.os} status={item.status} etapa={item.etapa} atrasoMin={minutosDeAtraso(item, agora)} />
+                    </button>
+                  </div>
+                );
+              })
             )}
           </section>
         );
       })}
+    </div>
+  );
+}
+
+/** Divisor "agora" entre o que já passou e o que ainda vem no dia. */
+function LinhaAgora({ agora }: { agora: Date }) {
+  return (
+    <div role="separator" aria-label={`Agora, ${format(agora, 'HH:mm')}`} className="flex items-center gap-2 text-xs font-semibold text-danger">
+      <span className="h-px flex-1 bg-danger/60" />
+      Agora · {format(agora, 'HH:mm')}
+      <span className="h-px flex-1 bg-danger/60" />
     </div>
   );
 }

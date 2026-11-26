@@ -10,6 +10,8 @@ export interface Column<T> {
   render: (row: T) => ReactNode;
   className?: string;
   hideBelow?: 'sm' | 'md' | 'lg';
+  /** Nome para leitor de tela quando `header` é vazio. Padrão: "Ações" (colunas de botões de linha). */
+  srLabel?: string;
 }
 
 interface DataTableProps<T> {
@@ -51,8 +53,9 @@ export function DataTable<T>({
         <thead>
           <tr className="border-b border-border bg-surface-alt text-xs uppercase tracking-wide text-ink">
             {columns.map((col, i) => (
-              <th key={i} className={`px-4 py-3 font-semibold sm:px-5 ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>
-                {col.header}
+              <th scope="col" key={i} className={`px-4 py-3 font-semibold sm:px-5 ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>
+                {/* Coluna de ações vem sem título: leitor de tela precisa de um nome pra ela. */}
+                {col.header || <span className="sr-only">{col.srLabel ?? 'Ações'}</span>}
               </th>
             ))}
           </tr>
@@ -65,7 +68,19 @@ export function DataTable<T>({
               animate={{ opacity: 1 }}
               transition={{ delay: Math.min(idx * 0.02, 0.3) }}
               onClick={() => onRowClick?.(row)}
-              className={`border-b border-border last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-surface-alt' : ''} ${isRowSelected?.(row) ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
+              // Linha clicável também por teclado. Só reage quando o foco está na própria linha: Enter num botão de
+              // ação dentro dela não pode abrir o registro.
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (e) => {
+                      if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
+                  : undefined
+              }
+              className={`border-b border-border last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-surface-alt focus:outline-none focus-visible:bg-surface-alt focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-400' : ''} ${isRowSelected?.(row) ? 'bg-brand-50 dark:bg-brand-900/20' : ''}`}
             >
               {columns.map((col, i) => (
                 <td key={i} className={`px-4 py-3 sm:px-5 ${col.className ?? ''} ${col.hideBelow ? hideClass[col.hideBelow] : ''}`}>

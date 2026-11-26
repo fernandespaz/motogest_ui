@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -281,5 +281,81 @@ describe('OrcamentosPage — paginação', () => {
 
     expect(screen.getByText(/^Cliente 1 —/)).toBeInTheDocument();
     expect(screen.queryByText('Nenhum orçamento cadastrado')).not.toBeInTheDocument();
+  });
+});
+
+describe('OrcamentosPage — busca, etapas e rejeição', () => {
+  const lista = [
+    { id: 1, clienteNome: 'Ana Souza', veiculoPlaca: 'AAA1A11', status: 'RASCUNHO', consultorId: 10 },
+    { id: 2, clienteNome: 'Bruno Lima', veiculoPlaca: 'BBB2B22', status: 'ENVIADO', consultorId: 10 },
+    { id: 3, clienteNome: 'Carla Dias', veiculoPlaca: 'CCC3C33', status: 'APROVADO', consultorId: 10 },
+  ];
+  const rejeitarMock = vi.fn().mockResolvedValue({});
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ perfil: 'Administrador', usuarioId: 1 });
+    vi.mocked(useTodosOrcamentos).mockReturnValue({ data: lista, isLoading: false } as never);
+    vi.mocked(useDeleteOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useEnviarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useAprovarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useRejeitarOrcamento).mockReturnValue({ mutateAsync: rejeitarMock, isPending: false } as never);
+    vi.mocked(useCriarOSAPartirDeOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+  });
+
+  it('filtros de etapa mostram a contagem e recortam a lista', async () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: /Todos \(3\)/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /Aprovado \(1\)/ }));
+    expect(screen.getByText(/Carla Dias/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ana Souza/)).not.toBeInTheDocument();
+  });
+
+  it('busca por nome, placa ou número, sem diferenciar acento/maiúscula; sem resultado oferece limpar filtros', async () => {
+    renderPage();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por nº, cliente ou placa/), 'bbb2');
+    expect(screen.getByText(/Bruno Lima/)).toBeInTheDocument();
+    expect(screen.queryByText(/Ana Souza/)).not.toBeInTheDocument();
+
+    await userEvent.clear(screen.getByPlaceholderText(/Buscar por nº, cliente ou placa/));
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por nº, cliente ou placa/), 'zzz');
+    expect(screen.getByText('Nenhum orçamento encontrado')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.getByText(/Ana Souza/)).toBeInTheDocument();
+  });
+
+  it('rejeitar pede confirmação antes de chamar a API', async () => {
+    renderPage();
+    await userEvent.click(screen.getByTitle('Rejeitar'));
+    expect(rejeitarMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/Rejeitar o orçamento #2/)).toBeInTheDocument();
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Rejeitar' }));
+    await waitFor(() => expect(rejeitarMock).toHaveBeenCalledWith(2));
+  });
+
+  it('sem nenhum orçamento, o estado vazio traz o botão de criar o primeiro', () => {
+    vi.mocked(useTodosOrcamentos).mockReturnValue({ data: [], isLoading: false } as never);
+    renderPage();
+    expect(screen.getByText('Crie o primeiro orçamento para começar a cotar.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Novo orçamento/ }).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('OrcamentosPage — busca não casa campos vazios', () => {
+  it('digitar "und" não acha orçamentos só porque o interessado/placa estão vazios', async () => {
+    vi.clearAllMocks();
+    useAuthStore.setState({ perfil: 'Administrador', usuarioId: 1 });
+    vi.mocked(useTodosOrcamentos).mockReturnValue({
+      data: [{ id: 1, clienteNome: 'Ana Souza', status: 'RASCUNHO', consultorId: 10 }],
+      isLoading: false,
+    } as never);
+    vi.mocked(useDeleteOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useEnviarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useAprovarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useRejeitarOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useCriarOSAPartirDeOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    renderPage();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por nº, cliente ou placa/), 'und');
+    expect(screen.getByText('Nenhum orçamento encontrado')).toBeInTheDocument();
   });
 });

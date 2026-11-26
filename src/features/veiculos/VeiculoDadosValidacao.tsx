@@ -16,10 +16,10 @@ type CampoConsulta = keyof DadosPlaca;
 const CAMPOS: { campo: CampoConsulta; label: string; type?: 'number'; required?: boolean }[] = [
   { campo: 'marca', label: 'Marca' },
   { campo: 'modelo', label: 'Modelo', required: true },
-  { campo: 'anoFabricacao', label: 'Ano de fabricação', type: 'number', required: true },
+  { campo: 'anoFabricacao', label: 'Ano de fabricação', type: 'number' },
   { campo: 'anoModelo', label: 'Ano do modelo', type: 'number' },
-  { campo: 'cor', label: 'Cor', required: true },
-  { campo: 'chassi', label: 'Chassi', required: true },
+  { campo: 'cor', label: 'Cor' },
+  { campo: 'chassi', label: 'Chassi' },
 ];
 
 function OrigemBadge({ origem }: { origem: 'consulta' | 'manual' }) {

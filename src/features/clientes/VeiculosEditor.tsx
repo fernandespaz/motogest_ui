@@ -47,7 +47,7 @@ export function VeiculosEditor({ name, titulo = 'Veículos' }: { name: string; t
               <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
             {/* Mesma experiência do orçamento e do cadastro de veículo: placa em destaque + consulta automática. */}
-            <VeiculoComConsulta nomeDoCampo={(campo) => `${name}.${index}.${campo}`} />
+            <VeiculoComConsulta nomeDoCampo={(campo) => `${name}.${index}.${campo}`} categoriaVazia />
           </div>
         ))}
       </div>

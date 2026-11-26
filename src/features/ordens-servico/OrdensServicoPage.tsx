@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import { FileArrowDown } from '@phosphor-icons/react';
 import clsx from 'clsx';
@@ -22,6 +22,7 @@ import { openPdfInNewTab } from '@/lib/downloadBlob';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
+import { LIMITE_BUSCA_TEXTO, casaComTexto, classificarBuscaOS } from './ordemServicoBusca';
 
 // Os 5 status mais consultados no dia a dia viram chip (1 clique); os 4
 // restantes (menos frequentes) ficam atrás do seletor "Mais status" pra não
@@ -41,7 +42,12 @@ const selectCompacto =
 export function OrdensServicoPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
-  const [status, setStatus] = useState<OrdemServicoStatus | ''>('');
+  // Atalhos (ex.: legenda do dashboard) abrem a lista já filtrada por /ordens-servico?status=CONCLUIDA.
+  const [searchParams] = useSearchParams();
+  const statusDaUrl = searchParams.get('status') as OrdemServicoStatus | null;
+  const [status, setStatus] = useState<OrdemServicoStatus | ''>(
+    statusDaUrl && [...statusEmDestaque, ...statusOutros].includes(statusDaUrl) ? statusDaUrl : '',
+  );
   const [numero, setNumero] = useState('');
   const [tecnicoId, setTecnicoId] = useState<number | ''>('');
   const navigate = useNavigate();
@@ -62,17 +68,37 @@ export function OrdensServicoPage() {
   const { data: usuarios } = useUsuarios();
   const mecanicos = usuarios?.filter((u) => isMecanico(u.perfilNome)) ?? [];
 
-  const { data, isLoading } = useOrdensServico({
-    page,
-    size,
+  // Número e CPF/CNPJ vão para a API; placa e nome não têm filtro lá, então busca-se nas O.S. mais recentes e o
+  // recorte (e a paginação) é feito aqui.
+  const busca = classificarBuscaOS(numero);
+  const buscaPorTexto = busca.tipo === 'texto';
+  const { data: dadosApi, isLoading } = useOrdensServico({
+    page: buscaPorTexto ? 0 : page,
+    size: buscaPorTexto ? LIMITE_BUSCA_TEXTO : size,
     // Mais recente primeiro — mesma convenção de OrcamentosPage, pra a
     // última OS aberta/aprovada aparecer no topo da lista em vez de ficar
     // perdida nas últimas páginas conforme o histórico cresce.
     sort: 'id,desc',
     status: status || undefined,
-    numero: numero || undefined,
+    numero: busca.tipo === 'numero' ? busca.valor : undefined,
+    clienteDocumento: busca.tipo === 'documento' ? busca.valor : undefined,
     usuarioResponsavelId: tecnicoId || undefined,
   });
+  const data = useMemo(() => {
+    if (!buscaPorTexto || !dadosApi) return dadosApi;
+    const filtradas = (dadosApi.content ?? []).filter((os) => casaComTexto(os, busca.valor));
+    const totalPages = Math.max(1, Math.ceil(filtradas.length / size));
+    const pagina = Math.min(page, totalPages - 1);
+    return {
+      ...dadosApi,
+      content: filtradas.slice(pagina * size, (pagina + 1) * size),
+      pageNumber: pagina,
+      totalPages,
+      totalElements: filtradas.length,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dadosApi, buscaPorTexto, numero, page, size]);
+  const buscaIncompleta = buscaPorTexto && (dadosApi?.totalElements ?? 0) > (dadosApi?.content?.length ?? 0);
   const imagensPorVeiculoId = useImagensPorVeiculoId();
 
   async function baixarPdf(row: OrdemServicoResponse) {
@@ -93,8 +119,8 @@ export function OrdensServicoPage() {
   return (
     <div>
       <PageHeader
-        title="Ordens de Serviço"
-        subtitle="Núcleo operacional da oficina"
+        title="O.S."
+        subtitle="Ordens de serviço da oficina"
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -104,7 +130,7 @@ export function OrdensServicoPage() {
             setNumero(value);
             setPage(0);
           }}
-          placeholder="Buscar por número da OS..."
+          placeholder="Buscar por número, placa ou cliente..."
           className="w-full max-w-xs"
         />
 
@@ -170,17 +196,23 @@ export function OrdensServicoPage() {
         )}
       </div>
 
+      {buscaIncompleta && (
+        <p className="mb-2 text-xs text-ink-muted">
+          Busca por placa ou nome entre as {LIMITE_BUSCA_TEXTO} O.S. mais recentes. Para uma mais antiga, procure pelo número ou pelo CPF/CNPJ.
+        </p>
+      )}
+
       <Card>
         <DataTable<OrdemServicoResponse>
           loading={isLoading}
           rows={data?.content ?? []}
           rowKey={(row) => row.id!}
-          emptyTitle="Nenhuma Ordem de Serviço encontrada"
+          emptyTitle="Nenhuma O.S. encontrada"
           columns={[
             {
               header: 'Número',
               render: (row) => (
-                <span className="flex items-center gap-2 font-medium text-ink">
+                <span className="flex items-center gap-2 whitespace-nowrap font-medium text-ink">
                   <ModeloVeiculoThumb base64={row.veiculoId != null ? imagensPorVeiculoId.get(row.veiculoId) : undefined} size={40} />
                   {row.tempoEstourado && (
                     <AlertTriangle size={14} className="shrink-0 text-danger" aria-label="Tempo estourado" />

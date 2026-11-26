@@ -40,12 +40,15 @@ export function AgendamentoFormModal({
   onClose,
   agendamento,
   defaultDate,
+  clientePreSelecionado,
   onSalvoParaOrcamento,
 }: {
   open: boolean;
   onClose: () => void;
   agendamento?: AgendamentoResponse | null;
   defaultDate?: string;
+  /** Cliente já escolhido (ex.: "Agendar" no perfil do cliente). */
+  clientePreSelecionado?: ClienteResponse | null;
   /** Chamado com o id do agendamento recém-criado quando o usuário escolhe "Criar orçamento". */
   onSalvoParaOrcamento?: (agendamentoId: number) => void;
 }) {
@@ -95,7 +98,7 @@ export function AgendamentoFormModal({
   useEffect(() => {
     if (open) {
       setBuscaCliente('');
-      setClienteCriado(null);
+      setClienteCriado(!agendamento && clientePreSelecionado ? clientePreSelecionado : null);
       setObservacaoAberta(false);
       reset(
         agendamento
@@ -106,10 +109,10 @@ export function AgendamentoFormModal({
               observacoes: agendamento.observacoes ?? '',
               servicoIds: agendamento.servicos?.map((s) => s.id!).filter(Boolean) ?? [],
             }
-          : { clienteId: 0, veiculoId: 0, dataHora: defaultDate ?? '', servicoIds: [] },
+          : { clienteId: clientePreSelecionado?.id ?? 0, veiculoId: 0, dataHora: defaultDate ?? '', observacoes: '', servicoIds: [] },
       );
     }
-  }, [open, agendamento, defaultDate, reset]);
+  }, [open, agendamento, defaultDate, clientePreSelecionado, reset]);
 
   // Cliente com um único veículo: já vem selecionado, é um clique a menos.
   useEffect(() => {

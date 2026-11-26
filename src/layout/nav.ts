@@ -38,14 +38,14 @@ export const navItems: NavItem[] = [
   { label: 'Veículos', to: '/veiculos', icon: Car, group: 'operacao', permissions: ['VEICULO_READ'] },
   { label: 'Orçamentos', to: '/orcamentos', icon: FileText, group: 'operacao', permissions: ['ORCAMENTO_READ'] },
   {
-    label: 'Ordens de Serviço',
+    label: 'O.S.',
     to: '/ordens-servico',
     icon: ClipboardList,
     group: 'operacao',
     permissions: ['ORDEM_SERVICO_READ'],
   },
   {
-    label: 'Minhas OS',
+    label: 'Minhas O.S.',
     to: '/minhas-os',
     icon: ClipboardCheck,
     group: 'operacao',

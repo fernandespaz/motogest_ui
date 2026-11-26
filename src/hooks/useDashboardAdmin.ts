@@ -56,5 +56,22 @@ export function useDashboardAdmin() {
     [agenda.data],
   );
 
-  return { funil, agendaHoje, carregandoOs: ordens.isLoading, carregandoAgenda: agenda.isLoading, podeOs, podeAgenda };
+  const totalOs = funil.abertas + funil.emExecucao + funil.paraFaturar + funil.paraEntregar;
+  // O funil lê só as OS mais recentes: se existem mais que isso, o total pode estar subcontado e a tela avisa.
+  const osLimitadas = (ordens.data?.totalElements ?? 0) > (ordens.data?.content?.length ?? 0);
+
+  return {
+    funil,
+    totalOs,
+    osLimitadas,
+    agendaHoje,
+    carregandoOs: ordens.isLoading,
+    carregandoAgenda: agenda.isLoading,
+    erroOs: ordens.isError,
+    erroAgenda: agenda.isError,
+    refazerOs: () => void ordens.refetch(),
+    refazerAgenda: () => void agenda.refetch(),
+    podeOs,
+    podeAgenda,
+  };
 }
