@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import type { UseFormRegisterReturn } from 'react-hook-form';
+import type { Resolver, UseFormRegisterReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Modal } from '@/components/ui/Modal';
@@ -99,7 +99,7 @@ export function FecharCaixaModal({
     getValues,
     watch,
     formState: { errors },
-  } = useForm<FormInput, unknown, FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormInput, unknown, FormValues>({ resolver: zodResolver(schema) as unknown as Resolver<FormInput, unknown, FormValues> });
 
   useEffect(() => {
     if (!open) return;

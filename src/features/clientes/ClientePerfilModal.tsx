@@ -21,7 +21,7 @@ const MAX_HISTORICO = 5;
 /** Resumo do relacionamento: o que está em aberto agora e quando o cliente esteve aqui pela última vez. */
 export function resumirCliente(ordens: OrdemServicoResponse[], orcamentos: OrcamentoResponse[]) {
   const datas = ordens
-    .map((o) => o.dataAbertura ?? o.createdAt)
+    .map((o) => o.dataAbertura)
     .filter((d): d is string => !!d)
     .sort();
   return {

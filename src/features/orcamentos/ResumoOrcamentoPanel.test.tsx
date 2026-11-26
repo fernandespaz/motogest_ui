@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { ResumoOrcamentoPanel, pendenciasEnvio } from './ResumoOrcamentoPanel';
+import type { ItemFormValue } from '../shared/ItemsEditor';
 
-const servico = { tipoItem: 'SERVICO' as const, servicoId: 1, descricao: 'Revisão', quantidade: 1, valorUnitario: 100 };
+const servico: ItemFormValue = { tipoItem: 'SERVICO', servicoId: 1, descricao: 'Revisão', quantidade: 1, valorUnitario: 100 };
 const livre = { tipoItem: 'PRODUTO' as const, descricao: 'Pastilha', quantidade: 2, valorUnitario: 50, custoUnitario: 30 };
 
 describe('pendenciasEnvio', () => {

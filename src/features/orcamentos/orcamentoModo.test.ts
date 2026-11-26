@@ -42,9 +42,11 @@ describe('camposDoModo', () => {
       // lista e PDF mostram "marca modelo": a descrição sai dos campos, não é digitada à parte
       veiculoDescricao: 'Honda CG 160',
     });
-    expect(p.veiculoChassi).toBeUndefined();
-    expect(p.interessadoEmail).toBeUndefined();
-    expect(p.veiculoPlaca).toBeUndefined();
+    // campos vazios chegam como undefined (o tipo de retorno do CADASTRADO não os declara)
+    const avulso = p as Record<string, unknown>;
+    expect(avulso.veiculoChassi).toBeUndefined();
+    expect(avulso.interessadoEmail).toBeUndefined();
+    expect(avulso.veiculoPlaca).toBeUndefined();
   });
 
   it('CADASTRADO com ids 0 (combobox vazio) não manda id', () => {

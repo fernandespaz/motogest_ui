@@ -30,12 +30,12 @@ describe('itemParaPayload — valor da peça e acréscimo', () => {
 
 describe('resumoCustoLucro', () => {
   it('soma custo e lucro só dos itens com custo informado', () => {
-    const r = resumoCustoLucro([livre, { tipoItem: 'SERVICO', descricao: 'x', quantidade: 1, valorUnitario: 500 }]);
+    const r = resumoCustoLucro([livre, { quantidade: 1, valorUnitario: 500 }]);
     expect(r).toEqual({ custo: 450, lucro: 112.5, margem: 20 });
   });
 
   it('é undefined quando nenhum item tem custo', () => {
-    expect(resumoCustoLucro([{ tipoItem: 'SERVICO', descricao: 'x', quantidade: 1, valorUnitario: 500 }])).toBeUndefined();
+    expect(resumoCustoLucro([{ quantidade: 1, valorUnitario: 500 }])).toBeUndefined();
   });
 });
 
