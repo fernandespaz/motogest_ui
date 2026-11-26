@@ -85,6 +85,31 @@ describe('DataTable', () => {
     expect(onRowClick).toHaveBeenCalledWith(rows[0]);
   });
 
+  it('linha clicável abre também por teclado (Enter/Espaço), mas Enter num botão dentro da linha não a abre', async () => {
+    const onRowClick = vi.fn();
+    const comAcao: Column<Row>[] = [...columns, { header: '', render: () => <button type="button" onClick={(e) => e.stopPropagation()}>Remover</button> }];
+    render(<DataTable columns={comAcao} rows={rows} rowKey={(r) => r.id} onRowClick={onRowClick} />);
+
+    const linha = screen.getByText('Carlos').closest('tr')!;
+    expect(linha).toHaveAttribute('tabindex', '0');
+    linha.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await userEvent.keyboard(' ');
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+
+    screen.getAllByRole('button', { name: 'Remover' })[0].focus();
+    await userEvent.keyboard('{Enter}');
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+  });
+
+  it('linha sem onRowClick não entra na ordem de tabulação; coluna sem título ganha nome "Ações" para leitor de tela', () => {
+    const comAcao: Column<Row>[] = [...columns, { header: '', render: () => null }];
+    render(<DataTable columns={comAcao} rows={rows} rowKey={(r) => r.id} />);
+    expect(screen.getByText('Carlos').closest('tr')).not.toHaveAttribute('tabindex');
+    expect(screen.getByRole('columnheader', { name: 'Ações' })).toBeInTheDocument();
+  });
+
   it('has no selection highlight at all when isRowSelected is not passed', () => {
     render(<DataTable columns={columns} rows={rows} rowKey={(r) => r.id} />);
 

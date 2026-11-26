@@ -32,8 +32,8 @@ interface AlertDialogProps {
 export function AlertDialog({ open, tone = 'info', title, message, children, closeLabel = 'Entendi', onClose }: AlertDialogProps) {
   const { icon: Icon, circle } = toneStyles[tone];
   return (
-    <Modal open={open} onClose={onClose} size="sm" centered>
-      <div role="alertdialog" aria-label={title} className="flex flex-col items-center text-center">
+    <Modal open={open} onClose={onClose} size="sm" centered role="alertdialog" ariaLabel={title}>
+      <div className="flex flex-col items-center text-center">
         <div className={clsx('mb-3 flex h-14 w-14 items-center justify-center rounded-full', circle)}>
           <Icon size={30} aria-hidden="true" />
         </div>

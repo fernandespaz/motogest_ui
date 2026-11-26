@@ -13,6 +13,7 @@ import { carregarPagBankSdk, criptografarCartao } from '@/lib/pagbankSdk';
 import { formatCardExpiry, formatCardNumber, formatCnpj, formatCpf, formatCurrency, onlyDigits } from '@/lib/formatters';
 import { pagamentoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { preventEnterSubmit } from '@/lib/preventEnterSubmit';
+import { MENSAGEM_PAGAMENTO_PLANO_EM_BREVE, webhookPagBankLiberado } from '@/lib/liberacaoPagamentos';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage, mensagemSeguraParaUsuario } from '@/api/client';
 import type { PagamentoResponse } from '@/api/types';
@@ -310,6 +311,12 @@ export function PagamentoCartaoModal({
                     : 'Pagamento processado com segurança pelo PagBank. Os dados do seu cartão são criptografados no seu navegador e o MotoGest nunca chega a ver ou armazenar o número completo.'}
                 </span>
               </div>
+
+              {!webhookPagBankLiberado() && (
+                <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                  {MENSAGEM_PAGAMENTO_PLANO_EM_BREVE}
+                </p>
+              )}
 
               {chavePublicaIndisponivel && (
                 <p className="text-xs font-medium text-danger">

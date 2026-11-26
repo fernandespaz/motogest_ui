@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { FileArrowDown, CheckCircle, XCircle, Wrench, Trash, ChatCircle } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import clsx from 'clsx';
 import { Card } from '@/components/ui/Card';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Button } from '@/components/ui/Button';
 import { IconActionButton } from '@/components/ui/IconActionButton';
 import { Badge } from '@/components/ui/Badge';
@@ -23,6 +25,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orcamentoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { buildOrcamentoPdfBlob } from './orcamentoPdf';
 import { openPdfInNewTab } from '@/lib/downloadBlob';
+import { orcamentoSemCadastro, MENSAGEM_ENVIAR_SEM_CADASTRO } from './orcamentoModo';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 import { ModeloVeiculoThumb, useImagensPorVeiculoId } from '@/features/shared/ModeloVeiculoField';
@@ -32,9 +35,22 @@ import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 
 const TAMANHO_PAGINA = 20;
 
+// Etapas do funil de orçamento, na ordem em que acontecem. Convertido some da lista (virou OS).
+const FILTROS_STATUS = ['RASCUNHO', 'ENVIADO', 'APROVADO', 'REJEITADO'] as const;
+
+function normalizar(texto: string | undefined | null) {
+  return (texto ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 export function OrcamentosPage() {
   const [page, setPage] = useState(0);
   const [deleting, setDeleting] = useState<OrcamentoResponse | null>(null);
+  const [rejeitando, setRejeitando] = useState<OrcamentoResponse | null>(null);
+  // Guarda o último orçamento do diálogo: durante a animação de saída `rejeitando` já é null e o texto não pode virar "#undefined".
+  const ultimoRejeitado = useRef<OrcamentoResponse | null>(null);
+  if (rejeitando) ultimoRejeitado.current = rejeitando;
+  const [busca, setBusca] = useState('');
+  const [statusFiltro, setStatusFiltro] = useState<string>('');
   const navigate = useNavigate();
   const perfil = useAuthStore((s) => s.perfil);
   const usuarioId = useAuthStore((s) => s.usuarioId);
@@ -57,7 +73,7 @@ export function OrcamentosPage() {
   // foi ajustado com um endpoint "/me" — aqui precisaria de algo equivalente).
   const { data: todos, isLoading } = useTodosOrcamentos('id,desc');
   const imagensPorVeiculoId = useImagensPorVeiculoId();
-  const filtrados = useMemo(
+  const carteira = useMemo(
     () =>
       (todos ?? []).filter(
         (o: OrcamentoResponse) =>
@@ -65,6 +81,21 @@ export function OrcamentosPage() {
       ),
     [todos, perfil, usuarioId],
   );
+  // Busca por nº, cliente ou placa + etapa do funil, tudo no cliente (a API não filtra — ver comentário acima).
+  const contagemPorStatus = useMemo(() => {
+    const c: Record<string, number> = {};
+    for (const o of carteira) c[o.status ?? ''] = (c[o.status ?? ''] ?? 0) + 1;
+    return c;
+  }, [carteira]);
+  const filtrados = useMemo(() => {
+    const termo = normalizar(busca.trim());
+    return carteira.filter(
+      (o: OrcamentoResponse) =>
+        (!statusFiltro || o.status === statusFiltro) &&
+        (!termo || normalizar([o.id, o.clienteNome, o.interessadoNome, o.veiculoPlaca].filter(Boolean).join(' ')).includes(termo)),
+    );
+  }, [carteira, busca, statusFiltro]);
+  const temFiltro = busca.trim() !== '' || statusFiltro !== '';
   const totalElements = filtrados.length;
   const totalPages = Math.max(1, Math.ceil(totalElements / TAMANHO_PAGINA));
   // Depois de remover um orçamento (ou o filtro de carteira encolher a
@@ -87,6 +118,17 @@ export function OrcamentosPage() {
       setDeleting(null);
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível remover o orçamento.'));
+    }
+  }
+
+  async function confirmarRejeicao() {
+    if (!rejeitando?.id) return;
+    try {
+      await rejeitar.mutateAsync(rejeitando.id);
+      toast.info('Orçamento rejeitado.');
+      setRejeitando(null);
+    } catch (error) {
+      toast.error(extractErrorMessage(error));
     }
   }
 
@@ -138,7 +180,17 @@ export function OrcamentosPage() {
   // aí o cliente abria um orçamento que a tela pública ainda tratava como
   // rascunho, sem opção de aprovar. Uma única ação resolve os dois passos
   // juntos, na ordem certa.
+  // Enviar/aprovar exigem cliente e veículo cadastrados (o backend recusa com 422). Em vez de deixar o
+  // consultor esbarrar no erro, explica e leva direto pro orçamento, onde está o "vincular cliente".
+  function exigirCadastro(row: OrcamentoResponse): boolean {
+    if (!orcamentoSemCadastro(row)) return true;
+    toast.info(MENSAGEM_ENVIAR_SEM_CADASTRO);
+    navigate(`/orcamentos/${row.id}`);
+    return false;
+  }
+
   async function handleEnviarECompartilhar(row: OrcamentoResponse) {
+    if (!exigirCadastro(row)) return;
     try {
       const atualizado = await enviar.mutateAsync(row.id!);
       toast.success('Orçamento enviado — aguardando aprovação do cliente.');
@@ -156,6 +208,7 @@ export function OrcamentosPage() {
   // diretamente pelo cliente presencial: passa pelo ENVIADO só como transição
   // de estado interna, sem abrir o compartilhamento.
   async function handleAprovarNoBalcao(row: OrcamentoResponse) {
+    if (!exigirCadastro(row)) return;
     let enviado: OrcamentoResponse;
     try {
       enviado = await enviar.mutateAsync(row.id!);
@@ -190,12 +243,63 @@ export function OrcamentosPage() {
         }
       />
 
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <SearchInput
+          value={busca}
+          onChange={(v) => {
+            setBusca(v);
+            setPage(0);
+          }}
+          placeholder="Buscar por nº, cliente ou placa..."
+          className="w-full max-w-xs"
+        />
+        <div role="group" aria-label="Filtrar por etapa" className="flex min-w-0 max-w-full gap-1.5 overflow-x-auto no-scrollbar">
+          {[{ valor: '', rotulo: 'Todos', total: carteira.length }, ...FILTROS_STATUS.map((s) => ({ valor: s, rotulo: metaFor(orcamentoStatusMeta, s).label, total: contagemPorStatus[s] ?? 0 }))].map((f) => (
+            <button
+              key={f.valor}
+              type="button"
+              aria-pressed={statusFiltro === f.valor}
+              onClick={() => {
+                setStatusFiltro(f.valor);
+                setPage(0);
+              }}
+              className={clsx(
+                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400',
+                statusFiltro === f.valor
+                  ? 'border-brand-600 bg-brand-600 text-white'
+                  : 'border-border text-ink-muted hover:bg-surface-alt hover:text-ink',
+              )}
+            >
+              {f.rotulo} <span className="tabular-nums opacity-80">({f.total})</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <Card>
         <DataTable<OrcamentoResponse>
           loading={isLoading}
           rows={rows}
           rowKey={(row) => row.id!}
-          emptyTitle="Nenhum orçamento cadastrado"
+          emptyTitle={temFiltro ? 'Nenhum orçamento encontrado' : 'Nenhum orçamento cadastrado'}
+          emptyDescription={temFiltro ? 'Ajuste a busca ou a etapa selecionada.' : 'Crie o primeiro orçamento para começar a cotar.'}
+          emptyAction={
+            temFiltro ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setBusca('');
+                  setStatusFiltro('');
+                }}
+              >
+                Limpar filtros
+              </Button>
+            ) : (
+              <Button onClick={() => navigate('/orcamentos/novo')}>
+                <Plus size={18} /> Novo orçamento
+              </Button>
+            )
+          }
           columns={[
             {
               header: '#',
@@ -206,7 +310,15 @@ export function OrcamentosPage() {
                 </span>
               ),
             },
-            { header: 'Cliente', render: (row) => `${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}` },
+            {
+              header: 'Cliente',
+              render: (row) => (
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  {`${row.clienteNome ?? ''} — ${row.veiculoPlaca ?? ''}`}
+                  {orcamentoSemCadastro(row) && <Badge tone="warning">Sem cadastro</Badge>}
+                </span>
+              ),
+            },
             { header: 'Valor', render: (row) => formatCurrency(row.valorTotal) },
             { header: 'Criado em', render: (row) => formatDate(row.createdAt), hideBelow: 'sm' },
             {
@@ -275,14 +387,9 @@ export function OrcamentosPage() {
                         icon={XCircle}
                         label="Rejeitar"
                         tone="danger"
-                        onClick={async (e) => {
+                        onClick={(e) => {
                           e.stopPropagation();
-                          try {
-                            await rejeitar.mutateAsync(row.id!);
-                            toast.info('Orçamento rejeitado.');
-                          } catch (error) {
-                            toast.error(extractErrorMessage(error));
-                          }
+                          setRejeitando(row);
                         }}
                       />
                       <IconActionButton
@@ -324,6 +431,17 @@ export function OrcamentosPage() {
         />
         {todos && <Pagination page={paginaAtual} totalPages={totalPages} totalElements={totalElements} onChange={setPage} />}
       </Card>
+
+      <ConfirmDialog
+        open={!!rejeitando}
+        title="Rejeitar orçamento"
+        description={`Rejeitar o orçamento #${ultimoRejeitado.current?.id}? Ele não poderá mais ser aprovado.`}
+        confirmLabel="Rejeitar"
+        variant="danger"
+        loading={rejeitar.isPending}
+        onConfirm={confirmarRejeicao}
+        onCancel={() => setRejeitando(null)}
+      />
 
       <ConfirmDialog
         open={!!deleting}

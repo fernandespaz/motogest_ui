@@ -4,10 +4,15 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { OficinaDadosTab } from './OficinaDadosTab';
 import { LicencaTab } from './LicencaTab';
+import { CarteiraPlacasTab } from './CarteiraPlacasTab';
+import { useAuthStore } from '@/store/authStore';
 
 export function OficinaPage() {
   const location = useLocation();
-  const [tab, setTab] = useState(location.pathname.endsWith('/licenca') ? 'licenca' : 'dados');
+  const podeVerCarteira = useAuthStore((s) => s.hasPermission('PLACAS_CARTEIRA'));
+  const [tab, setTab] = useState(
+    location.pathname.endsWith('/licenca') ? 'licenca' : location.pathname.endsWith('/placas') && podeVerCarteira ? 'placas' : 'dados',
+  );
 
   return (
     <div>
@@ -17,6 +22,7 @@ export function OficinaPage() {
         tabs={[
           { key: 'dados', label: 'Dados cadastrais' },
           { key: 'licenca', label: 'Licença e plano' },
+          ...(podeVerCarteira ? [{ key: 'placas', label: 'Consulta de placas' }] : []),
         ]}
         active={tab}
         onChange={setTab}
@@ -28,6 +34,11 @@ export function OficinaPage() {
       <TabPanel hidden={tab !== 'licenca'}>
         <LicencaTab />
       </TabPanel>
+      {podeVerCarteira && (
+        <TabPanel hidden={tab !== 'placas'}>
+          <CarteiraPlacasTab />
+        </TabPanel>
+      )}
     </div>
   );
 }

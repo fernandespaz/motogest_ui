@@ -4,6 +4,7 @@ import {
   formatCardNumber,
   formatCep,
   formatMinutosEmHorasDecimais,
+  telefoneNacional,
   formatCnpj,
   formatCpf,
   formatCpfOuCnpj,
@@ -311,3 +312,19 @@ describe('formatMinutosEmHorasDecimais', () => {
     expect(formatMinutosEmHorasDecimais(null)).toBe('—');
   });
 });
+
+describe('telefoneNacional', () => {
+  it('normaliza para DDD + número, tirando 55, zero de tronco e máscara', () => {
+    expect(telefoneNacional('(11) 91234-5678')).toBe('11912345678');
+    expect(telefoneNacional('5511912345678')).toBe('11912345678');
+    expect(telefoneNacional('011912345678')).toBe('11912345678');
+    expect(telefoneNacional('1133334444')).toBe('1133334444');
+  });
+
+  it('número que não parece válido não vira link', () => {
+    expect(telefoneNacional('12345')).toBeUndefined();
+    expect(telefoneNacional('')).toBeUndefined();
+    expect(telefoneNacional(undefined)).toBeUndefined();
+  });
+});
+

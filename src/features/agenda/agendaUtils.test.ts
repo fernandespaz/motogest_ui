@@ -5,11 +5,14 @@ import {
   agruparPorDia,
   contaCarga,
   intervaloDaVisao,
+  minutosDeAtraso,
   montarCards,
   montarItens,
   nivelCarga,
   proximoPasso,
+  rotuloDoDia,
   statusEfetivo,
+  textoAtraso,
 } from './agendaUtils';
 
 const hoje = new Date();
@@ -208,5 +211,38 @@ describe('vínculo exato agendamento → orçamento → OS', () => {
   it('prefere o orçamento mais avançado quando há mais de um para o mesmo agendamento', () => {
     const [item] = montarItens([ag({ id: 1 })], [], [orc({ id: 1, status: 'REJEITADO' }), orc({ id: 2, status: 'APROVADO' })]);
     expect(item.orcamento?.id).toBe(2);
+  });
+
+  describe('atrasados', () => {
+    const marcado = new Date('2026-11-26T10:00:00');
+    const item = (o: Partial<AgendamentoResponse>, ordens: OrdemServicoResponse[] = []) =>
+      montarItens([ag({ id: 1, dataHora: marcado.toISOString(), ...o })], ordens, [], marcado)[0];
+    const apos = (min: number) => new Date(marcado.getTime() + min * 60_000);
+
+    it('só conta depois da tolerância de 15 min', () => {
+      expect(minutosDeAtraso(item({ status: 'AGENDADO' }), apos(10))).toBe(0);
+      expect(minutosDeAtraso(item({ status: 'AGENDADO' }), apos(15))).toBe(15);
+      expect(minutosDeAtraso(item({ status: 'CONFIRMADO' }), apos(42))).toBe(42);
+    });
+
+    it('não é atraso: já tem OS, está em andamento, concluído, cancelado ou no futuro', () => {
+      expect(minutosDeAtraso(item({ status: 'AGENDADO', veiculoId: 10 }, [os({ veiculoId: 10, status: 'EM_ANDAMENTO' })]), apos(60))).toBe(0);
+      expect(minutosDeAtraso(item({ status: 'CONCLUIDO' }), apos(60))).toBe(0);
+      expect(minutosDeAtraso(item({ status: 'CANCELADO' }), apos(60))).toBe(0);
+      expect(minutosDeAtraso(item({ status: 'AGENDADO' }), apos(-30))).toBe(0);
+    });
+
+    it('texto na maior unidade que couber', () => {
+      expect(textoAtraso(42)).toBe('42 min');
+      expect(textoAtraso(135)).toBe('2 h');
+      expect(textoAtraso(24 * 60)).toBe('1 dia');
+      expect(textoAtraso(3 * 24 * 60 + 5)).toBe('3 dias');
+    });
+
+    it('rótulo do dia: hoje, ontem ou dd/MM', () => {
+      expect(rotuloDoDia('2026-11-26T09:00:00', marcado)).toBe('hoje');
+      expect(rotuloDoDia('2026-11-25T09:00:00', marcado)).toBe('ontem');
+      expect(rotuloDoDia('2026-11-22T09:00:00', marcado)).toBe('22/11');
+    });
   });
 });

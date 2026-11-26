@@ -2,6 +2,8 @@ import {
   addDays,
   addMonths,
   addWeeks,
+  differenceInCalendarDays,
+  differenceInMinutes,
   endOfDay,
   endOfMonth,
   endOfWeek,
@@ -234,6 +236,41 @@ export function proximoPasso(item: AgendaItem): ProximoPasso {
     default:
       return 'ABRIR_ORCAMENTO';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Atrasados: o horário marcado passou e o veículo ainda não virou OS (possível no-show).
+// ---------------------------------------------------------------------------
+
+/** Folga antes de chamar de atrasado — chegar 5–10 min depois não é falta. */
+export const TOLERANCIA_ATRASO_MIN = 15;
+
+/** Minutos de atraso (0 quando não está atrasado): só vale para quem ainda não chegou — sem OS, não iniciado e não cancelado. */
+export function minutosDeAtraso(item: AgendaItem, agora: Date = new Date()): number {
+  if (item.os || !item.ag.dataHora) return 0;
+  if (item.status !== 'AGENDADO' && item.status !== 'CONFIRMADO') return 0;
+  const minutos = differenceInMinutes(agora, new Date(item.ag.dataHora));
+  return minutos >= TOLERANCIA_ATRASO_MIN ? minutos : 0;
+}
+
+export function estaAtrasado(item: AgendaItem, agora: Date = new Date()): boolean {
+  return minutosDeAtraso(item, agora) > 0;
+}
+
+/** "42 min", "2 h" ou "3 dias" — a unidade maior que couber, sem fracionar. */
+export function textoAtraso(minutos: number): string {
+  if (minutos < 60) return `${minutos} min`;
+  if (minutos < 24 * 60) return `${Math.floor(minutos / 60)} h`;
+  const dias = Math.floor(minutos / (24 * 60));
+  return dias === 1 ? '1 dia' : `${dias} dias`;
+}
+
+/** Rótulo curto do dia do agendamento para a faixa de atrasados ("hoje", "ontem", "22/11"). */
+export function rotuloDoDia(dataHora: string, agora: Date = new Date()): string {
+  const dias = differenceInCalendarDays(agora, new Date(dataHora));
+  if (dias === 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  return format(new Date(dataHora), 'dd/MM');
 }
 
 export function porHorario(a: AgendamentoResponse, b: AgendamentoResponse): number {

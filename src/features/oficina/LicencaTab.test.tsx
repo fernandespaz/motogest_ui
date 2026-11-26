@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useLicencaAtual } from '@/hooks/useOficina';
 import { LicencaTab } from './LicencaTab';
 
@@ -14,6 +14,8 @@ vi.mock('./PagamentoCartaoModal', () => ({
 }));
 
 describe('LicencaTab', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it('shows a loading spinner while the licença has not loaded yet', () => {
     vi.mocked(useLicencaAtual).mockReturnValue({ data: undefined, isLoading: true } as never);
     render(<LicencaTab />);
@@ -77,5 +79,18 @@ describe('LicencaTab', () => {
     render(<LicencaTab />);
 
     expect(screen.getByText('Faça upgrade para continuar usando sem limites')).toBeInTheDocument();
+  });
+
+  it('avisa que a confirmação automática dos pagamentos vem em breve enquanto o webhook do PagBank não estiver liberado', () => {
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'TRIAL', diasRestantes: 20 }, isLoading: false } as never);
+    render(<LicencaTab />);
+    expect(screen.getByRole('status')).toHaveTextContent('estará liberada em breve');
+  });
+
+  it('esconde o aviso quando o webhook do PagBank está liberado', () => {
+    vi.stubEnv('VITE_PAGBANK_WEBHOOK_LIBERADO', 'true');
+    vi.mocked(useLicencaAtual).mockReturnValue({ data: { status: 'TRIAL', diasRestantes: 20 }, isLoading: false } as never);
+    render(<LicencaTab />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

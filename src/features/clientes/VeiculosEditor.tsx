@@ -4,7 +4,7 @@ import { Trash } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/Button';
 import { FormSection } from '@/components/ui/FormSection';
 import { IconActionButton } from '@/components/ui/IconActionButton';
-import { VeiculoCampos } from '@/features/shared/VeiculoCampos';
+import { VeiculoComConsulta } from '@/features/shared/VeiculoComConsulta';
 import type { CategoriaComplexidade } from '@/api/types';
 
 /** New vehicles to create alongside the client — matches VeiculoDoClienteRequest (no id: these are always creations, never edits of an existing vehicle). */
@@ -22,7 +22,7 @@ export interface VeiculoNovoFormValue {
 }
 
 export function VeiculosEditor({ name, titulo = 'Veículos' }: { name: string; titulo?: string }) {
-  const { control, register, watch, setValue } = useFormContext();
+  const { control } = useFormContext();
   const { fields, append, remove } = useFieldArray({ control, name });
 
   return (
@@ -46,7 +46,8 @@ export function VeiculosEditor({ name, titulo = 'Veículos' }: { name: string; t
               </span>
               <IconActionButton icon={Trash} label="Remover veículo" tone="danger" onClick={() => remove(index)} />
             </div>
-            <VeiculoCampos register={register} watch={watch} setValue={setValue} prefix={`${name}.${index}`} />
+            {/* Mesma experiência do orçamento e do cadastro de veículo: placa em destaque + consulta automática. */}
+            <VeiculoComConsulta nomeDoCampo={(campo) => `${name}.${index}.${campo}`} categoriaVazia />
           </div>
         ))}
       </div>

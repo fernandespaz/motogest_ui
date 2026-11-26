@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { AgendaCardBody, cardShell } from './AgendaCard';
-import { COLUNAS, type AgendaItem, type CardKanban, type ColunaId } from './agendaUtils';
+import { COLUNAS, minutosDeAtraso, type AgendaItem, type CardKanban, type ColunaId } from './agendaUtils';
 
 /**
  * Quadro somente leitura: mostra o que acontece na oficina. Ninguém move card aqui — iniciar,
  * pausar, pedir peça e concluir é o técnico, na OS, e as colunas seguem o status dela.
  */
-export function AgendaKanban({ cards, onAbrir }: { cards: CardKanban[]; onAbrir: (item: AgendaItem) => void }) {
+export function AgendaKanban({ cards, agora, onAbrir }: { cards: CardKanban[]; agora: Date; onAbrir: (item: AgendaItem) => void }) {
   const porColuna = useMemo(() => {
     const mapa = new Map<ColunaId, CardKanban[]>(COLUNAS.map((c) => [c.id, []]));
     for (const c of cards) mapa.get(c.coluna)!.push(c);
@@ -38,7 +38,7 @@ export function AgendaKanban({ cards, onAbrir }: { cards: CardKanban[]; onAbrir:
               <article key={c.key} className={cardShell(c.coluna)}>
                 {c.item ? (
                   <button type="button" onClick={() => onAbrir(c.item!)} className="w-full">
-                    <AgendaCardBody ag={c.item.ag} os={c.os} status={c.item.status} etapa={c.item.etapa} mostrarStatus={false} />
+                    <AgendaCardBody ag={c.item.ag} os={c.os} status={c.item.status} etapa={c.item.etapa} mostrarStatus={false} atrasoMin={minutosDeAtraso(c.item, agora)} />
                   </button>
                 ) : (
                   <Link to={`/ordens-servico/${c.os?.id}`} className="block">

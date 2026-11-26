@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Car } from 'lucide-react';
-import { PencilSimple, Trash } from '@phosphor-icons/react';
+import { PencilSimple } from '@phosphor-icons/react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -10,12 +10,11 @@ import { DataTable } from '@/components/ui/DataTable';
 import { Pagination } from '@/components/ui/Pagination';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { IconActionButton } from '@/components/ui/IconActionButton';
-import { InfoDialog } from '@/components/ui/InfoDialog';
 import { useClientes, useDeleteCliente } from '@/hooks/useClientes';
 import type { ClienteResponse } from '@/api/types';
 import { formatDocumento, formatPhone, getInitials } from '@/lib/formatters';
-import { TOM_CATEGORIA_COMPLEXIDADE } from '@/lib/categoria';
 import { ClienteFormModal } from './ClienteFormModal';
+import { ClientePerfilModal } from './ClientePerfilModal';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
 
@@ -24,18 +23,11 @@ export function ClientesPage() {
   const [busca, setBusca] = useState('');
   const [modalCliente, setModalCliente] = useState<ClienteResponse | null | undefined>(undefined);
   const [deleting, setDeleting] = useState<ClienteResponse | null>(null);
-  const [notFoundDismissed, setNotFoundDismissed] = useState(true);
+  // Clique na linha abre o perfil (leitura + ações); o formulário de edição é uma ação explícita dentro dele.
+  const [perfil, setPerfil] = useState<ClienteResponse | null>(null);
 
-  const { data, isLoading, isFetching } = useClientes({ page, size: 20, busca: busca || undefined });
+  const { data, isLoading } = useClientes({ page, size: 20, busca: busca || undefined });
   const deleteMutation = useDeleteCliente();
-
-  // Only pops up once per completed search, and only when the user actually typed
-  // something — an empty tenant on first load shouldn't be treated as "not found".
-  useEffect(() => {
-    if (busca && !isFetching && data && data.totalElements === 0) {
-      setNotFoundDismissed(false);
-    }
-  }, [busca, isFetching, data]);
 
   async function confirmDelete() {
     if (!deleting?.id) return;
@@ -53,7 +45,9 @@ export function ClientesPage() {
       <PageHeader
         title="Clientes"
         subtitle={
-          data
+          data && busca
+            ? `${data.totalElements} ${data.totalElements === 1 ? 'resultado' : 'resultados'} para "${busca}"`
+            : data
             ? `${data.totalElements} ${data.totalElements === 1 ? 'cliente cadastrado' : 'clientes cadastrados'}, com os veículos vinculados`
             : 'Cadastro de pessoas físicas e jurídicas, com os veículos vinculados'
         }
@@ -80,18 +74,42 @@ export function ClientesPage() {
           loading={isLoading}
           rows={data?.content ?? []}
           rowKey={(row) => row.id!}
-          emptyTitle="Nenhum cliente cadastrado"
-          emptyDescription="Cadastre o primeiro cliente da oficina para começar."
+          // Busca sem resultado aparece aqui mesmo, na lista — antes abria um diálogo que exigia um clique a cada tentativa.
+          emptyTitle={busca ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+          emptyDescription={
+            busca ? `Nada encontrado para "${busca}". Confira o nome, o CPF/CNPJ ou a placa.` : 'Cadastre o primeiro cliente da oficina para começar.'
+          }
+          emptyAction={
+            busca ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="secondary" onClick={() => setBusca('')}>
+                  Ver todos os clientes
+                </Button>
+                <Button onClick={() => setModalCliente(null)}>
+                  <Plus size={18} /> Novo cliente
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={() => setModalCliente(null)}>
+                <Plus size={18} /> Cadastrar primeiro cliente
+              </Button>
+            )
+          }
           columns={[
             {
               header: 'Nome',
               render: (row) => (
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
+                  <div aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700">
                     {getInitials(row.nome ?? '?')}
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-ink">{row.nome}</p>
+                    <p className="flex flex-wrap items-center gap-1.5 font-medium text-ink">
+                      <span className="truncate">{row.nome}</span>
+                      {/* Tipo e Status eram colunas quase constantes ("Física", "Ativo"): agora só o que foge do comum aparece. */}
+                      {row.tipoPessoa === 'PJ' && <Badge>Jurídica</Badge>}
+                      {row.ativo === false && <Badge tone="neutral">Inativo</Badge>}
+                    </p>
                     <p className="font-mono text-xs text-ink-muted">
                       {formatDocumento(row.documento ?? '', row.tipoPessoa === 'PJ' ? 'PJ' : 'PF')}
                     </p>
@@ -99,10 +117,9 @@ export function ClientesPage() {
                 </div>
               ),
             },
-            { header: 'Tipo', render: (row) => <Badge>{row.tipoPessoa === 'PJ' ? 'Jurídica' : 'Física'}</Badge>, hideBelow: 'sm' },
             {
               header: 'Contato',
-              render: (row) => (row.telefone ? formatPhone(row.telefone) : row.email || '—'),
+              render: (row) => <span className="whitespace-nowrap">{row.telefone ? formatPhone(row.telefone) : row.email || '—'}</span>,
               hideBelow: 'md',
             },
             {
@@ -111,9 +128,11 @@ export function ClientesPage() {
                 row.veiculos && row.veiculos.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {row.veiculos.map((v) => (
-                      <Badge key={v.id} tone={v.categoria ? TOM_CATEGORIA_COMPLEXIDADE[v.categoria] : 'neutral'}>
-                        <span className="font-mono">{v.placa}</span>
-                        {v.categoria && <span className="font-semibold">· {v.categoria}</span>}
+                      // Só a placa, em neutro: a categoria (A/B/C) é dado de hora técnica, não um alerta — ver no cadastro do veículo.
+                      <Badge key={v.id} tone="neutral">
+                        <span className="font-mono" title={[v.marca, v.modelo, v.categoria && `categoria ${v.categoria}`].filter(Boolean).join(' · ') || undefined}>
+                          {v.placa}
+                        </span>
                       </Badge>
                     ))}
                   </div>
@@ -123,11 +142,6 @@ export function ClientesPage() {
                   </span>
                 ),
               hideBelow: 'md',
-            },
-            {
-              header: 'Status',
-              render: (row) => <Badge tone={row.ativo === false ? 'neutral' : 'success'}>{row.ativo === false ? 'Inativo' : 'Ativo'}</Badge>,
-              hideBelow: 'sm',
             },
             {
               header: '',
@@ -142,25 +156,29 @@ export function ClientesPage() {
                       setModalCliente(row);
                     }}
                   />
-                  <IconActionButton
-                    icon={Trash}
-                    label="Remover"
-                    tone="danger"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleting(row);
-                    }}
-                  />
                 </div>
               ),
             },
           ]}
-          onRowClick={(row) => setModalCliente(row)}
+          onRowClick={(row) => setPerfil(row)}
         />
         {data && (
           <Pagination page={data.pageNumber} totalPages={data.totalPages} totalElements={data.totalElements} onChange={setPage} />
         )}
       </Card>
+
+      <ClientePerfilModal
+        cliente={perfil}
+        onClose={() => setPerfil(null)}
+        onEditar={(c) => {
+          setPerfil(null);
+          setModalCliente(c);
+        }}
+        onRemover={(c) => {
+          setPerfil(null);
+          setDeleting(c);
+        }}
+      />
 
       <ClienteFormModal open={modalCliente !== undefined} onClose={() => setModalCliente(undefined)} cliente={modalCliente} />
 
@@ -175,12 +193,6 @@ export function ClientesPage() {
         onCancel={() => setDeleting(null)}
       />
 
-      <InfoDialog
-        open={!notFoundDismissed}
-        title="Nada encontrado"
-        description="Nenhum dado encontrado para o cliente ou veículo informado."
-        onClose={() => setNotFoundDismissed(true)}
-      />
     </div>
   );
 }

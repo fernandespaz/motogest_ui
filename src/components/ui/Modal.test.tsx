@@ -1,4 +1,5 @@
-﻿import { render, screen } from '@testing-library/react';
+﻿import { render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { Modal } from './Modal';
@@ -77,6 +78,48 @@ describe('Modal', () => {
 
     expect(fecharDeCima).toHaveBeenCalledTimes(1);
     expect(fecharBase).not.toHaveBeenCalled();
+  });
+
+  it('expõe role=dialog nomeado pelo título, move o foco pra dentro e devolve ao elemento de origem ao fechar', async () => {
+    function Exemplo() {
+      const [aberto, setAberto] = useState(false);
+      return (
+        <>
+          <button onClick={() => setAberto(true)}>Abrir</button>
+          <Modal open={aberto} onClose={() => setAberto(false)} title="Editar cliente">
+            <input aria-label="Nome" />
+            <button>Salvar</button>
+          </Modal>
+        </>
+      );
+    }
+    render(<Exemplo />);
+    const abrir = screen.getByRole('button', { name: 'Abrir' });
+    await userEvent.click(abrir);
+
+    const dialogo = screen.getByRole('dialog', { name: 'Editar cliente' });
+    expect(dialogo).toHaveAttribute('aria-modal', 'true');
+    expect(dialogo).toHaveFocus();
+
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(abrir).toHaveFocus();
+  });
+
+  it('Tab circula dentro do modal: do último campo volta ao primeiro, e Shift+Tab do primeiro vai ao último', async () => {
+    render(
+      <Modal open onClose={() => {}} title="Editar">
+        <input aria-label="Nome" />
+        <button>Salvar</button>
+      </Modal>,
+    );
+    const fechar = screen.getByRole('button', { name: 'Fechar' });
+    const salvar = screen.getByRole('button', { name: 'Salvar' });
+    salvar.focus();
+    await userEvent.tab();
+    expect(fechar).toHaveFocus();
+    await userEvent.tab({ shift: true });
+    expect(salvar).toHaveFocus();
   });
 
   it('closes only the topmost modal on Escape when one is open above another', async () => {

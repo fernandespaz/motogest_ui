@@ -11,12 +11,10 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Tabs, TabPanel } from '@/components/ui/Tabs';
 import { useRelatorioCaixaDiario, useRelatorioCaixaPeriodo } from '@/hooks/useFinanceiro';
 import { caixaApi } from '@/api/endpoints/caixa';
-import { baixarExportacaoCaixa } from './caixaExport';
+import { useExportacaoCaixa } from './useExportacaoCaixa';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/formatters';
 import { caixaSessaoStatusMeta, metaFor } from '@/lib/statusMeta';
 import { CaixaTipoLabel, CaixaValorCell } from '@/features/shared/CaixaMovimentoCells';
-import { toast } from '@/store/toastStore';
-import { extractErrorMessage } from '@/api/client';
 import type { CaixaMovimentoResponse, CaixaSessaoResponse, PontoDiarioCaixaResponse } from '@/api/types';
 
 type SubAba = 'diario' | 'periodo';
@@ -46,19 +44,11 @@ export function CaixaRelatoriosTab() {
 
 function RelatorioDiario() {
   const [data, setData] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [exportando, setExportando] = useState(false);
+  const { exportando, exportar: exportarArquivo } = useExportacaoCaixa('Não foi possível exportar o relatório.');
   const { data: relatorio, isLoading } = useRelatorioCaixaDiario(data);
 
-  async function exportar(formato: 'PDF' | 'XLSX') {
-    setExportando(true);
-    try {
-      await baixarExportacaoCaixa(() => caixaApi.relatorios.diarioExportar(data, formato), `caixa-diario-${data}`, formato);
-    } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível exportar o relatório.'));
-    } finally {
-      setExportando(false);
-    }
-  }
+  const exportar = (formato: 'PDF' | 'XLSX') =>
+    exportarArquivo(() => caixaApi.relatorios.diarioExportar(data, formato), `caixa-diario-${data}`, formato);
 
   return (
     <div className="flex flex-col gap-4">
@@ -124,23 +114,15 @@ function RelatorioDiario() {
 function RelatorioPeriodo() {
   const [inicio, setInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [fim, setFim] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [exportando, setExportando] = useState(false);
+  const { exportando, exportar: exportarArquivo } = useExportacaoCaixa('Não foi possível exportar o relatório.');
   const { data: relatorio, isLoading } = useRelatorioCaixaPeriodo(inicio, fim);
 
-  async function exportar(formato: 'PDF' | 'XLSX') {
-    setExportando(true);
-    try {
-      await baixarExportacaoCaixa(
-        () => caixaApi.relatorios.periodoExportar(inicio, fim, formato),
-        `caixa-periodo-${inicio}-a-${fim}`,
-        formato,
-      );
-    } catch (error) {
-      toast.error(extractErrorMessage(error, 'Não foi possível exportar o relatório.'));
-    } finally {
-      setExportando(false);
-    }
-  }
+  const exportar = (formato: 'PDF' | 'XLSX') =>
+    exportarArquivo(
+      () => caixaApi.relatorios.periodoExportar(inicio, fim, formato),
+      `caixa-periodo-${inicio}-a-${fim}`,
+      formato,
+    );
 
   return (
     <div className="flex flex-col gap-4">

@@ -1,6 +1,7 @@
 ﻿import type { UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { Input, Select } from '@/components/ui/Field';
 import { ModeloVeiculoField } from '@/features/shared/ModeloVeiculoField';
+import { PlacaConsulta, type DadosPlaca } from '@/features/shared/PlacaConsulta';
 import { CATEGORIAS_COMPLEXIDADE } from '@/lib/categoria';
 
 interface VeiculoCamposErros {
@@ -30,28 +31,64 @@ export function VeiculoCampos({
   errors,
   estrito,
   categoriaVazia,
+  consultaPlaca,
+  ocultarPlaca,
+  nomeDoCampo,
+  ocultarKm,
 }: {
+  /** O rascunho de orçamento não guarda o KM (só o cadastro do veículo guarda). */
+  ocultarKm?: boolean;
   register: UseFormRegister<any>;
   watch: UseFormWatch<any>;
   setValue: UseFormSetValue<any>;
   prefix?: string;
   errors?: VeiculoCamposErros;
-  /** Marca modelo, cor, ano de fabricação e chassi como obrigatórios (cadastro completo de um veículo). */
+  /** Marca o modelo como obrigatório e valida na hora (cadastro de um veículo). Cor, ano e chassi são recomendados, não obrigatórios. */
   estrito?: boolean;
   /** Mostra a opção vazia na categoria — veículo legado sem categoria precisa de uma escolha explícita. */
   categoriaVazia?: boolean;
+  /** Mostra "Buscar dados da placa" — só em cadastro novo (na edição, os dados já existem e uma consulta cobraria à toa). */
+  consultaPlaca?: boolean;
+  /** Esconde o campo de placa (ela já foi informada em outro ponto da tela, como o hero do cadastro de veículo). */
+  ocultarPlaca?: boolean;
+  /**
+   * Para formulários cujos campos de veículo têm outros nomes (o rascunho de orçamento usa "veiculoPlaca",
+   * "veiculoMarca"…): traduz o nome do campo daqui ("placa", "marca"…) para o nome no form. Tem prioridade sobre `prefix`.
+   */
+  nomeDoCampo?: (campo: string) => string;
 }) {
-  const n = (campo: string) => (prefix ? `${prefix}.${campo}` : campo);
+  const n = (campo: string) => (nomeDoCampo ? nomeDoCampo(campo) : prefix ? `${prefix}.${campo}` : campo);
   const marca = watch(n('marca')) as string | undefined;
   const modelo = watch(n('modelo')) as string | undefined;
+  const placa = watch(n('placa')) as string | undefined;
+  const chassi = watch(n('chassi')) as string | undefined;
+
+  // Nunca sobrescreve o que o usuário já digitou: só completa campos vazios.
+  function aplicarDadosPlaca(dados: DadosPlaca) {
+    const preencher = (campo: string, valor: string | number | null | undefined) => {
+      if (valor == null || valor === '') return;
+      const atual = watch(n(campo)) as unknown;
+      if (atual != null && atual !== '') return;
+      setValue(n(campo), valor, { shouldDirty: true, shouldValidate: !!estrito });
+    };
+    preencher('marca', dados.marca);
+    preencher('modelo', dados.modelo);
+    preencher('anoFabricacao', dados.anoFabricacao);
+    preencher('anoModelo', dados.anoModelo);
+    preencher('cor', dados.cor);
+    preencher('chassi', dados.chassi);
+  }
 
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-3 lg:grid-cols-12">
-      <div className="col-span-2 lg:col-span-3">
-        <Input label="Placa" required error={errors?.placa?.message} {...register(n('placa'))} />
-      </div>
+      {!ocultarPlaca && (
+        <div className="col-span-2 lg:col-span-3">
+          <Input label="Placa" required error={errors?.placa?.message} {...register(n('placa'))} />
+          {consultaPlaca && <PlacaConsulta placa={placa} chassiPreenchido={!!chassi} onDados={aplicarDadosPlaca} />}
+        </div>
+      )}
       <ModeloVeiculoField
-        className="col-span-2 lg:col-span-9 lg:self-end"
+        className={ocultarPlaca ? 'col-span-2 lg:col-span-12' : 'col-span-2 lg:col-span-9 lg:self-end'}
         marca={marca}
         modelo={modelo}
         onSelecionar={(m) => {
@@ -66,7 +103,7 @@ export function VeiculoCampos({
         <Input label="Modelo" required={estrito} error={errors?.modelo?.message} {...register(n('modelo'))} />
       </div>
       <div className="lg:col-span-3">
-        <Input label="Cor" required={estrito} error={errors?.cor?.message} {...register(n('cor'))} />
+        <Input label="Cor" error={errors?.cor?.message} {...register(n('cor'))} />
       </div>
       <div className="lg:col-span-3">
         <Select
@@ -88,7 +125,6 @@ export function VeiculoCampos({
         <Input
           label="Ano de fabricação"
           type="number"
-          required={estrito}
           error={errors?.anoFabricacao?.message}
           {...register(n('anoFabricacao'))}
         />
@@ -96,11 +132,13 @@ export function VeiculoCampos({
       <div className="lg:col-span-3">
         <Input label="Ano do modelo" type="number" {...register(n('anoModelo'))} />
       </div>
+      {!ocultarKm && (
+        <div className="lg:col-span-3">
+          <Input label="KM atual" type="number" {...register(n('kmAtual'))} />
+        </div>
+      )}
       <div className="lg:col-span-3">
-        <Input label="KM atual" type="number" {...register(n('kmAtual'))} />
-      </div>
-      <div className="lg:col-span-3">
-        <Input label="Chassi" required={estrito} error={errors?.chassi?.message} {...register(n('chassi'))} />
+        <Input label="Chassi" error={errors?.chassi?.message} {...register(n('chassi'))} />
       </div>
     </div>
   );

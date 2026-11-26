@@ -210,3 +210,61 @@ describe('OrdensServicoPage — CPF/CNPJ do cliente', () => {
     expect(screen.getByText('Frota Rápida — MTG0019')).toBeInTheDocument();
   });
 });
+
+describe('OrdensServicoPage busca', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ perfil: 'Consultor Técnico' });
+    vi.mocked(useUsuarios).mockReturnValue({ data: [] } as never);
+    vi.mocked(useOrdensServico).mockReturnValue({
+      data: {
+        content: [
+          { id: 42, numero: 'OS-000042', clienteNome: 'Frota Rápida', veiculoPlaca: 'MTG0019', status: 'APROVADA' },
+          { id: 43, numero: 'OS-000043', clienteNome: 'Bruno Santos', veiculoPlaca: 'ABC1D23', status: 'APROVADA' },
+        ],
+        pageNumber: 0,
+        totalPages: 1,
+        totalElements: 2,
+      },
+      isLoading: false,
+    } as never);
+  });
+
+  it('título "O.S." e busca por número, placa ou cliente', () => {
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'O.S.' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Buscar por número, placa ou cliente...')).toBeInTheDocument();
+  });
+
+  it('número vai para a API (param numero), sem filtrar no cliente', async () => {
+    renderPage();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por número/), '43');
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ numero: '43', size: 20 }));
+  });
+
+  it('CPF/CNPJ vai para a API (param clienteDocumento)', async () => {
+    renderPage();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por número/), '123.456.789-01');
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ clienteDocumento: '12345678901' }));
+  });
+
+  it('placa (com ou sem hífen) filtra a lista pela placa, buscando as O.S. mais recentes', async () => {
+    renderPage();
+    await userEvent.type(screen.getByPlaceholderText(/Buscar por número/), 'abc-1d23');
+
+    expect(useOrdensServico).toHaveBeenLastCalledWith(expect.objectContaining({ size: 200, page: 0, numero: undefined }));
+    expect(screen.getByText('OS-000043')).toBeInTheDocument();
+    expect(screen.queryByText('OS-000042')).not.toBeInTheDocument();
+  });
+
+  it('nome filtra por cliente (sem acento/caixa) e sem resultado mostra o estado vazio', async () => {
+    renderPage();
+    const campo = screen.getByPlaceholderText(/Buscar por número/);
+    await userEvent.type(campo, 'rapida');
+    expect(screen.getByText('OS-000042')).toBeInTheDocument();
+    expect(screen.queryByText('OS-000043')).not.toBeInTheDocument();
+
+    await userEvent.clear(campo);
+    await userEvent.type(campo, 'ninguem');
+    expect(screen.getByText('Nenhuma O.S. encontrada')).toBeInTheDocument();
+  });
+});

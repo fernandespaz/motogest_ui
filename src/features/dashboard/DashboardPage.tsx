@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { format } from 'date-fns';
-import { CalendarClock, ChevronRight, ClipboardList, FilePlus2, PackageX } from 'lucide-react';
+import { AlertTriangle, CalendarClock, ChevronRight, ClipboardList, FilePlus2, PackageX } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { DonutChart } from '@/components/ui/DonutChart';
-import { buttonStyles } from '@/components/ui/Button';
+import { Button, buttonStyles } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { PageSpinner } from '@/components/ui/Spinner';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useDashboardAdmin } from '@/hooks/useDashboardAdmin';
@@ -19,14 +20,40 @@ import { DashboardConsultor } from './DashboardConsultor';
 
 const MAX_AGENDA = 6;
 
+/** Falha de um bloco do painel: mensagem + nova tentativa, sem derrubar o resto da tela. */
+function BlocoComErro({ mensagem, onRetry }: { mensagem: string; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 px-4 py-8 text-center">
+      <AlertTriangle size={22} className="text-warning" aria-hidden="true" />
+      <p className="text-sm text-ink-muted">{mensagem}</p>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
+        Tentar novamente
+      </Button>
+    </div>
+  );
+}
+
 function dataPorExtenso(): string {
   const texto = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 function DashboardGeral() {
-  const { data, isLoading } = useDashboard();
-  const { funil, agendaHoje, carregandoOs, carregandoAgenda, podeOs, podeAgenda } = useDashboardAdmin();
+  const { data, isLoading, isError, refetch } = useDashboard();
+  const {
+    funil,
+    totalOs,
+    osLimitadas,
+    agendaHoje,
+    carregandoOs,
+    carregandoAgenda,
+    erroOs,
+    erroAgenda,
+    refazerOs,
+    refazerAgenda,
+    podeOs,
+    podeAgenda,
+  } = useDashboardAdmin();
   const navigate = useNavigate();
   const nome = useAuthStore((s) => s.nome);
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -36,7 +63,18 @@ function DashboardGeral() {
   // caixa, então o corte é feito aqui, não no backend.
   const podeVerFinanceiro = hasPermission('FINANCEIRO_READ');
 
-  if (isLoading || !data) return <PageSpinner label="Carregando indicadores..." />;
+  if (isLoading) return <PageSpinner label="Carregando indicadores..." />;
+  // Sem isto, uma falha em GET /dashboard deixava o spinner girando para sempre.
+  if (isError || !data) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Não foi possível carregar o painel"
+        description="Verifique sua conexão e tente de novo."
+        action={<Button onClick={() => void refetch()}>Tentar novamente</Button>}
+      />
+    );
+  }
 
   // O cartão só vira atalho pra tela correspondente se o usuário tem acesso a
   // ela — senão o clique cairia numa rota que ele não pode abrir.
@@ -61,22 +99,37 @@ function DashboardGeral() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          index={0}
-          icon={ClipboardList}
-          label="OS abertas"
-          value={String(data.ordensServicoAbertas ?? 0)}
-          {...atalho('ORDEM_SERVICO_READ', '/ordens-servico')}
-        />
-        <StatCard
-          index={1}
-          icon={ClipboardList}
-          label="OS em andamento"
-          value={String(data.ordensServicoEmAndamento ?? 0)}
-          tone="warning"
-          {...atalho('ORDEM_SERVICO_READ', '/ordens-servico')}
-        />
+      <div className={clsx("grid grid-cols-1 gap-4 sm:grid-cols-2", podeOs ? "xl:grid-cols-3" : "xl:grid-cols-4")}>
+        {/* Com o funil de OS na tela, um único número de "OS na oficina" (mesma fonte da rosca). Os contadores do
+            backend ("abertas" = só Aberta; "em andamento" = Em andamento + Aguardando peça) divergiam dos grupos da
+            rosca e mostravam dois valores para a mesma coisa; sem o funil (sem permissão), continuam valendo. */}
+        {podeOs ? (
+          <StatCard
+            index={0}
+            icon={ClipboardList}
+            label="O.S. na oficina"
+            value={carregandoOs || erroOs ? '—' : String(totalOs)}
+            {...atalho('ORDEM_SERVICO_READ', '/ordens-servico')}
+          />
+        ) : (
+          <>
+            <StatCard
+              index={0}
+              icon={ClipboardList}
+              label="O.S. abertas"
+              value={String(data.ordensServicoAbertas ?? 0)}
+              {...atalho('ORDEM_SERVICO_READ', '/ordens-servico')}
+            />
+            <StatCard
+              index={1}
+              icon={ClipboardList}
+              label="O.S. em andamento"
+              value={String(data.ordensServicoEmAndamento ?? 0)}
+              tone="warning"
+              {...atalho('ORDEM_SERVICO_READ', '/ordens-servico')}
+            />
+          </>
+        )}
         <StatCard
           index={2}
           icon={CalendarClock}
@@ -97,18 +150,23 @@ function DashboardGeral() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         {podeOs && (
           <Card>
-            <CardHeader title="Ordens de serviço" subtitle="Onde está cada OS em andamento" />
+            <CardHeader
+              title="Ordens de serviço"
+              subtitle={osLimitadas ? "Considera as 100 O.S. mais recentes" : "Onde está cada O.S. em andamento"}
+            />
             <CardBody>
               {carregandoOs ? (
                 <PageSpinner label="Carregando ordens..." />
+              ) : erroOs ? (
+                <BlocoComErro mensagem="Não foi possível carregar as ordens de serviço." onRetry={refazerOs} />
               ) : (
                 <DonutChart
-                  centerLabel="OS ativas"
+                  centerLabel="O.S. ativas"
                   segments={[
                     { label: 'Abertas / aguardando cliente', value: funil.abertas, tone: 'muted' },
                     { label: 'Em execução', value: funil.emExecucao, tone: 'brand' },
-                    { label: 'Prontas para faturar', value: funil.paraFaturar, tone: 'warning' },
-                    { label: 'Prontas para entrega', value: funil.paraEntregar, tone: 'success' },
+                    { label: 'Prontas para faturar', value: funil.paraFaturar, tone: 'warning', to: '/ordens-servico?status=CONCLUIDA' },
+                    { label: 'Prontas para entrega', value: funil.paraEntregar, tone: 'success', to: '/ordens-servico?status=FATURADO' },
                   ]}
                   emptyLabel="Nenhuma OS ativa"
                 />
@@ -165,6 +223,8 @@ function DashboardGeral() {
             />
             {carregandoAgenda ? (
               <PageSpinner label="Carregando agenda..." />
+            ) : erroAgenda ? (
+              <BlocoComErro mensagem="Não foi possível carregar a agenda." onRetry={refazerAgenda} />
             ) : agendaHoje.length === 0 ? (
               <p className="px-5 pb-5 text-sm text-ink-muted">Nenhum agendamento para hoje.</p>
             ) : (

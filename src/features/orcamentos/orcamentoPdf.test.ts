@@ -87,3 +87,22 @@ describe('buildOrcamentoPdfBlob — avarias da vistoria de entrada', () => {
     expect(renderOSDocumentPdf).toHaveBeenLastCalledWith(expect.objectContaining({ avarias: [] }));
   });
 });
+
+describe('buildOrcamentoPdfBlob — dado interno', () => {
+  // O PDF é gerado no navegador a partir da visão do consultor, que agora carrega custo/margem/lucro:
+  // nada disso pode chegar ao documento do cliente.
+  it('não leva custo, margem nem lucro dos itens pro documento', async () => {
+    vi.mocked(clientesApi.get).mockResolvedValue(null as never);
+    vi.mocked(veiculosApi.get).mockResolvedValue(null as never);
+    await buildOrcamentoPdfBlob({
+      id: 8,
+      status: 'RASCUNHO',
+      itens: [
+        { tipoItem: 'PRODUTO', descricao: 'Pastilha', quantidade: 3, valorUnitario: 100, valorTotal: 300, custoUnitario: 60, margemPercentual: 40, lucroTotal: 120 },
+      ],
+    } as OrcamentoResponse);
+    const enviado = JSON.stringify(vi.mocked(renderOSDocumentPdf).mock.calls.at(-1));
+    expect(enviado).toContain('Pastilha');
+    expect(enviado).not.toMatch(/custo|margem|lucro|"60"|:60[,}]|:120[,}]/i);
+  });
+});

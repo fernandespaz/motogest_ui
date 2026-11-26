@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FormProvider, useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { format } from 'date-fns';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +20,7 @@ import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/us
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useAgendamento } from '@/hooks/useAgenda';
 import {
+  type ItemFormValue,
   ItemsEditor,
   MENSAGEM_SERVICO_SEM_TEMPO,
   erroListaItens,
@@ -30,6 +32,7 @@ import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/Mo
 import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
 import { VistoriaEntrada } from '@/features/vistoria/VistoriaEntrada';
 import { MAX_AVARIAS, avariaSchema, avariasParaFormValues, avariasParaPayload } from '@/features/vistoria/avarias';
+import { acrescimoSobreBase } from '@/lib/margem';
 import { ehNivelCombustivel } from '@/lib/combustivel';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -39,6 +42,31 @@ import { useAuthStore } from '@/store/authStore';
 import { isMecanico, isConsultor } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
 import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
+import { CamposInteressado, SeletorModoCliente, SugestoesClienteExistente } from './ClienteOrcamentoModo';
+import { Disclosure } from '@/components/ui/Disclosure';
+import { AvisoAlteracoesNaoSalvas } from '@/components/AvisoAlteracoesNaoSalvas';
+import { ConcluirCadastroModal } from './ConcluirCadastroModal';
+import { ResumoOrcamentoPanel, pendenciasEnvio } from './ResumoOrcamentoPanel';
+import { VeiculoAvulsoSecao } from './VeiculoAvulsoSecao';
+import { camposDoModo, orcamentoSemCadastro } from './orcamentoModo';
+
+/** Quanto esperar sem novas alterações antes de salvar o rascunho sozinho. */
+export const ATRASO_AUTOSAVE_MS = 2500;
+
+/** Remove ausentes/nulos/'' (recursivo): o form guarda '' onde o servidor devolve nada, e isso não é diferença real. */
+function semVazios(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(semVazios);
+  if (v && typeof v === 'object') {
+    return Object.fromEntries(
+      Object.entries(v as Record<string, unknown>)
+        .filter(([, x]) => x !== undefined && x !== null && x !== '')
+        .map(([k, x]) => [k, semVazios(x)]),
+    );
+  }
+  return v;
+}
+
+type EstadoAutosave = { estado: 'ocioso' | 'pendente' | 'salvando' | 'salvo' | 'erro' | 'incompleto'; em?: Date; erro?: string };
 
 const itemSchema = z.object({
   id: z.number().optional(),
@@ -50,11 +78,38 @@ const itemSchema = z.object({
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
   precificadoPorHT: z.boolean().optional(),
+  // INTERNO: valor da peça e acréscimo do consultor. Valores já chegam como number (ou undefined) do ItemsEditor.
+  custoUnitario: z.number().min(0, 'Valor da peça inválido').optional(),
+  acrescimoPercentual: z.number().min(0, 'Acréscimo inválido').optional(),
+}).refine((i) => i.acrescimoPercentual == null || i.custoUnitario != null, {
+  path: ['custoUnitario'],
+  message: 'Informe o valor da peça para usar o acréscimo',
 });
 
-const schema = z.object({
-  clienteId: z.coerce.number().positive('Selecione o cliente'),
-  veiculoId: z.coerce.number().positive('Selecione o veículo'),
+const anoOpcional = z.preprocess(
+  (v) => (v === '' || v == null ? undefined : Number(v)),
+  z.number().int().min(1900, 'Ano inválido').max(new Date().getFullYear() + 1, 'Ano inválido').optional(),
+);
+
+const schema = z
+  .object({
+  // O que vai pro backend depende do modo (ver camposDoModo): cliente/veículo cadastrados OU interessado/veículo avulso.
+  modo: z.enum(['CADASTRADO', 'INTERESSADO']),
+  clienteId: z.coerce.number().optional(),
+  veiculoId: z.coerce.number().optional(),
+  interessadoNome: z.string().optional(),
+  interessadoTelefone: z.string().optional(),
+  interessadoEmail: z.string().optional(),
+  veiculoCategoria: z.enum(['A', 'B', 'C']).optional().or(z.literal('')),
+  veiculoPlaca: z.string().optional(),
+  veiculoDescricao: z.string().optional(),
+  // Demais dados do veículo avulso (os mesmos do cadastro de veículo). Anos vêm de <input type="number">: '' vira ausente.
+  veiculoMarca: z.string().optional(),
+  veiculoModelo: z.string().optional(),
+  veiculoAnoFabricacao: anoOpcional,
+  veiculoAnoModelo: anoOpcional,
+  veiculoCor: z.string().optional(),
+  veiculoChassi: z.string().optional(),
   // Vínculo com a Agenda. Não é editável aqui, mas PRECISA ir de volta no PUT: o backend grava null quando falta.
   agendamentoId: z.number().optional(),
   validadeDias: z.coerce.number().optional(),
@@ -72,7 +127,19 @@ const schema = z.object({
     .array(itemSchema)
     .min(1, 'Adicione ao menos um item')
     .refine((itens) => !temServicoPorHTSemTempo(itens), MENSAGEM_SERVICO_SEM_TEMPO),
-});
+  })
+  .superRefine((v, ctx) => {
+    if (v.modo === 'CADASTRADO') {
+      if (!v.clienteId) ctx.addIssue({ code: 'custom', path: ['clienteId'], message: 'Selecione o cliente' });
+      if (!v.veiculoId) ctx.addIssue({ code: 'custom', path: ['veiculoId'], message: 'Selecione o veículo' });
+      return;
+    }
+    if (!v.interessadoNome?.trim()) ctx.addIssue({ code: 'custom', path: ['interessadoNome'], message: 'Informe o nome do cliente' });
+    if (!v.veiculoCategoria) ctx.addIssue({ code: 'custom', path: ['veiculoCategoria'], message: 'Informe a categoria do veículo' });
+    if (v.interessadoEmail?.trim() && !z.string().email().safeParse(v.interessadoEmail.trim()).success) {
+      ctx.addIssue({ code: 'custom', path: ['interessadoEmail'], message: 'E-mail inválido' });
+    }
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -90,8 +157,34 @@ function itensParaFormValues(itens: OrcamentoResponse['itens']): FormValues['ite
       quantidade: i.quantidade ?? 1,
       valorUnitario: i.valorUnitario ?? 0,
       tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
+      // Sem o valor da peça, o próximo save apagaria o custo gravado (o backend grava null quando falta).
+      // O acréscimo não é gravado: reconstrói-se do preço atual, então um desconto aprovado aparece certo.
+      // Item livre antigo (só preço, sem valor da peça): o preço vira o valor, com acréscimo zero — o consultor só informa o valor.
+      custoUnitario: i.custoUnitario ?? (i.servicoId == null && i.produtoId == null ? (i.valorUnitario ?? undefined) : undefined),
+      acrescimoPercentual:
+        i.custoUnitario != null ? acrescimoSobreBase(i.custoUnitario, i.valorUnitario ?? 0) : undefined,
     })) ?? []
   );
+}
+
+// Campos do interessado/veículo avulso vindos da resposta (ausentes quando o orçamento é de cliente cadastrado).
+function interessadoParaFormValues(o: OrcamentoResponse) {
+  return {
+    interessadoNome: o.interessadoNome ?? '',
+    interessadoTelefone: o.interessadoTelefone ?? '',
+    interessadoEmail: o.interessadoEmail ?? '',
+    veiculoCategoria: o.veiculoCategoria ?? ('' as const),
+    // Na resposta, veiculoPlaca já vem preenchida com a placa avulsa quando não há cadastro.
+    veiculoPlaca: o.veiculoId == null ? (o.veiculoPlaca ?? '') : '',
+    veiculoDescricao: o.veiculoDescricao ?? '',
+    veiculoMarca: o.veiculoMarca ?? '',
+    // Rascunho antigo só tem a descrição livre: ela vira o modelo e o consultor ajusta.
+    veiculoModelo: o.veiculoModelo ?? (o.veiculoMarca ? '' : (o.veiculoDescricao ?? '')),
+    veiculoAnoFabricacao: o.veiculoAnoFabricacao ?? undefined,
+    veiculoAnoModelo: o.veiculoAnoModelo ?? undefined,
+    veiculoCor: o.veiculoCor ?? '',
+    veiculoChassi: o.veiculoChassi ?? '',
+  };
 }
 
 export function OrcamentoFormPage() {
@@ -132,6 +225,11 @@ function OrcamentoFormContent() {
   const [searchParams] = useSearchParams();
   const agendamentoOrigemId = isEditing ? undefined : Number(searchParams.get('agendamentoId')) || undefined;
   const { data: agendamentoOrigem } = useAgendamento(agendamentoOrigemId);
+  // "Novo orçamento" a partir do perfil do cliente: /orcamentos/novo?clienteId=&clienteNome=&veiculoId=.
+  // clienteNome só rotula o campo enquanto a lista de clientes (paginada) não traz esse cliente.
+  const clienteIdUrl = isEditing ? undefined : Number(searchParams.get('clienteId')) || undefined;
+  const veiculoIdUrl = isEditing ? undefined : Number(searchParams.get('veiculoId')) || undefined;
+  const clienteNomeUrl = isEditing ? undefined : searchParams.get('clienteNome') || undefined;
   // Mesmo atalho de UX do redirecionamento acima, não controle de acesso de
   // verdade (ver comentário em OrcamentosPage sobre o gap real: ORCAMENTO_READ
   // não distingue "ver os próprios" de "ver todos" no backend) — evita que um
@@ -164,7 +262,7 @@ function OrcamentoFormContent() {
     resolver: zodResolver(schema),
     // agendamentoId vem do parâmetro da URL (não do GET do agendamento): se o GET falhar (sem AGENDA_READ, rede),
     // o vínculo com a Agenda não pode se perder em silêncio.
-    defaultValues: { itens: [], avarias: [], validadeDias: 7, agendamentoId: agendamentoOrigemId, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
+    defaultValues: { modo: 'CADASTRADO', clienteId: clienteIdUrl, veiculoId: clienteIdUrl ? veiculoIdUrl : undefined, itens: [], avarias: [], validadeDias: 7, agendamentoId: agendamentoOrigemId, dataEntradaVeiculo: toDateTimeLocalValue(new Date().toISOString()) },
   });
   const {
     control,
@@ -174,10 +272,48 @@ function OrcamentoFormContent() {
     setValue,
     getValues,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = methods;
+  const [concluindoCadastro, setConcluindoCadastro] = useState(false);
+  // A navegação que o próprio formulário faz depois de salvar não pode disparar o aviso de "sair sem salvar".
+  const saidaAposSalvar = useRef(false);
+  // Salvamento automático do rascunho (ver autoSalvar). `emVoo` evita dois saves ao mesmo tempo (inclusive com o
+  // clique em "Criar rascunho" e com o auto-save de desconto/reserva); `ultimoSalvo` é o payload que o servidor já tem.
+  const [autosave, setAutosave] = useState<EstadoAutosave>({ estado: 'ocioso' });
+  const efetivoIdRef = useRef<number | undefined>(undefined);
+  efetivoIdRef.current = efetivoId;
+  const emVoo = useRef<Promise<unknown> | null>(null);
+  const ultimoSalvo = useRef<string | null>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const autoSalvarRef = useRef<() => Promise<void>>(async () => {});
+  // Durante o reset() que devolve a resposta do servidor ao form, as notificações do react-hook-form não são edições.
+  const sincronizando = useRef(false);
   const clienteId = watch('clienteId');
   const veiculoId = watch('veiculoId');
+  const modo = watch('modo');
+  const veiculoCategoriaAvulso = watch('veiculoCategoria');
+  const interessadoTelefone = watch('interessadoTelefone');
+  const interessadoEmail = watch('interessadoEmail');
+  const semCadastro = modo === 'INTERESSADO';
+  const itens = watch('itens') ?? [];
+  const avarias = watch('avarias') ?? [];
+  // A vistoria (canvas 3D) é opcional e pesada: começa fechada e só abre sozinha quando já há avarias
+  // (orçamento salvo, ou marcadas antes) — senão o consultor pode ficar sem ver o que está registrado.
+  const [vistoriaAberta, setVistoriaAberta] = useState(false);
+  const temAvarias = avarias.length > 0;
+  useEffect(() => {
+    if (temAvarias) setVistoriaAberta(true);
+  }, [temAvarias]);
+  // Orçamento já salvo sem cliente cadastrado (diferente de só ter alternado o modo na tela).
+  const semCadastroSalvo = orcamentoSemCadastro(orcamento);
+  // Cria cliente e veículo junto: o backend exige as duas permissões de escrita.
+  const podeConcluirCadastro =
+    isEditing &&
+    semCadastroSalvo &&
+    orcamento?.status === 'RASCUNHO' &&
+    hasPermission('ORCAMENTO_WRITE') &&
+    hasPermission('CLIENTE_WRITE') &&
+    hasPermission('VEICULO_WRITE');
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
@@ -202,21 +338,52 @@ function OrcamentoFormContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agendamentoOrigem]);
 
+  function valoresDoOrcamento(o: OrcamentoResponse): FormValues {
+    return {
+      // Sem clienteId na resposta = orçamento criado "ainda não cadastrado".
+      modo: o.clienteId == null ? 'INTERESSADO' : 'CADASTRADO',
+      ...interessadoParaFormValues(o),
+      clienteId: o.clienteId ?? 0,
+      veiculoId: o.veiculoId ?? 0,
+      agendamentoId: o.agendamentoId ?? undefined,
+      validadeDias: o.validadeDias ?? 7,
+      dataEntradaVeiculo: toDateTimeLocalValue(o.dataEntradaVeiculo),
+      nivelCombustivel: ehNivelCombustivel(o.nivelCombustivel) ? o.nivelCombustivel : undefined,
+      observacoes: o.observacoes ?? '',
+      avarias: avariasParaFormValues(o.avarias),
+      itens: itensParaFormValues(o.itens),
+    } as FormValues;
+  }
+
+  // Compara "o que está num formulário" com "o que o servidor tem" sem ruído: valida/coage com o mesmo schema do
+  // salvar (números como número), monta o payload e descarta vazios. Chave igual = nada a salvar.
+  function chaveDeValores(valores: FormValues): string {
+    const r = schema.safeParse(valores);
+    return JSON.stringify(semVazios(paraPayload(r.success ? r.data : valores)));
+  }
+  const chaveAtual = () => chaveDeValores(getValues() as FormValues);
+
+  // O orçamento chega do servidor: na 1ª vez popula o form. Depois (cada save invalida a consulta; desconto aprovado,
+  // "concluir cadastro" etc. também mudam o registro) só reaplica quando é mudança de FORA e o consultor não tem
+  // nada digitado a salvar — nunca pisa em alteração pendente, nem refaz as linhas por eco do próprio autosave.
+  const carregado = useRef(false);
   useEffect(() => {
-    if (orcamento) {
-      reset({
-        clienteId: orcamento.clienteId ?? 0,
-        veiculoId: orcamento.veiculoId ?? 0,
-        agendamentoId: orcamento.agendamentoId ?? undefined,
-        validadeDias: orcamento.validadeDias ?? 7,
-        dataEntradaVeiculo: toDateTimeLocalValue(orcamento.dataEntradaVeiculo),
-        nivelCombustivel: ehNivelCombustivel(orcamento.nivelCombustivel) ? orcamento.nivelCombustivel : undefined,
-        observacoes: orcamento.observacoes ?? '',
-        avarias: avariasParaFormValues(orcamento.avarias),
-        itens: itensParaFormValues(orcamento.itens),
-      });
+    if (!orcamento) return;
+    const valores = valoresDoOrcamento(orcamento);
+    if (!carregado.current) {
+      carregado.current = true;
+      reset(valores);
+      // O que acabou de chegar do servidor já está salvo: não conta como alteração a salvar.
+      ultimoSalvo.current = chaveAtual();
+      return;
     }
-  }, [orcamento, reset]);
+    const doServidor = chaveDeValores(valores);
+    if (doServidor === ultimoSalvo.current) return; // eco do que o próprio formulário salvou
+    if (chaveAtual() !== ultimoSalvo.current) return; // há alterações do consultor a salvar: não sobrescreve
+    reset(valores);
+    ultimoSalvo.current = doServidor;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orcamento]);
 
   const clienteOptions: ComboboxOption[] = (clientes?.content ?? []).map((c: ClienteResponse) => ({
     value: c.id!,
@@ -226,7 +393,7 @@ function OrcamentoFormContent() {
   // The client list above is a searched/paginated subset — when editing an
   // existing orçamento, its client may not be in it, which would otherwise
   // blank out the combobox's label for a value that's actually set.
-  const nomeClienteConhecido = orcamento?.clienteNome ?? agendamentoOrigem?.clienteNome;
+  const nomeClienteConhecido = orcamento?.clienteNome ?? agendamentoOrigem?.clienteNome ?? clienteNomeUrl;
   if (clienteId && nomeClienteConhecido && !clienteOptions.some((o) => o.value === clienteId)) {
     clienteOptions.unshift({ value: clienteId, label: nomeClienteConhecido });
   }
@@ -257,27 +424,170 @@ function OrcamentoFormContent() {
   // "id" e "precificadoPorHT" são só do form; serviço cobrado pela hora
   // técnica vai sem valorUnitario pro backend calcular (ver itemParaPayload).
   function paraPayload(values: FormValues) {
+    const { modo: modoValor, ...resto } = values;
     return {
-      ...values,
+      ...camposDoModo(modoValor, { ...resto, veiculoCategoria: resto.veiculoCategoria || undefined }),
       // Vazio = não informado: na criação o backend assume "agora"; na edição mantém o que já tinha.
       dataEntradaVeiculo: values.dataEntradaVeiculo || undefined,
       itens: values.itens.map(itemParaPayload),
-      avarias: avariasParaPayload(values.avarias),
+      // A vistoria só existe com veículo cadastrado (some da tela sem cadastro) e o backend recusa avaria com foto
+      // sem veículo: ao alternar pra "ainda não cadastrado" as avarias antigas não podem seguir escondidas no payload.
+      avarias: modoValor === 'INTERESSADO' ? [] : avariasParaPayload(values.avarias),
     };
+  }
+
+  // Volta ao form o que o servidor devolveu (ids reais dos itens, valores normalizados) — assim desconto/reserva
+  // enxergam os itens salvos e o formulário deixa de contar como "sujo". Os campos que só existem na tela
+  // (hora técnica, valor da hora do catálogo) e as avarias vêm do que está no form agora.
+  function sincronizarComResposta(resposta: OrcamentoResponse, valores: FormValues) {
+    const doServidor = itensParaFormValues(resposta.itens);
+    const naTela = (getValues('itens') ?? []) as ItemFormValue[];
+    const itensSync =
+      doServidor.length === naTela.length
+        ? doServidor.map((it, i) => ({ ...it, precificadoPorHT: naTela[i].precificadoPorHT, precoPorHoraCatalogo: naTela[i].precoPorHoraCatalogo }))
+        : doServidor;
+    sincronizando.current = true;
+    reset({
+      modo: valores.modo,
+      ...interessadoParaFormValues(resposta),
+      clienteId: resposta.clienteId ?? valores.clienteId,
+      veiculoId: resposta.veiculoId ?? valores.veiculoId,
+      agendamentoId: resposta.agendamentoId ?? valores.agendamentoId,
+      validadeDias: resposta.validadeDias ?? valores.validadeDias,
+      dataEntradaVeiculo: toDateTimeLocalValue(resposta.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
+      nivelCombustivel: ehNivelCombustivel(resposta.nivelCombustivel) ? resposta.nivelCombustivel : valores.nivelCombustivel,
+      observacoes: resposta.observacoes ?? valores.observacoes,
+      // Avarias não vêm do servidor de volta: a lista da tela é a fonte da verdade (o payload nunca
+      // usa o id delas) e o getValues pega o que o consultor marcou enquanto o save estava em voo.
+      avarias: getValues('avarias') ?? valores.avarias,
+      itens: itensSync as FormValues['itens'],
+    });
+    // O que o form tem agora (já normalizado pelo servidor: '' no lugar de ausente etc.) É o que está salvo.
+    ultimoSalvo.current = chaveAtual();
+    // As notificações do reset chegam de forma síncrona; solta a trava logo depois do ciclo atual.
+    queueMicrotask(() => {
+      sincronizando.current = false;
+    });
+  }
+
+  // O autosave NÃO usa reset(): ele recria as linhas dos itens e o campo onde o consultor está digitando perde o foco
+  // (e o que ele digita a seguir se perde). Só entrega os ids reais dos itens (desconto/reserva precisam deles).
+  function aplicarIdsDosItens(resposta: OrcamentoResponse) {
+    const doServidor = resposta.itens ?? [];
+    const naTela = (getValues('itens') ?? []) as ItemFormValue[];
+    if (doServidor.length !== naTela.length) return;
+    doServidor.forEach((it, i) => {
+      if (it.id != null && naTela[i].id !== it.id) setValue(`itens.${i}.id` as 'itens.0.id', it.id, { shouldDirty: false });
+    });
+  }
+
+  function agendarAutosave() {
+    if (readOnly) return;
+    // O que está na tela já é o que o servidor tem (ex.: ecos do reset que devolve a resposta): não é alteração.
+    if (chaveAtual() === ultimoSalvo.current) return;
+    clearTimeout(temporizador.current);
+    setAutosave((a) => (a.estado === 'pendente' ? a : { ...a, estado: 'pendente' }));
+    temporizador.current = setTimeout(() => void autoSalvarRef.current(), ATRASO_AUTOSAVE_MS);
+  }
+
+  // Salva o rascunho sozinho, sem toast nem navegação, quando o formulário já está válido (mesmas regras do "Criar
+  // rascunho": identificação, ao menos um item, hora técnica com tempo). Incompleto não salva — só avisa o que falta.
+  async function autoSalvar() {
+    if (readOnly) return;
+    if (emVoo.current) {
+      agendarAutosave(); // há um save em andamento: tenta de novo depois dele
+      return;
+    }
+    const validado = schema.safeParse(getValues());
+    if (!validado.success) {
+      setAutosave((a) => ({ ...a, estado: 'incompleto' }));
+      return;
+    }
+    const payload = paraPayload(validado.data);
+    const chave = chaveAtual();
+    if (chave === ultimoSalvo.current) {
+      setAutosave((a) => (a.em ? { ...a, estado: 'salvo' } : { estado: 'ocioso' }));
+      return;
+    }
+    setAutosave((a) => ({ ...a, estado: 'salvando' }));
+    const tarefa = (async () => {
+      try {
+        let resposta: OrcamentoResponse;
+        if (efetivoIdRef.current) {
+          resposta = await updateMutation.mutateAsync({ id: efetivoIdRef.current, payload });
+        } else {
+          resposta = await createMutation.mutateAsync(payload);
+          if (resposta.id) {
+            efetivoIdRef.current = resposta.id;
+            setSavedId(resposta.id);
+          }
+        }
+        ultimoSalvo.current = chave;
+        setAutosave({ estado: 'salvo', em: new Date() });
+        aplicarIdsDosItens(resposta);
+        // Se algo mudou enquanto salvava, a próxima rodada cuida.
+        if (chaveAtual() !== chave) agendarAutosave();
+      } catch (error) {
+        // Ex.: o backend recusa editar com desconto pendente de aprovação — mostra o motivo em vez de só "falhou".
+        setAutosave((a) => ({ ...a, estado: 'erro', erro: extractErrorMessage(error, '') || undefined }));
+      } finally {
+        emVoo.current = null;
+      }
+    })();
+    emVoo.current = tarefa;
+    await tarefa;
+  }
+  autoSalvarRef.current = autoSalvar;
+
+  // Qualquer edição do usuário (name definido; reset() não tem nome) reinicia a contagem para salvar. Vai por ref
+  // porque o efeito é montado uma vez e `readOnly`/handlers mudam a cada render.
+  const agendarRef = useRef(agendarAutosave);
+  agendarRef.current = agendarAutosave;
+  useEffect(() => {
+    const assinatura = watch((_valores, { name }) => {
+      if (name && !sincronizando.current) agendarRef.current();
+    });
+    return () => {
+      assinatura.unsubscribe();
+      clearTimeout(temporizador.current);
+    };
+  }, [watch]);
+
+  // Roda um salvamento manual (clique em Salvar, auto-save de desconto/reserva) NA MESMA FILA do autosave: espera o que
+  // estiver em voo, cancela o que estava agendado e publica a própria promessa — assim nenhum dos caminhos cria o
+  // mesmo orçamento duas vezes nem se atropelam.
+  async function protegido<T>(tarefa: () => Promise<T>): Promise<T> {
+    if (emVoo.current) await emVoo.current;
+    clearTimeout(temporizador.current);
+    const promessa = tarefa();
+    emVoo.current = promessa.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      return await promessa;
+    } finally {
+      emVoo.current = null;
+    }
   }
 
   async function onSubmit(values: FormValues) {
     try {
-      if (efetivoId) {
-        await updateMutation.mutateAsync({ id: efetivoId, payload: paraPayload(values) });
-        toast.success(orcamentoId ? 'Orçamento atualizado.' : 'Orçamento criado como rascunho.');
-      } else {
-        await createMutation.mutateAsync(paraPayload(values));
-        toast.success('Orçamento criado como rascunho.');
-      }
+      await protegido(async () => {
+        const idAtual = efetivoIdRef.current;
+        if (idAtual) {
+          await updateMutation.mutateAsync({ id: idAtual, payload: paraPayload(values) });
+          toast.success(orcamentoId ? 'Orçamento atualizado.' : 'Orçamento criado como rascunho.');
+        } else {
+          await createMutation.mutateAsync(paraPayload(values));
+          toast.success('Orçamento criado como rascunho.');
+        }
+      });
+      saidaAposSalvar.current = true;
       navigate('/orcamentos');
     } catch (error) {
       toast.error(extractErrorMessage(error, 'Não foi possível salvar o orçamento.'));
+      agendarAutosave(); // as alterações continuam pendentes: o autosave tenta de novo
     }
   }
 
@@ -287,10 +597,21 @@ function OrcamentoFormContent() {
   // silenciosamente, sem esperar o clique em "Criar rascunho". Só roda uma
   // vez: com efetivoId já definido, devolve a origem existente direto.
   async function garantirOrigem() {
-    if (efetivoId) return { tipo: 'ORCAMENTO' as const, id: efetivoId };
+    if (emVoo.current) await emVoo.current; // o autosave pode estar criando o rascunho agora mesmo
+    if (efetivoIdRef.current) return { tipo: 'ORCAMENTO' as const, id: efetivoIdRef.current };
+    return protegido(() => criarRascunhoParaAcao());
+  }
+
+  async function criarRascunhoParaAcao() {
+    // outra chamada pode ter criado enquanto esta esperava na fila
+    if (efetivoIdRef.current) return { tipo: 'ORCAMENTO' as const, id: efetivoIdRef.current };
     const valores = getValues();
-    if (!valores.clienteId || !valores.veiculoId) {
+    if (valores.modo === 'CADASTRADO' && (!valores.clienteId || !valores.veiculoId)) {
       toast.error('Selecione cliente e veículo antes de solicitar desconto ou reservar estoque.');
+      return undefined;
+    }
+    if (valores.modo === 'INTERESSADO' && (!valores.interessadoNome?.trim() || !valores.veiculoCategoria)) {
+      toast.error('Informe o nome e a categoria do veículo antes de solicitar desconto ou reservar estoque.');
       return undefined;
     }
     // Esse auto-save pula o zod (usa getValues direto) — sem esta checagem um
@@ -304,19 +625,8 @@ function OrcamentoFormContent() {
       const criado = await createMutation.mutateAsync(paraPayload(valores));
       if (!criado.id) return undefined;
       setSavedId(criado.id);
-      reset({
-        clienteId: criado.clienteId ?? valores.clienteId,
-        veiculoId: criado.veiculoId ?? valores.veiculoId,
-        agendamentoId: criado.agendamentoId ?? valores.agendamentoId,
-        validadeDias: criado.validadeDias ?? valores.validadeDias,
-        dataEntradaVeiculo: toDateTimeLocalValue(criado.dataEntradaVeiculo) || valores.dataEntradaVeiculo,
-        nivelCombustivel: ehNivelCombustivel(criado.nivelCombustivel) ? criado.nivelCombustivel : valores.nivelCombustivel,
-        observacoes: criado.observacoes ?? valores.observacoes,
-        // Avarias não vêm do servidor de volta: a lista da tela é a fonte da verdade (o payload nunca
-        // usa o id delas) e o getValues pega o que o consultor marcou enquanto o save estava em voo.
-        avarias: getValues('avarias') ?? valores.avarias,
-        itens: itensParaFormValues(criado.itens),
-      });
+      efetivoIdRef.current = criado.id;
+      sincronizarComResposta(criado, valores);
       if ((criado.avarias?.length ?? 0) < valores.avarias.length) {
         // Schema presente não prova persistência (ver prohibited-actions #5): se o backend devolveu menos
         // avarias do que enviamos, mantemos as da tela e avisamos em vez de mostrar sucesso silencioso.
@@ -335,6 +645,23 @@ function OrcamentoFormContent() {
   if (redirecionandoForaDeOrcamento || bloqueadoPorOutroConsultor) return <PageSpinner />;
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const textoSalvamento = readOnly
+    ? undefined
+    : autosave.estado === 'salvando'
+      ? 'Salvando…'
+      : autosave.estado === 'pendente'
+        ? 'Alterações ainda não salvas'
+        : autosave.estado === 'erro'
+          ? `Não foi possível salvar automaticamente${autosave.erro ? `: ${autosave.erro}` : ''}. Use o botão acima.`
+          : autosave.estado === 'incompleto'
+            ? efetivoId
+              ? 'Complete os campos destacados para salvar automaticamente.'
+              : 'Escolha cliente, veículo e ao menos 1 item para salvar automaticamente.'
+            : autosave.estado === 'salvo' && autosave.em
+              ? `Salvo automaticamente às ${format(autosave.em, 'HH:mm')}`
+              : efetivoId
+                ? undefined
+                : 'O rascunho é salvo sozinho quando houver cliente, veículo e itens.';
 
   async function compartilharWhatsApp() {
     if (!orcamento?.tokenAprovacao) return;
@@ -391,8 +718,20 @@ function OrcamentoFormContent() {
         </p>
       )}
 
+      {/* Montado só aberto: nada é consultado antes de o consultor pedir, e cada abertura parte do zero. */}
+      {podeConcluirCadastro && concluindoCadastro && orcamento && (
+        <ConcluirCadastroModal open onClose={() => setConcluindoCadastro(false)} orcamento={orcamento} />
+      )}
+
+      {/* Perder a cotação por um clique no menu é o pior erro da tela: avisa antes de sair com alterações não salvas. */}
+      <AvisoAlteracoesNaoSalvas
+        ativo={isDirty && !readOnly && chaveAtual() !== ultimoSalvo.current}
+        permitirSaida={saidaAposSalvar}
+        mensagem="Este orçamento tem alterações que ainda não foram salvas."
+      />
+
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Card>
             <CardBody className="flex flex-col gap-4">
               {/* Não uso <fieldset disabled> aqui — com className="contents" (necessário
@@ -400,7 +739,56 @@ function OrcamentoFormContent() {
                   pros campos descendentes, então cada controle recebe o disabled
                   explicitamente. */}
               <div className="contents">
+                {!readOnly && (
+                  <div className="mb-4 flex flex-col gap-3">
+                    <SeletorModoCliente modo={modo} onChange={(m) => setValue('modo', m, { shouldDirty: true })} />
+                    {isEditing && semCadastroSalvo && !semCadastro && !clienteId && (
+                      <p className="text-sm text-ink-muted">
+                        Escolha o cliente e o veículo cadastrados e salve — os itens do orçamento são mantidos.
+                      </p>
+                    )}
+                    {!semCadastro && !clienteId && (
+                      <SugestoesClienteExistente
+                        telefone={interessadoTelefone}
+                        email={interessadoEmail}
+                        onEscolher={(id, nome) => {
+                          setValue('clienteId', id, { shouldDirty: true });
+                          setValue('veiculoId', 0);
+                          setBuscaClienteInput(nome);
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+                {semCadastro && (
+                  <div className="mb-4 flex flex-col gap-3">
+                    <CamposInteressado disabled={readOnly} />
+                    {!readOnly && <VeiculoAvulsoSecao />}
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-muted">
+                      <p>
+                        Dá para montar e salvar o rascunho agora. Para enviar ao cliente é preciso vincular um cliente e um
+                        veículo cadastrados.
+                      </p>
+                      {podeConcluirCadastro && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={isDirty}
+                          title={isDirty ? 'Salve as alterações antes de concluir o cadastro' : undefined}
+                          onClick={() => setConcluindoCadastro(true)}
+                        >
+                          <UserPlus size={14} /> Concluir cadastro
+                        </Button>
+                      )}
+                    </div>
+                    {podeConcluirCadastro && isDirty && (
+                      <p className="text-xs text-ink-muted">Salve o rascunho para poder concluir o cadastro.</p>
+                    )}
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {!semCadastro && (
                   <Controller
                     control={control}
                     name="clienteId"
@@ -417,8 +805,10 @@ function OrcamentoFormContent() {
                           // A vehicle belongs to one client — a stale selection
                           // from whoever was picked before must not survive this.
                           setValue('veiculoId', 0);
-                          // Os itens foram precificados pela categoria do veículo anterior.
-                          if (value !== field.value) {
+                          // Os itens foram precificados pela categoria do veículo anterior. Sem cliente
+                          // anterior (ex.: vinculando um orçamento "ainda não cadastrado") os itens ficam:
+                          // o ItemsEditor reprecifica sozinho se a categoria do veículo real for outra.
+                          if (field.value && value !== field.value) {
                             setValue('itens', []);
                             descartarAvarias();
                           }
@@ -431,6 +821,8 @@ function OrcamentoFormContent() {
                       />
                     )}
                   />
+                  )}
+                  {!semCadastro && (
                   <Controller
                     control={control}
                     name="veiculoId"
@@ -454,6 +846,7 @@ function OrcamentoFormContent() {
                       />
                     )}
                   />
+                  )}
                   <Input label="Validade (dias)" type="number" disabled={readOnly} {...register('validadeDias')} />
                   <Input
                     label="Entrada do veículo"
@@ -513,16 +906,16 @@ function OrcamentoFormContent() {
                   )}
                 </AnimatePresence>
 
-                <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />
-
                 <div className="mt-4 border-t border-border pt-4">
                   <ItemsEditor
                     name="itens"
                     mostrarTempoVendido
-                    categoriaVeiculo={selectedVeiculo?.categoria}
+                    permitirItemLivre
+                    categoriaVeiculo={semCadastro ? veiculoCategoriaAvulso || undefined : selectedVeiculo?.categoria}
                     disabled={readOnly}
                     origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
                     onGarantirOrigem={garantirOrigem}
+                    ocultarResumo
                   />
                   {erroListaItens(errors.itens) && (
                     <p className="mt-1 text-xs font-medium text-danger">{erroListaItens(errors.itens)}</p>
@@ -532,18 +925,25 @@ function OrcamentoFormContent() {
                   </div>
                 </div>
 
+                {/* Avaria com foto é do veículo cadastrado — sem ele a vistoria 3D não se aplica. */}
+                {!semCadastro && (
+                  <div className="mt-4">
+                    <Disclosure
+                      title="Vistoria de entrada (opcional)"
+                      summary={temAvarias ? `${avarias.length} ${avarias.length === 1 ? 'avaria' : 'avarias'}` : 'Registrar avarias e combustível'}
+                      open={vistoriaAberta}
+                      onOpenChange={setVistoriaAberta}
+                    >
+                      <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />
+                    </Disclosure>
+                  </div>
+                )}
+
                 <div className="mt-4">
                   <Textarea label="Observações" disabled={readOnly} {...register('observacoes')} />
                 </div>
               </div>
 
-              {!readOnly && (
-                <div className="flex justify-end gap-2 border-t border-border pt-4">
-                  <Button type="submit" loading={saving}>
-                    {efetivoId ? 'Salvar alterações' : 'Criar rascunho'}
-                  </Button>
-                </div>
-              )}
               {readOnly && (
                 <p className="rounded-lg bg-surface-alt px-3 py-2 text-sm text-ink-muted">
                   Este orçamento não está mais em rascunho e não pode ser editado.
@@ -551,6 +951,15 @@ function OrcamentoFormContent() {
               )}
             </CardBody>
           </Card>
+
+          <ResumoOrcamentoPanel
+            itens={itens as ItemFormValue[]}
+            pendencias={readOnly ? [] : pendenciasEnvio({ semCadastro, clienteId, veiculoId, itens })}
+            mostrarSalvar={!readOnly}
+            saving={saving}
+            rotuloSalvar={efetivoId ? 'Salvar alterações' : 'Criar rascunho'}
+            statusSalvamento={textoSalvamento}
+          />
         </form>
       </FormProvider>
     </div>

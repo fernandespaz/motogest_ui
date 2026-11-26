@@ -54,7 +54,7 @@ export function ProdutividadeMecanicosPage() {
       className: 'text-right',
       hideBelow: 'md',
     },
-    { header: '', render: () => <ChevronRight size={16} className="text-ink-muted" />, className: 'w-8' },
+    { header: '', srLabel: 'Detalhes', render: () => <ChevronRight size={16} className="text-ink-muted" />, className: 'w-8' },
   ];
 
   return (

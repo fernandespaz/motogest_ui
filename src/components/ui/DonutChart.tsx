@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
+import { Link } from 'react-router-dom';
 
 export type DonutTone = 'brand' | 'success' | 'warning' | 'danger' | 'muted';
 
@@ -18,6 +19,8 @@ export interface DonutSegment {
   tone: DonutTone;
   /** Texto da legenda à direita (ex.: "R$ 570,00 · 3"); por padrão, o próprio `value`. */
   display?: string;
+  /** Se informado, a linha da legenda vira link (ex.: lista já filtrada por esse grupo). */
+  to?: string;
 }
 
 const RADIUS = 42;
@@ -92,10 +95,26 @@ export function DonutChart({
 
       <ul className="w-full min-w-0 space-y-2">
         {segments.map((s) => (
-          <li key={s.label} className="flex items-center gap-2.5 text-sm">
-            <span className={clsx('h-2.5 w-2.5 shrink-0 rounded-full', toneClasses[s.tone].dot)} aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate text-ink-muted">{s.label}</span>
-            <span className="shrink-0 font-semibold text-ink">{s.display ?? s.value}</span>
+          <li key={s.label}>
+            {(() => {
+              const linha = (
+                <>
+                  <span className={clsx('h-2.5 w-2.5 shrink-0 rounded-full', toneClasses[s.tone].dot)} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-ink-muted">{s.label}</span>
+                  <span className="shrink-0 font-semibold text-ink">{s.display ?? s.value}</span>
+                </>
+              );
+              return s.to ? (
+                <Link
+                  to={s.to}
+                  className="-mx-2 flex items-center gap-2.5 rounded-lg px-2 py-1 text-sm transition-colors hover:bg-surface-alt focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+                >
+                  {linha}
+                </Link>
+              ) : (
+                <div className="flex items-center gap-2.5 text-sm">{linha}</div>
+              );
+            })()}
           </li>
         ))}
       </ul>
