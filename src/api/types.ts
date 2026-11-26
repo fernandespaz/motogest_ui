@@ -28,6 +28,7 @@ export type AgendamentoServicoResponse = Schemas['AgendamentoServicoResponse'];
 export type AgendamentoStatus = NonNullable<AgendamentoRequest['status']>;
 
 export type OrcamentoRequest = Schemas['OrcamentoRequest'];
+export type ConcluirCadastroRequest = Schemas['ConcluirCadastroRequest'];
 export type OrcamentoResponse = Schemas['OrcamentoResponse'];
 export type OrcamentoStatus = NonNullable<OrcamentoResponse['status']>;
 export type OrcamentoPublicoResponse = Schemas['OrcamentoPublicoResponse'];

@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { Controller, useFormContext } from 'react-hook-form';
 import { UserCheck, UserPlus } from 'lucide-react';
-import { Input, Select } from '@/components/ui/Field';
+import { Input } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { useClientes } from '@/hooks/useClientes';
 import { useAuthStore } from '@/store/authStore';
@@ -56,7 +56,7 @@ export function SeletorModoCliente({
   );
 }
 
-/** Dados mínimos do interessado e do veículo avulso (a categoria define a hora técnica dos serviços). */
+/** Dados do interessado (o veículo avulso tem a própria seção: ver VeiculoAvulsoSecao). */
 export function CamposInteressado({ disabled }: { disabled?: boolean }) {
   const { register, control, formState } = useFormContext();
   const errors = formState.errors as Record<string, { message?: string } | undefined>;
@@ -94,29 +94,6 @@ export function CamposInteressado({ disabled }: { disabled?: boolean }) {
           disabled={disabled}
           error={errors.interessadoEmail?.message}
           {...register('interessadoEmail')}
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Select
-          label="Categoria do veículo"
-          required
-          disabled={disabled}
-          hint="Define o valor da hora técnica"
-          error={errors.veiculoCategoria?.message}
-          {...register('veiculoCategoria')}
-        >
-          <option value="">Selecione…</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-        </Select>
-        <Input label="Placa" disabled={disabled} {...register('veiculoPlaca')} />
-        <Input
-          label="Veículo"
-          disabled={disabled}
-          placeholder="Ex.: Honda CG 160"
-          error={errors.veiculoDescricao?.message}
-          {...register('veiculoDescricao')}
         />
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { FieldErrors, UseFormRegister, UseFormWatch } from 'react-hook-form';
+import { get, type FieldErrors, type UseFormRegister, type UseFormWatch } from 'react-hook-form';
 import { CheckCircle2, Eye, EyeOff, Loader2, Pencil, PencilLine } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -76,7 +76,13 @@ export function VeiculoDadosValidacao({
   watch,
   errors,
   consulta,
+  nomeDoCampo = (campo) => campo,
+  semKmEObservacoes,
 }: {
+  /** Nome do campo no form: o rascunho de orçamento chama a marca de "veiculoMarca", e assim por diante. */
+  nomeDoCampo?: (campo: string) => string;
+  /** KM e observações são do cadastro do veículo; o rascunho de orçamento não os guarda. */
+  semKmEObservacoes?: boolean;
   placa: string;
   /** Campos que a consulta de fato devolveu (null/ausente = não retornado). */
   dadosConsulta: Partial<DadosPlaca>;
@@ -93,10 +99,11 @@ export function VeiculoDadosValidacao({
   const chassiRetornado = retornados.some((c) => c.campo === 'chassi');
 
   const origemDe = (campo: CampoConsulta): 'consulta' | 'manual' => {
-    const atual = watch(campo) as unknown;
+    const atual = watch(nomeDoCampo(campo)) as unknown;
     return String(atual ?? '') === String(dadosConsulta[campo] ?? '') ? 'consulta' : 'manual';
   };
-  const erro = (campo: string) => (errors[campo]?.message as string | undefined);
+  // get() entende nomes aninhados ("veiculosNovos.0.marca") além dos simples.
+  const erro = (campo: string) => (get(errors, nomeDoCampo(campo))?.message as string | undefined);
 
   return (
     <div className="flex flex-col gap-6">
@@ -138,14 +145,14 @@ export function VeiculoDadosValidacao({
                   }
                 >
                   {editando || chassiVisivel ? (
-                    <Input aria-label={label} readOnly={!editando && !erro(campo)} error={erro(campo)} {...register(campo)} />
+                    <Input aria-label={label} readOnly={!editando && !erro(campo)} error={erro(campo)} {...register(nomeDoCampo(campo))} />
                   ) : (
-                    <Input aria-label={label} value={mascararChassi(String(watch(campo) ?? ''))} readOnly />
+                    <Input aria-label={label} value={mascararChassi(String(watch(nomeDoCampo(campo)) ?? ''))} readOnly />
                   )}
                 </CampoComOrigem>
               ) : (
                 <CampoComOrigem key={campo} label={label} required={required} origem={origemDe(campo)}>
-                  <Input aria-label={label} type={type} readOnly={!editando && !erro(campo)} error={erro(campo)} {...register(campo)} />
+                  <Input aria-label={label} type={type} readOnly={!editando && !erro(campo)} error={erro(campo)} {...register(nomeDoCampo(campo))} />
                 </CampoComOrigem>
               ),
             )}
@@ -180,12 +187,12 @@ export function VeiculoDadosValidacao({
                 )
               }
             >
-              <Input aria-label={label} type={type} error={erro(campo)} {...register(campo)} />
+              <Input aria-label={label} type={type} error={erro(campo)} {...register(nomeDoCampo(campo))} />
             </CampoComOrigem>
           ))}
 
           <CampoComOrigem label="Categoria" required origem="manual">
-            <Select aria-label="Categoria" error={erro('categoria')} hint="Define a hora técnica dos serviços" {...register('categoria')}>
+            <Select aria-label="Categoria" error={erro('categoria')} hint="Define a hora técnica dos serviços" {...register(nomeDoCampo('categoria'))}>
               <option value="">Selecione a categoria</option>
               {CATEGORIAS_COMPLEXIDADE.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -195,12 +202,14 @@ export function VeiculoDadosValidacao({
             </Select>
           </CampoComOrigem>
 
-          <CampoComOrigem label="KM atual" origem="manual">
-            <Input aria-label="KM atual" type="number" {...register('kmAtual')} />
-          </CampoComOrigem>
+          {!semKmEObservacoes && (
+            <CampoComOrigem label="KM atual" origem="manual">
+              <Input aria-label="KM atual" type="number" {...register(nomeDoCampo('kmAtual'))} />
+            </CampoComOrigem>
+          )}
         </div>
 
-        <Textarea label="Observações" rows={2} {...register('observacoes')} />
+        {!semKmEObservacoes && <Textarea label="Observações" rows={2} {...register(nomeDoCampo('observacoes'))} />}
       </section>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { orcamentosApi } from '@/api/endpoints/orcamentos';
-import type { OrcamentoRequest, OrcamentoResponse, PageParams } from '@/api/types';
+import type { ConcluirCadastroRequest, OrcamentoRequest, OrcamentoResponse, PageParams } from '@/api/types';
+import { clientesKeys } from './useClientes';
+import { veiculosKeys } from './useVeiculos';
 import { createCrudHooks } from './factory';
 
 const hooks = createCrudHooks<OrcamentoResponse, OrcamentoRequest, PageParams>('orcamentos', orcamentosApi);
@@ -60,4 +62,22 @@ export function useAprovarOrcamento() {
 }
 export function useRejeitarOrcamento() {
   return useTransition(orcamentosApi.rejeitar);
+}
+
+/**
+ * Cria/escolhe cliente e veículo e vincula ao rascunho montado "ainda não cadastrado". Cliente e veículo
+ * novos passam a existir, então as listas deles também ficam velhas.
+ */
+export function useConcluirCadastroOrcamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: ConcluirCadastroRequest }) =>
+      orcamentosApi.concluirCadastro(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: orcamentosKeys.all });
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+      qc.invalidateQueries({ queryKey: veiculosKeys.all });
+    },
+    meta: { hasLocalErrorHandling: true },
+  });
 }

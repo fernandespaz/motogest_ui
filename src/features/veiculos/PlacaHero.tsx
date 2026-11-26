@@ -16,13 +16,18 @@ export function PlacaHero({
   register,
   error,
   consulta: c,
+  campo = 'placa',
 }: {
   register: UseFormRegister<any>;
   error?: string;
+  /** Nome do campo da placa no form (o rascunho de orçamento usa "veiculoPlaca"). */
+  campo?: string;
   /** Estado da consulta (compartilhado com a seção de validação, que também pode buscar o chassi). */
   consulta: ReturnType<typeof usePlacaConsulta>;
 }) {
   const preco = c.carteira ? formatCentavos(c.carteira.precoConsultaCentavos) : null;
+  // Um id por campo: o cadastro de cliente pode ter vários veículos novos na mesma tela.
+  const idDoCampo = `veiculo-placa-${campo.replace(/\./g, '-')}`;
 
   return (
     <section
@@ -42,11 +47,11 @@ export function PlacaHero({
 
       <div className="mt-3 flex items-stretch gap-2">
         <div className="flex-1">
-          <label htmlFor="veiculo-placa" className="sr-only">
+          <label htmlFor={idDoCampo} className="sr-only">
             Placa
           </label>
           <input
-            id="veiculo-placa"
+            id={idDoCampo}
             type="text"
             autoComplete="off"
             autoCapitalize="characters"
@@ -59,7 +64,7 @@ export function PlacaHero({
               if (e.key === 'Enter') e.preventDefault();
             }}
             className="h-14 w-full rounded-xl border border-border bg-white px-4 text-center text-2xl font-semibold uppercase tracking-[0.3em] text-ink placeholder:font-normal placeholder:tracking-[0.3em] placeholder:text-ink-muted/50 focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400 dark:bg-graphite-2"
-            {...register('placa', {
+            {...register(campo, {
               onChange: (e) => {
                 e.target.value = e.target.value.toUpperCase();
               },

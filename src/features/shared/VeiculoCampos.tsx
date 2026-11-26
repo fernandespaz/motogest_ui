@@ -33,7 +33,11 @@ export function VeiculoCampos({
   categoriaVazia,
   consultaPlaca,
   ocultarPlaca,
+  nomeDoCampo,
+  ocultarKm,
 }: {
+  /** O rascunho de orçamento não guarda o KM (só o cadastro do veículo guarda). */
+  ocultarKm?: boolean;
   register: UseFormRegister<any>;
   watch: UseFormWatch<any>;
   setValue: UseFormSetValue<any>;
@@ -47,8 +51,13 @@ export function VeiculoCampos({
   consultaPlaca?: boolean;
   /** Esconde o campo de placa (ela já foi informada em outro ponto da tela, como o hero do cadastro de veículo). */
   ocultarPlaca?: boolean;
+  /**
+   * Para formulários cujos campos de veículo têm outros nomes (o rascunho de orçamento usa "veiculoPlaca",
+   * "veiculoMarca"…): traduz o nome do campo daqui ("placa", "marca"…) para o nome no form. Tem prioridade sobre `prefix`.
+   */
+  nomeDoCampo?: (campo: string) => string;
 }) {
-  const n = (campo: string) => (prefix ? `${prefix}.${campo}` : campo);
+  const n = (campo: string) => (nomeDoCampo ? nomeDoCampo(campo) : prefix ? `${prefix}.${campo}` : campo);
   const marca = watch(n('marca')) as string | undefined;
   const modelo = watch(n('modelo')) as string | undefined;
   const placa = watch(n('placa')) as string | undefined;
@@ -124,9 +133,11 @@ export function VeiculoCampos({
       <div className="lg:col-span-3">
         <Input label="Ano do modelo" type="number" {...register(n('anoModelo'))} />
       </div>
-      <div className="lg:col-span-3">
-        <Input label="KM atual" type="number" {...register(n('kmAtual'))} />
-      </div>
+      {!ocultarKm && (
+        <div className="lg:col-span-3">
+          <Input label="KM atual" type="number" {...register(n('kmAtual'))} />
+        </div>
+      )}
       <div className="lg:col-span-3">
         <Input label="Chassi" required={estrito} error={errors?.chassi?.message} {...register(n('chassi'))} />
       </div>

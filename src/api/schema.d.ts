@@ -215,7 +215,7 @@ export interface paths {
             cookie?: never;
         };
         /** Configuracao fiscal da oficina, com as pendencias que ainda impedem a emissao */
-        get: operations["consultar"];
+        get: operations["consultar_1"];
         /** Salva a configuracao fiscal (pode ficar incompleta; habilitar a emissao exige completa) */
         put: operations["atualizar_8"];
         post?: never;
@@ -233,7 +233,7 @@ export interface paths {
             cookie?: never;
         };
         /** Metadados do certificado da oficina (validade, titular, situacao) — nunca o arquivo nem a senha */
-        get: operations["consultar_1"];
+        get: operations["consultar_2"];
         /** Envia (ou substitui) o e-CNPJ A1 da oficina: multipart com 'arquivo' (.pfx/.p12) e 'senha' */
         put: operations["enviar"];
         post?: never;
@@ -270,7 +270,7 @@ export interface paths {
             cookie?: never;
         };
         /** Lista a hora tecnica configurada para cada categoria (A/B/C) */
-        get: operations["consultar_2"];
+        get: operations["consultar_3"];
         /** Define o valor da hora tecnica das 3 categorias (A/B/C) e o arredondamento comercial (auditado) */
         put: operations["atualizar_10"];
         post?: never;
@@ -306,7 +306,7 @@ export interface paths {
             cookie?: never;
         };
         /** Capacidade produtiva atual da oficina e HP calculado */
-        get: operations["consultar_3"];
+        get: operations["consultar_4"];
         /** Define numero de mecanicos, horas/dia, dias uteis e eficiencia (auditado) */
         put: operations["atualizar_11"];
         post?: never;
@@ -442,6 +442,26 @@ export interface paths {
          * @description Campo multipart 'arquivo' (PNG ou JPEG, ate 5MB). Mantem a proporcao, reduz para no maximo 1280px e recomprime em JPEG (EXIF descartado). A foto expira 30 dias apos o upload. Use o 'id' retornado em AvariaRequest.fotoId (so vale para orcamentos do MESMO veiculo).
          */
         post: operations["enviar_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/veiculos/consulta-placa/{placa}/chassi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Busca o chassi completo (consulta extra, cobrada a parte)
+         * @description Exige que a placa ja tenha sido consultada. Chassi ja em cache nao e' cobrado.
+         */
+        post: operations["consultarChassi"];
         delete?: never;
         options?: never;
         head?: never;
@@ -676,6 +696,26 @@ export interface paths {
         put?: never;
         /** Registra uma movimentacao de estoque para o produto (entrada, saida, reserva, liberacao ou ajuste) */
         post: operations["registrar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/placas/recargas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gera uma recarga por Pix (QR Code e copia-e-cola)
+         * @description O credito so entra apos a confirmacao do pagamento pelo PagBank.
+         */
+        post: operations["recarregar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -939,6 +979,23 @@ export interface paths {
         put?: never;
         /** Envia o orcamento ao cliente (RASCUNHO -> ENVIADO) */
         post: operations["enviar_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orcamentos/{id}/concluir-cadastro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria/escolhe cliente e veiculo e os vincula a um rascunho montado sem cadastro */
+        post: operations["concluirCadastro"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1550,6 +1607,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/placas/carteiras/{tenantId}/ajuste": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ajuste manual na carteira de uma oficina (positivo credita, negativo debita) */
+        post: operations["ajustar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/oficinas": {
         parameters: {
             query?: never;
@@ -1623,6 +1697,26 @@ export interface paths {
          * @description Exige o JWT no header Authorization — no front, busque via fetch e use um blob URL. 404 quando a foto nao existe, e' de outro veiculo/oficina ou ja expirou.
          */
         get: operations["baixar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/veiculos/consulta-placa/{placa}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consulta marca, modelo, anos e cor pela placa
+         * @description Ordem: veiculo ja cadastrado na oficina (gratis) > cache global (gratis) > provedor (debita da carteira, com estorno se falhar). 402 = saldo insuficiente; 503 = indisponivel (preencher manualmente).
+         */
+        get: operations["consultar"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1882,6 +1976,57 @@ export interface paths {
          * @description Mesmo formato do detalhe por consultor. Sem PRODUTIVIDADE_READ, horas tecnicas disponiveis e PH vem null — componentes da hora tecnica, que o consultor so' ve como preco final.
          */
         get: operations["minhaProdutividade_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/placas/recargas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status de uma recarga (confere no PagBank enquanto pendente) */
+        get: operations["recarga"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/placas/carteira": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saldo, estado (OK/CRITICO/ESGOTADO) e precos da carteira da oficina */
+        get: operations["carteira"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/placas/carteira/extrato": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Extrato (recargas, consumos e estornos), do mais recente para o mais antigo */
+        get: operations["extrato"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2456,6 +2601,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/placas/provedor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Saldo real da conta da MotoGest no provedor, com alerta de saldo baixo */
+        get: operations["provedor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/placas/consumo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consumo, receita, custo e margem por oficina nos ultimos N dias */
+        get: operations["consumo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/usuarios/{id}/sessao": {
         parameters: {
             query?: never;
@@ -2668,6 +2847,8 @@ export interface components {
             valorUnitario?: number;
             /** Format: int32 */
             tempoVendidoMinutos?: number;
+            custoUnitario?: number;
+            margemPercentual?: number;
         };
         OrdemServicoRequest: {
             /** Format: int64 */
@@ -2713,6 +2894,9 @@ export interface components {
             valorTotal?: number;
             /** Format: int32 */
             tempoVendidoMinutos?: number;
+            custoUnitario?: number;
+            margemPercentual?: number;
+            lucroTotal?: number;
         };
         OrdemServicoPausaResponse: {
             /** Format: int64 */
@@ -2811,6 +2995,14 @@ export interface components {
             veiculoCategoria?: "A" | "B" | "C";
             veiculoPlaca?: string;
             veiculoDescricao?: string;
+            veiculoMarca?: string;
+            veiculoModelo?: string;
+            /** Format: int32 */
+            veiculoAnoFabricacao?: number;
+            /** Format: int32 */
+            veiculoAnoModelo?: number;
+            veiculoCor?: string;
+            veiculoChassi?: string;
         };
         OrcamentoResponse: {
             /** Format: int64 */
@@ -2853,6 +3045,14 @@ export interface components {
             /** @enum {string} */
             veiculoCategoria?: "A" | "B" | "C";
             veiculoDescricao?: string;
+            veiculoMarca?: string;
+            veiculoModelo?: string;
+            /** Format: int32 */
+            veiculoAnoFabricacao?: number;
+            /** Format: int32 */
+            veiculoAnoModelo?: number;
+            veiculoCor?: string;
+            veiculoChassi?: string;
         };
         OficinaUpdateRequest: {
             razaoSocial: string;
@@ -3203,6 +3403,29 @@ export interface components {
             /** Format: date-time */
             expiraEm?: string;
         };
+        ConsultaPlacaResponse: {
+            placa?: string;
+            encontrada?: boolean;
+            /** @enum {string} */
+            origem?: "API" | "CACHE" | "VEICULO_EXISTENTE";
+            marca?: string;
+            modelo?: string;
+            /** Format: int32 */
+            anoFabricacao?: number;
+            /** Format: int32 */
+            anoModelo?: number;
+            cor?: string;
+            chassi?: string;
+            placaJaCadastrada?: boolean;
+            /** Format: int64 */
+            veiculoId?: number;
+            /** Format: int64 */
+            valorCobradoCentavos?: number;
+            /** Format: int64 */
+            saldoCentavos?: number;
+            /** @enum {string} */
+            estadoCarteira?: "OK" | "CRITICO" | "ESGOTADO";
+        };
         ImportacaoCatalogoResponse: {
             /** Format: int32 */
             servicosCriados?: number;
@@ -3220,6 +3443,18 @@ export interface components {
             posicao?: components["schemas"]["PosicaoAvaria"];
             fotoUrl?: string;
         };
+        ItemPublicoResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            tipoItem?: "SERVICO" | "PRODUTO";
+            descricao?: string;
+            quantidade?: number;
+            valorUnitario?: number;
+            valorTotal?: number;
+            /** Format: int32 */
+            tempoVendidoMinutos?: number;
+        };
         OrdemServicoPublicoResponse: {
             /** Format: int64 */
             id?: number;
@@ -3231,7 +3466,7 @@ export interface components {
             status?: "ABERTA" | "AGUARDANDO_APROVACAO" | "APROVADA" | "EM_ANDAMENTO" | "AGUARDANDO_PECA" | "PAUSADA" | "CONCLUIDA" | "FATURADO" | "CANCELADA" | "ENTREGUE";
             valorTotal?: number;
             observacoes?: string;
-            itens?: components["schemas"]["ItemResponse"][];
+            itens?: components["schemas"]["ItemPublicoResponse"][];
             /** Format: date-time */
             dataAbertura?: string;
             logoBase64?: string;
@@ -3251,7 +3486,7 @@ export interface components {
             /** Format: int32 */
             validadeDias?: number;
             observacoes?: string;
-            itens?: components["schemas"]["ItemResponse"][];
+            itens?: components["schemas"]["ItemPublicoResponse"][];
             /** Format: date-time */
             createdAt?: string;
             logoBase64?: string;
@@ -3301,6 +3536,25 @@ export interface components {
             createdAt?: string;
             /** Format: int64 */
             contaPagarId?: number;
+        };
+        RecargaPlacasRequest: {
+            /** Format: int64 */
+            valorCentavos: number;
+        };
+        RecargaPlacasResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            valorCentavos?: number;
+            /** @enum {string} */
+            status?: "PENDENTE" | "PAGA" | "EXPIRADA" | "RECUSADA";
+            qrCodeText?: string;
+            qrCodeImageUrl?: string;
+            /** Format: date-time */
+            expiraEm?: string;
+            mensagemErro?: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         IniciarPixRequest: {
             plano: string;
@@ -3388,6 +3642,14 @@ export interface components {
         };
         PausarOrdemServicoRequest: {
             motivo: string;
+        };
+        ConcluirCadastroRequest: {
+            /** Format: int64 */
+            clienteId?: number;
+            cliente?: components["schemas"]["ClienteRequest"];
+            /** Format: int64 */
+            veiculoId?: number;
+            veiculo?: components["schemas"]["VeiculoDoClienteRequest"];
         };
         CancelamentoNfseRequest: {
             justificativa: string;
@@ -3713,6 +3975,11 @@ export interface components {
             senha: string;
             oficina: string;
         };
+        AjusteCarteiraRequest: {
+            /** Format: int64 */
+            valorCentavos: number;
+            motivo: string;
+        };
         OficinaRegistrationRequest: {
             razaoSocial: string;
             nomeFantasia?: string;
@@ -3951,6 +4218,51 @@ export interface components {
             valorTotal?: number;
             horasVendidas?: number;
             clienteRecorrente?: boolean;
+        };
+        CarteiraResponse: {
+            /** Format: int64 */
+            saldoCentavos?: number;
+            /** @enum {string} */
+            estado?: "OK" | "CRITICO" | "ESGOTADO";
+            /** Format: int64 */
+            consultasRestantes?: number;
+            /** Format: int64 */
+            precoConsultaCentavos?: number;
+            /** Format: int64 */
+            precoChassiCentavos?: number;
+            /** Format: int64 */
+            saldoCriticoCentavos?: number;
+            /** Format: int64 */
+            recargaMinimaCentavos?: number;
+            /** Format: int64 */
+            recargaMaximaCentavos?: number;
+            consultaAutomaticaDisponivel?: boolean;
+        };
+        LancamentoCarteiraResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            tipo?: "RECARGA" | "CONSUMO" | "ESTORNO" | "AJUSTE_CREDITO" | "AJUSTE_DEBITO";
+            /** Format: int64 */
+            valorCentavos?: number;
+            /** Format: int64 */
+            saldoAposCentavos?: number;
+            placa?: string;
+            descricao?: string;
+            /** Format: date-time */
+            data?: string;
+        };
+        PageResponseLancamentoCarteiraResponse: {
+            content?: components["schemas"]["LancamentoCarteiraResponse"][];
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            last?: boolean;
         };
         ChavePublicaResponse: {
             chavePublica?: string;
@@ -4292,6 +4604,29 @@ export interface components {
             /** Format: int32 */
             totalPages?: number;
             last?: boolean;
+        };
+        AdminProvedorPlacasResponse: {
+            status?: string;
+            /** Format: int64 */
+            saldoCentavos?: number;
+            /** Format: int64 */
+            consultasDisponiveis?: number;
+            /** Format: int64 */
+            alertaAbaixoDeCentavos?: number;
+            erro?: string;
+        };
+        AdminConsumoOficinaResponse: {
+            /** Format: int64 */
+            tenantId?: number;
+            oficina?: string;
+            /** Format: int64 */
+            consultas?: number;
+            /** Format: int64 */
+            receitaCentavos?: number;
+            /** Format: int64 */
+            custoCentavos?: number;
+            /** Format: int64 */
+            margemCentavos?: number;
         };
         AdminOficinaResponse: {
             /** Format: int64 */
@@ -4980,7 +5315,7 @@ export interface operations {
             };
         };
     };
-    consultar: {
+    consultar_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -5024,7 +5359,7 @@ export interface operations {
             };
         };
     };
-    consultar_1: {
+    consultar_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -5135,7 +5470,7 @@ export interface operations {
             };
         };
     };
-    consultar_2: {
+    consultar_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -5223,7 +5558,7 @@ export interface operations {
             };
         };
     };
-    consultar_3: {
+    consultar_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -5596,6 +5931,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AvariaFotoResponse"];
+                };
+            };
+        };
+    };
+    consultarChassi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placa: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsultaPlacaResponse"];
                 };
             };
         };
@@ -5986,6 +6343,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["MovimentacaoEstoqueResponse"];
+                };
+            };
+        };
+    };
+    recarregar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecargaPlacasRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RecargaPlacasResponse"];
                 };
             };
         };
@@ -6446,6 +6827,32 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["OrcamentoResponse"];
+                };
+            };
+        };
+    };
+    concluirCadastro: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConcluirCadastroRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -7470,6 +7877,34 @@ export interface operations {
             };
         };
     };
+    ajustar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenantId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AjusteCarteiraRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
     listar_23: {
         parameters: {
             query: {
@@ -7583,6 +8018,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": string[];
+                };
+            };
+        };
+    };
+    consultar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placa: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsultaPlacaResponse"];
                 };
             };
         };
@@ -7918,6 +8375,70 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ProdutividadeConsultorDetalheResponse"];
+                };
+            };
+        };
+    };
+    recarga: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RecargaPlacasResponse"];
+                };
+            };
+        };
+    };
+    carteira: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CarteiraResponse"];
+                };
+            };
+        };
+    };
+    extrato: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseLancamentoCarteiraResponse"];
                 };
             };
         };
@@ -8610,6 +9131,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AgendamentoResponse"][];
+                };
+            };
+        };
+    };
+    provedor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminProvedorPlacasResponse"];
+                };
+            };
+        };
+    };
+    consumo: {
+        parameters: {
+            query?: {
+                dias?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AdminConsumoOficinaResponse"][];
                 };
             };
         };

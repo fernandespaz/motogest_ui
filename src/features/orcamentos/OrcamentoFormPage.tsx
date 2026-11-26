@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageCircle, UserPlus } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +19,7 @@ import { useCreateOrcamento, useOrcamento, useUpdateOrcamento } from '@/hooks/us
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useAgendamento } from '@/hooks/useAgenda';
 import {
+  type ItemFormValue,
   ItemsEditor,
   MENSAGEM_SERVICO_SEM_TEMPO,
   erroListaItens,
@@ -30,6 +31,7 @@ import { ModeloVeiculoThumb, useModeloVeiculoImagem } from '@/features/shared/Mo
 import { ConsultorBadge } from '@/features/shared/ConsultorBadge';
 import { VistoriaEntrada } from '@/features/vistoria/VistoriaEntrada';
 import { MAX_AVARIAS, avariaSchema, avariasParaFormValues, avariasParaPayload } from '@/features/vistoria/avarias';
+import { acrescimoSobreBase } from '@/lib/margem';
 import { ehNivelCombustivel } from '@/lib/combustivel';
 import { toast } from '@/store/toastStore';
 import { extractErrorMessage } from '@/api/client';
@@ -40,6 +42,10 @@ import { isMecanico, isConsultor } from '@/lib/perfil';
 import { getLandingPath } from '@/layout/nav';
 import { resolverNomeFantasiaOficina } from '@/hooks/useOficina';
 import { CamposInteressado, SeletorModoCliente, SugestoesClienteExistente } from './ClienteOrcamentoModo';
+import { Disclosure } from '@/components/ui/Disclosure';
+import { ConcluirCadastroModal } from './ConcluirCadastroModal';
+import { ResumoOrcamentoPanel, pendenciasEnvio } from './ResumoOrcamentoPanel';
+import { VeiculoAvulsoSecao } from './VeiculoAvulsoSecao';
 import { camposDoModo, orcamentoSemCadastro } from './orcamentoModo';
 
 const itemSchema = z.object({
@@ -52,7 +58,18 @@ const itemSchema = z.object({
   valorUnitario: z.coerce.number().min(0, 'Valor inválido'),
   tempoVendidoMinutos: z.coerce.number().min(0).optional(),
   precificadoPorHT: z.boolean().optional(),
+  // INTERNO: valor da peça e acréscimo do consultor. Valores já chegam como number (ou undefined) do ItemsEditor.
+  custoUnitario: z.number().min(0, 'Valor da peça inválido').optional(),
+  acrescimoPercentual: z.number().min(0, 'Acréscimo inválido').optional(),
+}).refine((i) => i.acrescimoPercentual == null || i.custoUnitario != null, {
+  path: ['custoUnitario'],
+  message: 'Informe o valor da peça para usar o acréscimo',
 });
+
+const anoOpcional = z.preprocess(
+  (v) => (v === '' || v == null ? undefined : Number(v)),
+  z.number().int().min(1900, 'Ano inválido').max(new Date().getFullYear() + 1, 'Ano inválido').optional(),
+);
 
 const schema = z
   .object({
@@ -66,6 +83,13 @@ const schema = z
   veiculoCategoria: z.enum(['A', 'B', 'C']).optional().or(z.literal('')),
   veiculoPlaca: z.string().optional(),
   veiculoDescricao: z.string().optional(),
+  // Demais dados do veículo avulso (os mesmos do cadastro de veículo). Anos vêm de <input type="number">: '' vira ausente.
+  veiculoMarca: z.string().optional(),
+  veiculoModelo: z.string().optional(),
+  veiculoAnoFabricacao: anoOpcional,
+  veiculoAnoModelo: anoOpcional,
+  veiculoCor: z.string().optional(),
+  veiculoChassi: z.string().optional(),
   // Vínculo com a Agenda. Não é editável aqui, mas PRECISA ir de volta no PUT: o backend grava null quando falta.
   agendamentoId: z.number().optional(),
   validadeDias: z.coerce.number().optional(),
@@ -113,6 +137,12 @@ function itensParaFormValues(itens: OrcamentoResponse['itens']): FormValues['ite
       quantidade: i.quantidade ?? 1,
       valorUnitario: i.valorUnitario ?? 0,
       tempoVendidoMinutos: i.tempoVendidoMinutos ?? undefined,
+      // Sem o valor da peça, o próximo save apagaria o custo gravado (o backend grava null quando falta).
+      // O acréscimo não é gravado: reconstrói-se do preço atual, então um desconto aprovado aparece certo.
+      // Item livre antigo (só preço, sem valor da peça): o preço vira o valor, com acréscimo zero — o consultor só informa o valor.
+      custoUnitario: i.custoUnitario ?? (i.servicoId == null && i.produtoId == null ? (i.valorUnitario ?? undefined) : undefined),
+      acrescimoPercentual:
+        i.custoUnitario != null ? acrescimoSobreBase(i.custoUnitario, i.valorUnitario ?? 0) : undefined,
     })) ?? []
   );
 }
@@ -127,6 +157,13 @@ function interessadoParaFormValues(o: OrcamentoResponse) {
     // Na resposta, veiculoPlaca já vem preenchida com a placa avulsa quando não há cadastro.
     veiculoPlaca: o.veiculoId == null ? (o.veiculoPlaca ?? '') : '',
     veiculoDescricao: o.veiculoDescricao ?? '',
+    veiculoMarca: o.veiculoMarca ?? '',
+    // Rascunho antigo só tem a descrição livre: ela vira o modelo e o consultor ajusta.
+    veiculoModelo: o.veiculoModelo ?? (o.veiculoMarca ? '' : (o.veiculoDescricao ?? '')),
+    veiculoAnoFabricacao: o.veiculoAnoFabricacao ?? undefined,
+    veiculoAnoModelo: o.veiculoAnoModelo ?? undefined,
+    veiculoCor: o.veiculoCor ?? '',
+    veiculoChassi: o.veiculoChassi ?? '',
   };
 }
 
@@ -210,8 +247,9 @@ function OrcamentoFormContent() {
     setValue,
     getValues,
     reset,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = methods;
+  const [concluindoCadastro, setConcluindoCadastro] = useState(false);
   const clienteId = watch('clienteId');
   const veiculoId = watch('veiculoId');
   const modo = watch('modo');
@@ -219,8 +257,25 @@ function OrcamentoFormContent() {
   const interessadoTelefone = watch('interessadoTelefone');
   const interessadoEmail = watch('interessadoEmail');
   const semCadastro = modo === 'INTERESSADO';
+  const itens = watch('itens') ?? [];
+  const avarias = watch('avarias') ?? [];
+  // A vistoria (canvas 3D) é opcional e pesada: começa fechada e só abre sozinha quando já há avarias
+  // (orçamento salvo, ou marcadas antes) — senão o consultor pode ficar sem ver o que está registrado.
+  const [vistoriaAberta, setVistoriaAberta] = useState(false);
+  const temAvarias = avarias.length > 0;
+  useEffect(() => {
+    if (temAvarias) setVistoriaAberta(true);
+  }, [temAvarias]);
   // Orçamento já salvo sem cliente cadastrado (diferente de só ter alternado o modo na tela).
   const semCadastroSalvo = orcamentoSemCadastro(orcamento);
+  // Cria cliente e veículo junto: o backend exige as duas permissões de escrita.
+  const podeConcluirCadastro =
+    isEditing &&
+    semCadastroSalvo &&
+    orcamento?.status === 'RASCUNHO' &&
+    hasPermission('ORCAMENTO_WRITE') &&
+    hasPermission('CLIENTE_WRITE') &&
+    hasPermission('VEICULO_WRITE');
   const { data: veiculos, isFetching: buscandoVeiculos } = useVeiculosDoCliente(clienteId || undefined);
 
   const readOnly = isEditing && orcamento?.status !== 'RASCUNHO';
@@ -446,8 +501,13 @@ function OrcamentoFormContent() {
         </p>
       )}
 
+      {/* Montado só aberto: nada é consultado antes de o consultor pedir, e cada abertura parte do zero. */}
+      {podeConcluirCadastro && concluindoCadastro && orcamento && (
+        <ConcluirCadastroModal open onClose={() => setConcluindoCadastro(false)} orcamento={orcamento} />
+      )}
+
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <Card>
             <CardBody className="flex flex-col gap-4">
               {/* Não uso <fieldset disabled> aqui — com className="contents" (necessário
@@ -479,10 +539,28 @@ function OrcamentoFormContent() {
                 {semCadastro && (
                   <div className="mb-4 flex flex-col gap-3">
                     <CamposInteressado disabled={readOnly} />
-                    <p className="rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-muted">
-                      Dá para montar e salvar o rascunho agora. Para enviar ao cliente é preciso vincular um cliente e um
-                      veículo cadastrados.
-                    </p>
+                    {!readOnly && <VeiculoAvulsoSecao />}
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-muted">
+                      <p>
+                        Dá para montar e salvar o rascunho agora. Para enviar ao cliente é preciso vincular um cliente e um
+                        veículo cadastrados.
+                      </p>
+                      {podeConcluirCadastro && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={isDirty}
+                          title={isDirty ? 'Salve as alterações antes de concluir o cadastro' : undefined}
+                          onClick={() => setConcluindoCadastro(true)}
+                        >
+                          <UserPlus size={14} /> Concluir cadastro
+                        </Button>
+                      )}
+                    </div>
+                    {podeConcluirCadastro && isDirty && (
+                      <p className="text-xs text-ink-muted">Salve o rascunho para poder concluir o cadastro.</p>
+                    )}
                   </div>
                 )}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -604,17 +682,16 @@ function OrcamentoFormContent() {
                   )}
                 </AnimatePresence>
 
-                {/* Avaria com foto é do veículo cadastrado — sem ele a vistoria 3D não se aplica. */}
-                {!semCadastro && <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />}
-
                 <div className="mt-4 border-t border-border pt-4">
                   <ItemsEditor
                     name="itens"
                     mostrarTempoVendido
+                    permitirItemLivre
                     categoriaVeiculo={semCadastro ? veiculoCategoriaAvulso || undefined : selectedVeiculo?.categoria}
                     disabled={readOnly}
                     origem={efetivoId ? { tipo: 'ORCAMENTO', id: efetivoId } : undefined}
                     onGarantirOrigem={garantirOrigem}
+                    ocultarResumo
                   />
                   {erroListaItens(errors.itens) && (
                     <p className="mt-1 text-xs font-medium text-danger">{erroListaItens(errors.itens)}</p>
@@ -624,18 +701,25 @@ function OrcamentoFormContent() {
                   </div>
                 </div>
 
+                {/* Avaria com foto é do veículo cadastrado — sem ele a vistoria 3D não se aplica. */}
+                {!semCadastro && (
+                  <div className="mt-4">
+                    <Disclosure
+                      title="Vistoria de entrada (opcional)"
+                      summary={temAvarias ? `${avarias.length} ${avarias.length === 1 ? 'avaria' : 'avarias'}` : 'Registrar avarias e combustível'}
+                      open={vistoriaAberta}
+                      onOpenChange={setVistoriaAberta}
+                    >
+                      <VistoriaEntrada veiculo={selectedVeiculo} readOnly={readOnly} />
+                    </Disclosure>
+                  </div>
+                )}
+
                 <div className="mt-4">
                   <Textarea label="Observações" disabled={readOnly} {...register('observacoes')} />
                 </div>
               </div>
 
-              {!readOnly && (
-                <div className="flex justify-end gap-2 border-t border-border pt-4">
-                  <Button type="submit" loading={saving}>
-                    {efetivoId ? 'Salvar alterações' : 'Criar rascunho'}
-                  </Button>
-                </div>
-              )}
               {readOnly && (
                 <p className="rounded-lg bg-surface-alt px-3 py-2 text-sm text-ink-muted">
                   Este orçamento não está mais em rascunho e não pode ser editado.
@@ -643,6 +727,14 @@ function OrcamentoFormContent() {
               )}
             </CardBody>
           </Card>
+
+          <ResumoOrcamentoPanel
+            itens={itens as ItemFormValue[]}
+            pendencias={readOnly ? [] : pendenciasEnvio({ semCadastro, clienteId, veiculoId, itens })}
+            mostrarSalvar={!readOnly}
+            saving={saving}
+            rotuloSalvar={efetivoId ? 'Salvar alterações' : 'Criar rascunho'}
+          />
         </form>
       </FormProvider>
     </div>

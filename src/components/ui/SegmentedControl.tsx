@@ -13,8 +13,11 @@ export function SegmentedControl<T extends string>({
   onChange,
   options,
   required,
+  ariaLabel,
 }: {
   label?: string;
+  /** Nome acessível quando não há `label` visível (uso compacto, dentro de uma linha). */
+  ariaLabel?: string;
   value: T;
   onChange: (value: T) => void;
   options: SegmentedOption<T>[];
@@ -31,6 +34,7 @@ export function SegmentedControl<T extends string>({
       <div
         role="radiogroup"
         aria-labelledby={label ? labelId : undefined}
+        aria-label={label ? undefined : ariaLabel}
         className="grid auto-cols-fr grid-flow-col gap-1 rounded-lg border border-border bg-surface-alt p-1"
       >
         {options.map((o) => {

@@ -13,6 +13,7 @@ vi.mock('@/hooks/useOrcamentos', () => ({
   useOrcamento: vi.fn(),
   useCreateOrcamento: vi.fn(),
   useUpdateOrcamento: vi.fn(),
+  useConcluirCadastroOrcamento: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 vi.mock('@/hooks/useAgenda', () => ({ useAgendamento: vi.fn(() => ({ data: undefined })) }));
 vi.mock('@/store/toastStore', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
@@ -34,7 +35,17 @@ vi.mock('@/features/shared/ItemsEditor', async (importOriginal) => {
 vi.mock('@/features/shared/HoraTecnicaReferencia', () => ({ HoraTecnicaReferencia: () => null }));
 // three.js não roda no jsdom (sem WebGL) e o import real deixaria cada render da página lento.
 vi.mock('@/features/vistoria/VistoriaViewer', () => ({ default: () => <div data-testid="viewer" /> }));
+// A seção do veículo avulso usa a consulta de placa (carteira, cobrança): aqui ela está sempre indisponível.
+vi.mock('@/hooks/usePlacas', () => {
+  const mutacao = () => ({ mutateAsync: vi.fn(), isPending: false, data: undefined, reset: vi.fn() });
+  return {
+    useCarteiraPlacas: () => ({ data: undefined }),
+    useConsultarPlaca: mutacao,
+    useConsultarChassi: mutacao,
+  };
+});
 vi.mock('@/features/shared/ModeloVeiculoField', () => ({
+  ModeloVeiculoField: () => null,
   ModeloVeiculoThumb: () => null,
   useModeloVeiculoImagem: () => undefined,
 }));
@@ -233,7 +244,7 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
     renderPage('/orcamentos/8');
 
     await waitFor(() => expect(screen.getByLabelText(/Nome do cliente/)).toHaveValue('Maria Interessada'));
-    expect(screen.getByLabelText(/Categoria do veículo/)).toHaveValue('B');
+    expect(screen.getByLabelText(/^Categoria/)).toHaveValue('B');
     expect(screen.queryByText('Buscar por nome ou CPF/CNPJ...')).not.toBeInTheDocument();
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
@@ -244,6 +255,36 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
     expect(payload.clienteId).toBeUndefined();
     expect(payload.veiculoId).toBeUndefined();
     expect(payload).not.toHaveProperty('modo');
+  });
+
+  it('sem cadastro, o veículo tem os mesmos campos do cadastro (placa em destaque, marca, modelo, anos, cor, chassi) e vão ao backend', async () => {
+    const mutateAsync = vi.fn().mockResolvedValue({});
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync, isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({
+      data: { ...orcamentoSemCadastro, veiculoPlaca: 'abc1d23', veiculoMarca: 'Honda', veiculoModelo: 'CG 160', veiculoAnoFabricacao: 2019, veiculoCor: 'Preta', veiculoChassi: '9C2KC1670KR000001' },
+      isLoading: false,
+    } as never);
+    renderPage('/orcamentos/8');
+
+    expect(await screen.findByLabelText('Placa')).toHaveValue('abc1d23');
+    for (const rotulo of [/^Marca/, /^Modelo/, /^Cor/, /^Chassi/, /^Ano de fabricação/, /^Ano do modelo/]) {
+      expect(screen.getByLabelText(rotulo)).toBeInTheDocument();
+    }
+    expect(screen.getByLabelText(/^Marca/)).toHaveValue('Honda');
+    expect(screen.getByLabelText(/^Chassi/)).toHaveValue('9C2KC1670KR000001');
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Salvar alterações' }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled());
+    const { payload } = mutateAsync.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      veiculoMarca: 'Honda',
+      veiculoModelo: 'CG 160',
+      veiculoAnoFabricacao: 2019,
+      veiculoCor: 'Preta',
+      veiculoChassi: '9C2KC1670KR000001',
+      veiculoDescricao: 'Honda CG 160',
+    });
   });
 
   it('não salva sem cadastro se faltar o nome ou a categoria do veículo', async () => {
@@ -276,6 +317,25 @@ describe('OrcamentoFormPage — avarias da vistoria de entrada', () => {
 
     await user.click(screen.getByRole('button', { name: /Ainda não cadastrado/ }));
     expect(screen.getByLabelText(/Nome do cliente/)).toHaveValue('Maria Interessada');
+  });
+
+  it('rascunho salvo sem cadastro oferece "Concluir cadastro" e abre o painel já preenchido', async () => {
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoSemCadastro, isLoading: false } as never);
+    renderPage('/orcamentos/8');
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: /Concluir cadastro/ }));
+    expect(await screen.findByRole('heading', { name: 'Concluir cadastro' })).toBeInTheDocument();
+  });
+
+  it('sem permissão de escrever cliente e veículo, não oferece "Concluir cadastro"', async () => {
+    useAuthStore.setState({ hasPermission: (p: string) => p !== 'CLIENTE_WRITE' } as never);
+    vi.mocked(useUpdateOrcamento).mockReturnValue({ mutateAsync: vi.fn(), isPending: false } as never);
+    vi.mocked(useOrcamento).mockReturnValue({ data: orcamentoSemCadastro, isLoading: false } as never);
+    renderPage('/orcamentos/8');
+
+    await waitFor(() => expect(screen.getByLabelText(/Nome do cliente/)).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /Concluir cadastro/ })).not.toBeInTheDocument();
   });
 
   it('vindo da Agenda (?agendamentoId=) pré-preenche cliente/veículo, mostra a origem e envia o vínculo', async () => {

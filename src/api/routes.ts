@@ -35,6 +35,7 @@ export const API_ROUTES = {
     enviar: (id: number) => `/api/v1/orcamentos/${id}/enviar`,
     aprovar: (id: number) => `/api/v1/orcamentos/${id}/aprovar`,
     rejeitar: (id: number) => `/api/v1/orcamentos/${id}/rejeitar`,
+    concluirCadastro: (id: number) => `/api/v1/orcamentos/${id}/concluir-cadastro`,
   },
   orcamentosPublico: {
     buscar: (token: string) => `/api/v1/public/orcamentos/${token}`,
